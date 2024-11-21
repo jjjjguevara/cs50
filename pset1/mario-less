@@ -1,0 +1,10 @@
+#include <cs50.h>
+#include <stdio.h>
+
+int main(void)
+{
+    // Prompts the user for column's height
+    // Insists that the number be a positive integer
+
+    // Prints a column with the return value as height
+}
