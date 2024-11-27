@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map id="audio-engineering">
+    <title>Audio Engineering and Acoustics Fundamentals</title>
+
+    <!-- Core Concepts -->
+    <topicgroup>
+        <topicmeta>
+            <navtitle>Fundamental Concepts</navtitle>
+        </topicmeta>
+        <topicref href="../topics/sound-basics.dita" type="concept"/>
+        <topicref href="../topics/waveform-properties.dita" type="concept"/>
+    </topicgroup>
+
+    <!-- Physics and Acoustics -->
+    <topicgroup>
+        <topicmeta>
+            <navtitle>Physics of Sound</navtitle>
+        </topicmeta>
+        <topicref href="../topics/sound-propagation.dita" type="concept"/>
+        <topicref href="../topics/room-acoustics.dita" type="concept"/>
+        <topicref href="../topics/frequency-response.dita" type="concept"/>
+    </topicgroup>
+
+    <!-- Practical Applications -->
+    <topicgroup>
+        <topicmeta>
+            <navtitle>Recording and Mixing</navtitle>
+        </topicmeta>
+        <topicref href="../topics/microphone-placement.dita" type="task"/>
+        <topicref href="../topics/eq-usage.dita" type="task"/>
+    </topicgroup>
+</map>

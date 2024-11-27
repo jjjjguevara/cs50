@@ -1,0 +1,26 @@
+# Flask and Extensions
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.5
+Flask-WTF==1.2.1
+flask-cors==4.0.0
+
+# Environment and Configuration
+python-dotenv==1.0.0
+
+# XML Processing
+lxml==4.9.3
+xmlschema==2.5.1
+
+# HTTP Requests
+requests==2.31.0
+
+# Testing and Development Tools
+pytest==7.4.3
+black==23.11.0
+pylint==3.0.2
+
+# JavaScript Dependencies
+# To install JS dependencies, run:
+# npm install react react-dom lucide-react
+# npm install --save-dev @vitejs/plugin-react vite

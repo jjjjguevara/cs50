@@ -1,0 +1,8 @@
+<!-- concept.dtd -->
+<!ENTITY % topic-dtd PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+%topic-dtd;
+
+<!ELEMENT concept (title, prolog?, abstract?, conbody?)>
+<!ATTLIST concept id ID #REQUIRED>
+
+<!ELEMENT conbody (section*)>

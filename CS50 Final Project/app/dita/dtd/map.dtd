@@ -1,0 +1,9 @@
+<!-- map.dtd -->
+<!ELEMENT map (title?, topicref*)>
+<!ATTLIST map id ID #REQUIRED>
+
+<!ELEMENT topicref EMPTY>
+<!ATTLIST topicref
+    href CDATA #REQUIRED
+    format CDATA #IMPLIED
+    type CDATA #IMPLIED>

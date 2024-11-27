@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE task PUBLIC "-//OASIS//DTD DITA Task//EN" "../../../dtd/task.dtd">
+<task id="microphone-placement">
+    <title>Microphone Placement Techniques</title>
+    <shortdesc>Learn how to position microphones effectively for optimal sound capture.</shortdesc>
+    <taskbody>
+        <prereq>
+            <p>Before starting, ensure you have:</p>
+            <ul>
+                <li>A properly functioning microphone</li>
+                <li>XLR cables</li>
+                <li>Microphone stand</li>
+                <li>Basic understanding of your sound source</li>
+            </ul>
+        </prereq>
+        <context>
+            <p>Proper microphone placement is crucial for capturing the best possible sound. The position of the microphone relative to the sound source affects tone, presence, and balance.</p>
+        </context>
+        <steps>
+            <step>
+                <cmd>Identify the primary sound source</cmd>
+                <info>
+                    <p>Locate where the sound is originating and note any potential interference sources.</p>
+                </info>
+            </step>
+            <step>
+                <cmd>Set up the microphone stand</cmd>
+                <info>
+                    <p>Ensure the stand is stable and can support the weight of your microphone.</p>
+                </info>
+            </step>
+            <step>
+                <cmd>Position the microphone</cmd>
+                <substeps>
+                    <substep>
+                        <cmd>Start with the standard distance of 6-12 inches from the source</cmd>
+                    </substep>
+                    <substep>
+                        <cmd>Adjust the angle based on the polar pattern of your microphone</cmd>
+                    </substep>
+                </substeps>
+            </step>
+            <step>
+                <cmd>Test and adjust</cmd>
+                <info>
+                    <p>Monitor the sound and make fine adjustments to achieve the desired tone.</p>
+                </info>
+            </step>
+        </steps>
+        <result>
+            <p>When properly positioned, the microphone should capture a clear, balanced sound with minimal unwanted noise or coloration.</p>
+        </result>
+    </taskbody>
+</task>

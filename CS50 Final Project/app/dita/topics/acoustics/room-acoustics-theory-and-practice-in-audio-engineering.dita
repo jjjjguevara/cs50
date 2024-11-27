@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "../../../dtd/topic.dtd">
+<topic id="room-acoustics-theory-and-practice-in-audio-engineering">
+    <title>Room Acoustics: Theory and Practice in Audio Engineering</title>
+
+        <prolog>
+            <metadata>
+                <othermeta name="journal" content="Journal of Audio Engineering and Acoustics"/>
+                <othermeta name="doi" content="10.1000/jaes.2024.11.001"/>
+                <othermeta name="publication-date" content="2024-11-27"/>
+                <author>Dr. Jane Smith, Ph.D.</author>
+                <author>Prof. Peter Anderson</author>
+                <institution>Audio Engineering Institute</institution>
+                <category>Room Acoustics</category>
+                <category>Studio Design</category>
+                <keywords>
+                    <keyword>modal response</keyword>
+                    <keyword>room modes</keyword>
+                    <keyword>standing waves</keyword>
+                    <keyword>acoustic treatment</keyword>
+                </keywords>
+            </metadata>
+        </prolog>
+        <abstract>
+            <shortdesc>A comprehensive analysis of room acoustics principles.</shortdesc>
+            <p>This paper examines room acoustics principles and their implementation.</p>
+        </abstract>
+        <body>
+            <section id="introduction">
+                <title>Introduction</title>
+                <p>Room acoustics is fundamental to sound quality.</p>
+            </section>
+        </body>
+
+</topic>

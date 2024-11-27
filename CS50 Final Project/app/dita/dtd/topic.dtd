@@ -1,0 +1,28 @@
+<!-- topic.dtd -->
+<!ELEMENT topic (title, prolog?, abstract?, body?)>
+<!ATTLIST topic id ID #REQUIRED>
+
+<!ELEMENT title (#PCDATA)>
+<!ELEMENT prolog (metadata?)>
+<!ELEMENT metadata (othermeta*, author*, institution?, category*, keywords?)>
+<!ELEMENT othermeta EMPTY>
+<!ATTLIST othermeta
+    name CDATA #REQUIRED
+    content CDATA #REQUIRED>
+<!ELEMENT author (#PCDATA)>
+<!ELEMENT institution (#PCDATA)>
+<!ELEMENT category (#PCDATA)>
+<!ELEMENT keywords (keyword*)>
+<!ELEMENT keyword (#PCDATA)>
+
+<!ELEMENT abstract (shortdesc?, p*)>
+<!ELEMENT shortdesc (#PCDATA)>
+<!ELEMENT body (section*)>
+<!ELEMENT section (title?, p*)>
+<!ATTLIST section id ID #IMPLIED>
+<!ELEMENT p (#PCDATA | b | i | ul | ol)*>
+<!ELEMENT b (#PCDATA)>
+<!ELEMENT i (#PCDATA)>
+<!ELEMENT ul (li+)>
+<!ELEMENT ol (li+)>
+<!ELEMENT li (#PCDATA | p)*>

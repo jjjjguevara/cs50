@@ -1,0 +1,17 @@
+<!-- task.dtd -->
+<!ENTITY % topic-dtd PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+%topic-dtd;
+
+<!ELEMENT task (title, shortdesc?, taskbody?)>
+<!ATTLIST task id ID #REQUIRED>
+
+<!ELEMENT taskbody (prereq?, context?, steps, result?)>
+<!ELEMENT prereq (p | ul | ol)*>
+<!ELEMENT context (p | ul | ol)*>
+<!ELEMENT steps (step+)>
+<!ELEMENT step (cmd, info?, substeps?)>
+<!ELEMENT cmd (#PCDATA)>
+<!ELEMENT info (p | ul | ol)*>
+<!ELEMENT substeps (substep+)>
+<!ELEMENT substep (cmd)>
+<!ELEMENT result (p | ul | ol)*>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "../../../dtd/concept.dtd">
+<concept id="sound-basics">
+    <title>Understanding Sound: Basic Principles</title>
+    <shortdesc>Sound is a form of energy that travels through media as mechanical waves.</shortdesc>
+    <conbody>
+        <section>
+            <title>What is Sound?</title>
+            <p>Sound is a mechanical wave that results from the back and forth vibration of the particles of the medium through which the sound wave is moving. Most commonly, this medium is air, though sound can travel through any material medium.</p>
+        </section>
+        <section>
+            <title>Key Components</title>
+            <ul>
+                <li><b>Vibration:</b> The source of all sound is a vibrating object</li>
+                <li><b>Medium:</b> The material through which sound travels</li>
+                <li><b>Wave Motion:</b> The transfer of energy through the medium</li>
+                <li><b>Reception:</b> The detection and interpretation of sound waves</li>
+            </ul>
+        </section>
+        <section>
+            <title>Sound in Audio Engineering</title>
+            <p>Understanding the physical properties of sound is crucial for audio engineers as it forms the basis for:</p>
+            <ul>
+                <li>Microphone selection and placement</li>
+                <li>Room acoustics treatment</li>
+                <li>Signal processing decisions</li>
+                <li>Monitor speaker setup</li>
+            </ul>
+        </section>
+    </conbody>
+</concept>
