@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createRef } from "react";
 import { api } from "../utils/api";
+import "../../css/dita.css";
 import {
   ChevronRight,
   ChevronDown,
@@ -159,10 +160,9 @@ export default function DocumentationInterface() {
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-6">
         {selectedTopic ? (
-          <div
-            className="prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: selectedTopic.content }}
-          />
+          <div className="prose max-w-none dita-content">
+            <div dangerouslySetInnerHTML={{ __html: selectedTopic.content }} />
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
             <BookOpen size={48} />

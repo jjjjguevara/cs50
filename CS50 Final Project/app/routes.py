@@ -5,11 +5,9 @@ from flask import (
     Response,
     current_app,
     send_from_directory,
-    send_file,
-    render_template
+    render_template,
 )
-import os
-from typing import Union, Tuple
+from typing import Union, Tuple, Any
 from pathlib import Path
 import logging
 from .dita.processor import DITAProcessor
@@ -17,119 +15,92 @@ import traceback
 
 # Configure logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
-bp = Blueprint('main', __name__,
-               url_prefix='/',
-               static_folder='static',
-               template_folder='static')  # Changed template_folder to static
+# Initialize blueprint and processor
+bp = Blueprint(
+    'main',
+    __name__,
+    url_prefix='/',
+    static_folder='static',
+    template_folder='static'
+)
 dita_processor = DITAProcessor()
 
+# Define a type alias for Flask responses
+FlaskResponse = Union[Response, Tuple[Response, int], Tuple[str, int], Any]
+
+# Main routes
 @bp.route('/')
-def index():
-    if current_app.debug:
-        return render_template('index.html')
-    return send_from_directory('../dist', 'index.html')
+def index() -> FlaskResponse:
+    """Serve the main application page"""
+    try:
+        if current_app.debug:
+            logger.info("Serving development index.html")
+            return render_template('index.html')
+        logger.info("Serving production index.html")
+        return send_from_directory('../dist', 'index.html')
+    except Exception as e:
+        logger.error(f"Error serving index page: {str(e)}")
+        return jsonify({'error': 'Failed to load application'}), 500
 
-@bp.route('/<path:path>')
-def serve_static(path):
-    if current_app.debug:
-        return send_from_directory('static', path)
-    return send_from_directory('../dist', path)
-
+@bp.route('/static/<path:filename>')
+def serve_static(filename: str) -> FlaskResponse:
+    """Serve static files"""
+    try:
+        if current_app.debug:
+            return send_from_directory('static', filename)
+        return send_from_directory('../dist', filename)
+    except Exception as e:
+        logger.error(f"Error serving static file {filename}: {str(e)}")
+        return jsonify({'error': 'File not found'}), 404
 
 # API Routes
-@bp.route('/api/test', methods=['GET'])
-def test() -> Response:
-    """Test endpoint"""
-    return jsonify({'message': 'API is working!'})
-
 @bp.route('/api/topics', methods=['GET', 'POST'])
-def topics() -> Union[Response, Tuple[Response, int]]:
+def topics() -> FlaskResponse:
     """Handle topic operations"""
-    if request.method == 'GET':
-        topics = dita_processor.list_topics()
-        return jsonify(topics)
+    try:
+        if request.method == 'GET':
+            logger.info("Fetching all topics")
+            topics = dita_processor.list_topics()
+            return jsonify(topics)
 
-    # POST method handling
-    if not request.is_json:
-        return jsonify({'error': 'Request must be JSON'}), 400
+        # POST handling
+        if not request.is_json:
+            logger.warning("Received non-JSON request for topic creation")
+            return jsonify({'error': 'Request must be JSON'}), 400
 
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'Empty request body'}), 400
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Empty request body'}), 400
 
-    title = data.get('title')
-    content = data.get('content')
-    topic_type = data.get('type', 'concept')
+        title = data.get('title')
+        content = data.get('content')
+        topic_type = data.get('type', 'concept')
 
-    if not title or not content:
-        return jsonify({'error': 'Title and content are required'}), 400
+        if not title or not content:
+            logger.warning("Missing required fields for topic creation")
+            return jsonify({'error': 'Title and content are required'}), 400
 
-    topic_path = dita_processor.create_topic(
-        title,
-        content,
-        topic_type
-    )
+        logger.info(f"Creating new topic: {title}")
+        topic_path = dita_processor.create_topic(title, content, topic_type)
 
-    if topic_path:
-        return jsonify({
-            'message': 'Topic created successfully',
-            'path': str(topic_path)
-        })
-    return jsonify({'error': 'Failed to create topic'}), 500
+        if topic_path:
+            return jsonify({
+                'message': 'Topic created successfully',
+                'path': str(topic_path)
+            })
+        return jsonify({'error': 'Failed to create topic'}), 500
 
-@bp.route('/api/maps', methods=['GET', 'POST'])
-def maps() -> Union[Response, Tuple[Response, int]]:
-    """Handle map operations"""
-    if request.method == 'GET':
-        maps = dita_processor.list_maps()
-        return jsonify(maps)
-
-    # POST method handling
-    if not request.is_json:
-        return jsonify({'error': 'Request must be JSON'}), 400
-
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'Empty request body'}), 400
-
-    title = data.get('title')
-    topics = data.get('topics')
-
-    if not title or not topics:
-        return jsonify({'error': 'Title and topics are required'}), 400
-
-    if not isinstance(topics, list):
-        return jsonify({'error': 'Topics must be a list'}), 400
-
-    map_path = dita_processor.create_map(title, topics)
-
-    if map_path:
-        return jsonify({
-            'message': 'Map created successfully',
-            'path': str(map_path)
-        })
-    return jsonify({'error': 'Failed to create map'}), 500
-
-@bp.route('/api/transform/<path:file_path>', methods=['POST'])
-def transform_to_html(file_path: str) -> Union[Response, Tuple[Response, int]]:
-    """Transform a DITA file to HTML"""
-    if not file_path:
-        return jsonify({'error': 'File path is required'}), 400
-
-    input_path = Path(file_path)
-    output_path = dita_processor.transform_to_html(input_path)
-
-    if output_path:
-        return jsonify({
-            'message': 'Transformation successful',
-            'output_path': str(output_path)
-        })
-    return jsonify({'error': 'Transformation failed'}), 500
+    except Exception as e:
+        logger.error(f"Error in topics endpoint: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/view/<topic_id>', methods=['GET'])
-def view_topic(topic_id: str) -> Union[Response, Tuple[Response, int]]:
+def view_topic(topic_id: str) -> FlaskResponse:
     """View a topic as HTML"""
     try:
         logger.info(f"Attempting to view topic: {topic_id}")
@@ -139,79 +110,39 @@ def view_topic(topic_id: str) -> Union[Response, Tuple[Response, int]]:
 
         if not topic_path:
             logger.error(f"Topic not found: {topic_id}")
-            return jsonify({
-                'error': 'Topic not found',
-                'topic_id': topic_id,
-                'searched_directories': [
-                    str(dita_processor.topics_dir / subdir)
-                    for subdir in ['acoustics', 'articles', 'audio', 'abstracts', 'journals']
-                ]
-            }), 404
+            return Response("""
+                <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                    <h3 class="font-bold">Topic Not Found</h3>
+                    <p>The requested topic could not be found.</p>
+                </div>
+            """, mimetype='text/html')
 
         logger.info(f"Found topic at: {topic_path}")
 
-        # Transform to HTML directly
-        try:
-            html_content = dita_processor.transform_to_html(topic_path)
-            if html_content:
-                logger.info("Successfully transformed content to HTML")
-                return Response(html_content, mimetype='text/html')
-            else:
-                logger.error("HTML transformation returned empty content")
-                return jsonify({'error': 'Empty content after transformation'}), 500
-        except Exception as e:
-            logger.error(f"Error transforming content: {e}")
-            # Return a basic HTML error message that can be displayed
-            error_html = f"""
-            <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-                <h3 class="font-bold">Error Loading Content</h3>
-                <p>{str(e)}</p>
-                <p class="text-sm mt-2">Topic ID: {topic_id}</p>
-                <p class="text-sm">File: {topic_path}</p>
-            </div>
-            """
-            return Response(error_html, mimetype='text/html')
+        # Transform to HTML
+        html_content = dita_processor.transform_to_html(topic_path)
+
+        if html_content:
+            return Response(html_content, mimetype='text/html')
+        else:
+            return Response("""
+                <div class="error-container p-4 bg-yellow-50 border-l-4 border-yellow-500 text-yellow-700">
+                    <h3 class="font-bold">Empty Content</h3>
+                    <p>The topic exists but contains no content.</p>
+                </div>
+            """, mimetype='text/html')
 
     except Exception as e:
         logger.error(f"Unexpected error viewing topic: {str(e)}")
-        error_html = f"""
-        <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-            <h3 class="font-bold">Unexpected Error</h3>
-            <p>{str(e)}</p>
-        </div>
-        """
-        return Response(error_html, mimetype='text/html')
-
-# Serve static files
-@bp.route('/static/<path:filename>')
-def static_files(filename: str) -> Response:
-    """Serve static files"""
-    return send_from_directory('static', filename)
-
-# Catch-all route should be last
-@bp.route('/<path:path>')
-def catch_all(path: str) -> Tuple[Response, int]:
-    """Catch-all route for undefined paths"""
-    return jsonify({'error': f'Path {path} not found'}), 404
-
-@bp.route('/api/test-topics')
-def test_topics():
-    """Test endpoint that returns some hardcoded topics"""
-    return jsonify([
-        {
-            'id': 'test-topic-1',
-            'title': 'Test Topic 1',
-            'type': 'article'
-        },
-        {
-            'id': 'test-topic-2',
-            'title': 'Test Topic 2',
-            'type': 'article'
-        }
-    ])
+        return Response(f"""
+            <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                <h3 class="font-bold">Error</h3>
+                <p>{str(e)}</p>
+            </div>
+        """, mimetype='text/html')
 
 @bp.route('/api/debug/topics')
-def debug_topics():
+def debug_topics() -> FlaskResponse:
     """Debug endpoint for topic listing"""
     try:
         topics = dita_processor.list_topics()
@@ -227,7 +158,19 @@ def debug_topics():
         }
         return jsonify(debug_info)
     except Exception as e:
+        logger.error(f"Error in debug endpoint: {str(e)}")
         return jsonify({
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
+
+# Error handlers
+@bp.errorhandler(404)
+def not_found_error(error) -> Tuple[Response, int]:
+    logger.warning(f"404 error: {error}")
+    return jsonify({'error': 'Resource not found'}), 404
+
+@bp.errorhandler(500)
+def internal_error(error) -> Tuple[Response, int]:
+    logger.error(f"500 error: {error}")
+    return jsonify({'error': 'Internal server error'}), 500

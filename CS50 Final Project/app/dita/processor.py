@@ -1,12 +1,31 @@
-import os
+from typing import Optional, List, Dict, TypeVar, Sequence, Union, cast, Any
 from pathlib import Path
 from lxml import etree
 import logging
-from typing import Optional, List, Dict
+
+# Type aliases and generics
+HTMLString = str
+HTMLElements = List[str]
+XMLElement = Any
 
 class DITAProcessor:
-    def __init__(self):
+    # Class variable type annotations
+    logger: logging.Logger
+    app_root: Path
+    dita_root: Path
+    maps_dir: Path
+    topics_dir: Path
+    output_dir: Path
+    xsl_dir: Path
+    parser: etree.XMLParser
+
+    def __init__(self) -> None:
+        # Initialize logger
         self.logger = logging.getLogger(__name__)
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
 
         # Get the absolute path to the app directory
         self.app_root = Path(__file__).parent.parent
@@ -26,13 +45,108 @@ class DITAProcessor:
             no_network=True
         )
 
-        # Configure logging
-        logging.basicConfig(level=logging.INFO)
-
         # Ensure directories exist
         self._create_directories()
 
-    def _create_directories(self):
+    def create_topic(self, title: str, content: str, topic_type: str = "concept") -> Optional[Path]:
+        """Create a new DITA topic file"""
+        try:
+            # Create topic ID from title (sanitize the title for filename)
+            topic_id = "".join(c for c in title.lower() if c.isalnum() or c in ('-', '_')).replace(' ', '-')
+
+            # Determine appropriate subdirectory based on topic type or content
+            subdir = 'articles'  # default
+            if any(keyword in topic_id for keyword in ['acoustics', 'room', 'sound']):
+                subdir = 'acoustics'
+            elif any(keyword in topic_id for keyword in ['audio', 'microphone', 'recording']):
+                subdir = 'audio'
+            elif topic_type == 'abstract':
+                subdir = 'abstracts'
+            elif topic_type == 'journal':
+                subdir = 'journals'
+
+            # Construct full topic path
+            topic_dir = self.topics_dir / subdir
+            topic_path = topic_dir / f"{topic_id}.dita"
+
+            self.logger.info(f"Creating topic in directory: {topic_dir}")
+
+            # Ensure directory exists
+            topic_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create DITA content with proper structure based on topic type
+            if topic_type == "concept":
+                topic_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+    <concept id="{topic_id}">
+        <title>{title}</title>
+        <conbody>
+            <p>{content}</p>
+        </conbody>
+    </concept>"""
+            elif topic_type == "task":
+                topic_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE task PUBLIC "-//OASIS//DTD DITA Task//EN" "task.dtd">
+    <task id="{topic_id}">
+        <title>{title}</title>
+        <taskbody>
+            <context>
+                <p>{content}</p>
+            </context>
+        </taskbody>
+    </task>"""
+            elif topic_type == "abstract":
+                topic_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+    <topic id="{topic_id}">
+        <title>{title}</title>
+        <abstract>
+            <shortdesc>{content}</shortdesc>
+        </abstract>
+    </topic>"""
+            elif topic_type == "journal":
+                topic_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+    <topic id="{topic_id}">
+        <title>{title}</title>
+        <prolog>
+            <metadata>
+                <keywords>
+                    <keyword>journal</keyword>
+                </keywords>
+            </metadata>
+        </prolog>
+        <body>
+            <p>{content}</p>
+        </body>
+    </topic>"""
+            else:  # default to topic type
+                topic_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+    <topic id="{topic_id}">
+        <title>{title}</title>
+        <body>
+            <p>{content}</p>
+        </body>
+    </topic>"""
+
+            # Write content to file
+            with open(topic_path, 'w', encoding='utf-8') as f:
+                f.write(topic_content)
+
+            self.logger.info(f"Created topic at: {topic_path}")
+            return topic_path
+
+        except Exception as e:
+            self.logger.error(f"Error creating topic: {e}")
+            return None
+
+
+
+
+
+
+    def _create_directories(self) -> None:
         """Create necessary directories if they don't exist"""
         directories = [
             self.maps_dir,
@@ -47,92 +161,226 @@ class DITAProcessor:
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
 
-    def _extract_content_preview(self, tree) -> Optional[str]:
-        """Extract a preview of the topic content"""
-        try:
-            # Try different content locations based on topic type
-            content_paths = [
-                './/body/p',
-                './/conbody/p',
-                './/taskbody/p',
-                './/abstract/p',
-                './/shortdesc'
-            ]
-
-            for path in content_paths:
-                elements = tree.xpath(path)
-                if elements:
-                    return ' '.join(elem.text for elem in elements if elem.text)
-
-            return None
-        except Exception as e:
-            self.logger.error(f"Error extracting content preview: {str(e)}")
-            return None
-
-    def _transform_list(self, list_elem) -> str:
+    def _transform_list(self, list_elem: XMLElement) -> str:
         """Helper method to transform lists to HTML"""
         tag = etree.QName(list_elem).localname
         html = [f'<{tag} class="list-disc ml-6 mb-4">']
 
-        for item in list_elem.findall('.//*[local-name()="li"]'):
-            if item.text:
+        for item in list_elem.iter():
+            if etree.QName(item).localname == 'li' and item.text:
                 html.append(f'<li class="mb-2">{item.text}</li>')
 
         html.append(f'</{tag}>')
         return '\n'.join(html)
 
-    def transform_to_html(self, input_path: Path) -> Optional[str]:
+    def transform_to_html(self, input_path: Path) -> HTMLString:
         """Transform DITA content to HTML"""
         try:
             self.logger.info(f"Transforming {input_path} to HTML")
+            doc = self._parse_dita_file(input_path)
+            return self._generate_html_content(doc, input_path)
+        except Exception as e:
+            return self._create_error_html(e, input_path)
 
-            # Read the DITA content
-            with open(input_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+    def _parse_dita_file(self, input_path: Path) -> XMLElement:
+        """Parse DITA file into XML tree"""
+        with open(input_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return cast(XMLElement, etree.fromstring(content.encode('utf-8'), self.parser))
 
-            # Parse the content
-            doc = etree.fromstring(content.encode('utf-8'), self.parser)
+    def _generate_html_content(self, doc: XMLElement, input_path: Path) -> HTMLString:
+        """Generate HTML content from parsed DITA document"""
+        html_content = ['<div class="dita-content">']
 
-            # Basic HTML transformation
-            html_content = ['<div class="dita-content">']
+        # Add title
+        html_content.extend(self._transform_title(doc))
 
-            # Add title
-            title_elem = doc.find('.//*[local-name()="title"]')
-            if title_elem is not None and title_elem.text:
-                html_content.append(f'<h1 class="text-2xl font-bold mb-4">{title_elem.text}</h1>')
+        # Add metadata
+        html_content.extend(self._transform_metadata(doc))
 
-            # Add metadata if available
-            prolog = doc.find('.//*[local-name()="prolog"]')
-            if prolog is not None:
-                html_content.append('<div class="metadata mb-4">')
-                # Add authors
-                authors = prolog.findall('.//*[local-name()="author"]')
-                if authors:
-                    html_content.append('<div class="authors">')
-                    for author in authors:
-                        if author.text:
-                            html_content.append(f'<span class="author">{author.text}</span>')
-                    html_content.append('</div>')
-                html_content.append('</div>')
+        # Add main content
+        html_content.extend(self._transform_main_content(doc))
 
-            # Add main content
-            for element in doc.iter():
-                tag = etree.QName(element).localname
-                if tag == 'p' and element.text:
-                    html_content.append(f'<p class="mb-4">{element.text}</p>')
-                elif tag in ['ul', 'ol']:
-                    html_content.append(self._transform_list(element))
+        html_content.append('</div>')
+        result = '\n'.join(html_content)
 
+        self.logger.info("HTML transformation completed successfully")
+        return result
+
+    def _transform_title(self, doc: XMLElement) -> HTMLElements:
+        """Transform title element to HTML"""
+        html_content = []
+        title_elem = self._find_first_element(doc, 'title')
+
+        if title_elem is not None and title_elem.text:
+            html_content.append(
+                f'<h1 class="text-2xl font-bold mb-4">{title_elem.text}</h1>'
+            )
+
+        return html_content
+
+    def _transform_metadata(self, doc: XMLElement) -> HTMLElements:
+        """Transform metadata elements to HTML"""
+        html_content = []
+        prolog = self._find_first_element(doc, 'prolog')
+
+        if prolog is not None:
+            html_content.append('<div class="metadata mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">')
+
+            # Add table structure
+            html_content.append('<table class="min-w-full">')
+            html_content.append('<tbody>')
+
+            # Add authors
+            authors = [
+                author.text for author in prolog.iter()
+                if (etree.QName(author).localname == 'author' and author.text)
+            ]
+            if authors:
+                html_content.append('<tr>')
+                html_content.append('<td class="py-2 px-4 font-semibold">Authors</td>')
+                html_content.append(f'<td class="py-2 px-4">{", ".join(authors)}</td>')
+                html_content.append('</tr>')
+
+            # Add institution if present
+            institution = self._find_first_element(prolog, 'institution')
+            if institution is not None and institution.text:
+                html_content.append('<tr>')
+                html_content.append('<td class="py-2 px-4 font-semibold">Institution</td>')
+                html_content.append(f'<td class="py-2 px-4">{institution.text}</td>')
+                html_content.append('</tr>')
+
+            # Add categories
+            categories = [
+                cat.text for cat in prolog.iter()
+                if (etree.QName(cat).localname == 'category' and cat.text)
+            ]
+            if categories:
+                html_content.append('<tr>')
+                html_content.append('<td class="py-2 px-4 font-semibold">Categories</td>')
+                html_content.append('<td class="py-2 px-4">')
+                for category in categories:
+                    html_content.append(f'<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2 text-sm">{category}</span>')
+                html_content.append('</td>')
+                html_content.append('</tr>')
+
+            # Add keywords
+            keywords = [
+                kw.text for kw in prolog.iter()
+                if (etree.QName(kw).localname == 'keyword' and kw.text)
+            ]
+            if keywords:
+                html_content.append('<tr>')
+                html_content.append('<td class="py-2 px-4 font-semibold">Keywords</td>')
+                html_content.append('<td class="py-2 px-4">')
+                for keyword in keywords:
+                    html_content.append(f'<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">{keyword}</span>')
+                html_content.append('</td>')
+                html_content.append('</tr>')
+
+            # Add other metadata
+            for othermeta in prolog.iter():
+                if etree.QName(othermeta).localname == 'othermeta':
+                    name = othermeta.get('name')
+                    content = othermeta.get('content')
+                    if name and content:
+                        html_content.append('<tr>')
+                        html_content.append(f'<td class="py-2 px-4 font-semibold">{name.title()}</td>')
+                        html_content.append(f'<td class="py-2 px-4">{content}</td>')
+                        html_content.append('</tr>')
+
+            html_content.append('</tbody>')
+            html_content.append('</table>')
             html_content.append('</div>')
 
-            result = '\n'.join(html_content)
+        return html_content
 
-            self.logger.info("HTML transformation completed successfully")
-            return result
+    def _transform_authors(self, prolog: XMLElement) -> HTMLElements:
+        """Transform author elements to HTML"""
+        html_content = []
+        authors = [
+            author.text for author in prolog.iter()
+            if (etree.QName(author).localname == 'author' and author.text)
+        ]
 
-        except Exception as e:
-            self.logger.error(f"Transformation error: {e}")
-            return f'<div class="error">Error displaying content: {str(e)}</div>'
+        if authors:
+            html_content.extend([
+                '<div class="authors">',
+                '<span class="font-semibold">Authors: </span>',
+                ', '.join(authors),
+                '</div>'
+            ])
+
+        return html_content
+
+    def _transform_keywords(self, prolog: XMLElement) -> HTMLElements:
+        """Transform keyword elements to HTML"""
+        html_content = []
+        keywords = [
+            keyword.text for keyword in prolog.iter()
+            if (etree.QName(keyword).localname == 'keyword' and keyword.text)
+        ]
+
+        if keywords:
+            html_content.extend([
+                '<div class="keywords mt-2">',
+                '<span class="font-semibold">Keywords: </span>',
+                ', '.join(keywords),
+                '</div>'
+            ])
+
+        return html_content
+
+    def _transform_main_content(self, doc: XMLElement) -> HTMLElements:
+        """Transform main content elements to HTML"""
+        html_content = []
+
+        for elem in doc.iter():
+            tag = etree.QName(elem).localname
+            if tag == 'p' and elem.text:
+                html_content.append(
+                    f'<p class="mb-4">{elem.text}</p>'
+                )
+            elif tag == 'shortdesc' and elem.text:
+                html_content.append(
+                    f'<p class="text-lg text-gray-600 mb-6">{elem.text}</p>'
+                )
+            elif tag in ['ul', 'ol']:
+                html_content.append(self._transform_list(elem))
+            elif tag == 'section':
+                html_content.extend(self._transform_section(elem))
+
+        return html_content
+
+    def _transform_section(self, section_elem: XMLElement) -> HTMLElements:
+        """Transform section element to HTML"""
+        html_content = []
+        section_title = self._find_first_element(section_elem, 'title')
+
+        if section_title is not None and section_title.text:
+            html_content.append(
+                f'<h2 class="text-xl font-bold mt-6 mb-3">{section_title.text}</h2>'
+            )
+
+        return html_content
+
+    def _find_first_element(self, elem: XMLElement, tag_name: str) -> Optional[XMLElement]:
+        """Find first element with given tag name"""
+        for child in elem.iter():
+            if etree.QName(child).localname == tag_name:
+                return child
+        return None
+
+    def _create_error_html(self, error: Exception, input_path: Path) -> HTMLString:
+        """Create HTML error message"""
+        self.logger.error(f"Transformation error: {error}")
+        return f"""
+        <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+            <h3 class="font-bold">Error Loading Content</h3>
+            <p>{str(error)}</p>
+            <p class="text-sm mt-2">File: {input_path}</p>
+        </div>
+        """
 
     def list_topics(self) -> List[Dict[str, str]]:
         """List all available topics"""
@@ -153,7 +401,7 @@ class DITAProcessor:
                         with open(topic_file, 'r', encoding='utf-8') as f:
                             content = f.read()
 
-                        # Parse the content
+                        # Parse with a new parser instance for each file
                         tree = etree.fromstring(content.encode('utf-8'), self.parser)
 
                         # Find the title element - simplified approach
@@ -212,3 +460,25 @@ class DITAProcessor:
 
         self.logger.error(f"No topic found with ID: {topic_id}")
         return None
+
+    def _extract_content_preview(self, tree: XMLElement) -> Optional[str]:
+        """Extract a preview of the topic content"""
+        try:
+            # Try different content locations based on topic type
+            content_paths = [
+                './/body/p',
+                './/conbody/p',
+                './/taskbody/p',
+                './/abstract/p',
+                './/shortdesc'
+            ]
+
+            for path in content_paths:
+                elements = tree.xpath(path)
+                if elements:
+                    return ' '.join(elem.text for elem in elements if elem.text)
+
+            return None
+        except Exception as e:
+            self.logger.error(f"Error extracting content preview: {str(e)}")
+            return None

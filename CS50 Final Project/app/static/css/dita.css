@@ -1,0 +1,56 @@
+/* DITA Content Styles */
+.dita-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Make selectors more specific */
+.dita-content .metadata {
+    @apply bg-gray-50 rounded-lg border border-gray-200 overflow-hidden;
+}
+
+.dita-content .metadata table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+}
+
+.dita-content .metadata tr {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.dita-content .metadata tr:last-child {
+    border-bottom: none;
+}
+
+.dita-content .metadata td {
+    padding: 1rem;
+    vertical-align: top;
+}
+
+.dita-content .metadata td:first-child {
+    background: #f1f5f9;
+    width: 200px;
+    font-weight: 600;
+}
+
+/* Tag Styles */
+.dita-content .metadata span[class*="bg-"] {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    margin: 0.25rem;
+    font-size: 0.875rem;
+}
+
+/* Specific tag styles */
+.dita-content .metadata .bg-blue-100 {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.dita-content .metadata .bg-gray-100 {
+    background-color: #f3f4f6;
+    color: #374151;
+}
