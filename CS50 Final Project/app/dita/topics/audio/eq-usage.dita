@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE task PUBLIC "-//OASIS//DTD DITA Task//EN" "task.dtd">
+<task id="eq_usage">
+    <title>Effective EQ Usage</title>
+    <shortdesc>Learn how to apply equalization effectively in audio mixing.</shortdesc>
+    <taskbody>
+        <prereq>
+            <p>Before beginning, ensure you have:</p>
+            <ul>
+                <li>A properly calibrated monitoring system</li>
+                <li>Understanding of frequency ranges</li>
+                <li>Reference tracks for comparison</li>
+                <li>Basic knowledge of your EQ tool</li>
+            </ul>
+        </prereq>
+        <steps>
+            <step>
+                <cmd>Identify problem frequencies</cmd>
+                <info>
+                    <p>Listen for:</p>
+                    <ul>
+                        <li>Muddy or boomy areas (typically 200-400 Hz)</li>
+                        <li>Harsh frequencies (typically 2-4 kHz)</li>
+                        <li>Excessive sibilance (typically 5-8 kHz)</li>
+                    </ul>
+                </info>
+            </step>
+            <step>
+                <cmd>Apply subtractive EQ first</cmd>
+                <info>
+                    <p>Cut problem frequencies before boosting desirable ones:</p>
+                    <ul>
+                        <li>Use narrow Q for precise cuts</li>
+                        <li>Start with small cuts (2-3 dB)</li>
+                        <li>Listen in context with other tracks</li>
+                    </ul>
+                </info>
+            </step>
+            <step>
+                <cmd>Add enhancement with additive EQ</cmd>
+                <substeps>
+                    <substep>
+                        <cmd>Identify frequencies that need enhancement</cmd>
+                    </substep>
+                    <substep>
+                        <cmd>Apply gentle boosts (1-2 dB typically)</cmd>
+                    </substep>
+                    <substep>
+                        <cmd>Use wider Q settings for natural sound</cmd>
+                    </substep>
+                </substeps>
+            </step>
+            <step>
+                <cmd>Check the mix balance</cmd>
+                <info>
+                    <p>Verify that your EQ changes:</p>
+                    <ul>
+                        <li>Maintain proper level balance</li>
+                        <li>Don't create masking problems</li>
+                        <li>Sound natural and musical</li>
+                    </ul>
+                </info>
+            </step>
+        </steps>
+    </taskbody>
+</task>

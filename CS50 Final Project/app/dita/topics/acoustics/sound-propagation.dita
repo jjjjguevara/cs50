@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="sound_propagation">
+    <title>Sound Propagation</title>
+    <shortdesc>Understanding how sound waves travel through different mediums.</shortdesc>
+    <conbody>
+        <section>
+            <title>Wave Motion</title>
+            <p>Sound propagates through elastic media as a longitudinal wave, where particles oscillate parallel to the direction of wave travel. The speed of sound varies depending on the medium's properties.</p>
+        </section>
+        <section>
+            <title>Propagation Speed</title>
+            <p>Sound travels at different speeds through different materials:</p>
+            <ul>
+                <li>Air (20°C): approximately 343 meters per second</li>
+                <li>Water: approximately 1,481 meters per second</li>
+                <li>Steel: approximately 5,120 meters per second</li>
+            </ul>
+        </section>
+        <section>
+            <title>Factors Affecting Propagation</title>
+            <p>Several factors influence sound propagation:</p>
+            <ul>
+                <li><b>Temperature:</b> Higher temperatures increase propagation speed</li>
+                <li><b>Density:</b> Affects the speed and efficiency of sound transmission</li>
+                <li><b>Humidity:</b> Influences sound absorption in air</li>
+                <li><b>Wind:</b> Can bend sound waves and affect perceived direction</li>
+            </ul>
+        </section>
+    </conbody>
+</concept>

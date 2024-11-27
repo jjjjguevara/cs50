@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="waveform_properties">
+    <title>Waveform Properties</title>
+    <shortdesc>Understanding the characteristics and behavior of audio waveforms.</shortdesc>
+    <conbody>
+        <section>
+            <title>Basic Waveform Types</title>
+            <p>Audio waveforms come in several basic forms:</p>
+            <ul>
+                <li><b>Sine waves:</b> The purest form of sound, containing a single frequency</li>
+                <li><b>Square waves:</b> Characterized by abrupt transitions between extremes</li>
+                <li><b>Triangle waves:</b> Linear transitions between peaks and troughs</li>
+                <li><b>Sawtooth waves:</b> Rapid rise followed by sudden drop in amplitude</li>
+            </ul>
+        </section>
+        <section>
+            <title>Complex Waveforms</title>
+            <p>Most natural sounds consist of complex waveforms that combine multiple frequencies and harmonics. These can be analyzed using Fourier analysis, which breaks down complex waves into their constituent sine waves.</p>
+        </section>
+        <section>
+            <title>Harmonic Content</title>
+            <p>Harmonics are integer multiples of a fundamental frequency that contribute to a sound's timbre. The relative strength of different harmonics gives different instruments their distinctive sounds.</p>
+        </section>
+    </conbody>
+</concept>

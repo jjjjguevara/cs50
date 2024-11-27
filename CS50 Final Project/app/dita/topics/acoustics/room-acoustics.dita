@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="room-acoustics">
-    <title>Room Acoustics: Theory and Practice in Audio Engineering</title>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="room_acoustics">
+    <title>Room Acoustics</title>
 
     <prolog>
         <metadata>
@@ -29,42 +29,36 @@
         <shortdesc>A comprehensive analysis of room acoustics principles and their practical applications in modern audio engineering environments.</shortdesc>
         <p>This paper presents a detailed examination of room acoustics principles and their implementation in professional audio environments. We investigate the relationship between room dimensions, modal response, and acoustic treatment methods, providing evidence-based recommendations for optimizing critical listening spaces. The study combines theoretical acoustic modeling with real-world measurements from professional recording studios and control rooms.</p>
     </abstract>
-
-    <body>
-        <section id="introduction">
-            <title>Introduction</title>
-            <p>The acoustic properties of a room significantly impact the quality of sound recording, mixing, and critical listening. Understanding and controlling these properties is essential for creating professional audio environments. This study examines both theoretical principles and practical applications of room acoustics in professional audio settings.</p>
-        </section>
-
-        <section id="methodology">
-            <title>Research Methodology</title>
-            <p>Our research combines theoretical analysis with empirical measurements:</p>
+    <shortdesc>Understanding how sound behaves within enclosed spaces.</shortdesc>
+    <conbody>
+        <section>
+            <title>Acoustic Phenomena</title>
+            <p>Room acoustics involve several key phenomena:</p>
             <ul>
-                <li>Modal analysis using computational models</li>
-                <li>RT60 measurements in various room configurations</li>
-                <li>Frequency response analysis using swept sine techniques</li>
-                <li>Impulse response measurements in treated and untreated spaces</li>
+                <li><b>Reflection:</b> Sound waves bouncing off surfaces</li>
+                <li><b>Absorption:</b> Sound energy converted to heat by materials</li>
+                <li><b>Diffusion:</b> Scattering of sound waves in multiple directions</li>
+                <li><b>Standing Waves:</b> Resonant frequencies creating reinforced patterns</li>
             </ul>
         </section>
-
-        <section id="results">
-            <title>Key Findings</title>
-            <p>Analysis revealed several critical factors in room acoustic behavior:</p>
+        <section>
+            <title>Room Modes</title>
+            <p>Room modes are resonant frequencies determined by room dimensions. They occur in three types:</p>
             <ul>
-                <li>Modal response strongly correlates with room dimensions</li>
-                <li>Treatment effectiveness varies significantly by frequency range</li>
-                <li>Optimal reverberation times depend on room volume and usage</li>
+                <li><b>Axial modes:</b> Between parallel surfaces</li>
+                <li><b>Tangential modes:</b> Involving four surfaces</li>
+                <li><b>Oblique modes:</b> Involving all six surfaces</li>
             </ul>
         </section>
-
-        <section id="references">
-            <title>References</title>
-            <references>
-                <reference>Everest, F. A., `&amp;` Pohlmann, K. C. (2015). Master Handbook of Acoustics, 6th Edition. McGraw-Hill Education.</reference>
-                <reference>Cox, T. J., `&amp;` D'Antonio, P. (2016). Acoustic Absorbers and Diffusers: Theory, Design and Application. CRC Press.</reference>
-                <reference>Toole, F. E. (2017). Sound Reproduction: The Acoustics and Psychoacoustics of Loudspeakers and Rooms. Focal Press.</reference>
-                <reference>Kuttruff, H. (2016). Room Acoustics, 6th Edition. CRC Press.</reference>
-            </references>
+        <section>
+            <title>Acoustic Treatment</title>
+            <p>Various materials and structures can be used to control room acoustics:</p>
+            <ul>
+                <li>Bass traps for low-frequency control</li>
+                <li>Diffusers for scattered reflections</li>
+                <li>Absorptive panels for echo reduction</li>
+                <li>Resonant absorbers for specific frequencies</li>
+            </ul>
         </section>
-    </body>
-</topic>
+    </conbody>
+</concept>

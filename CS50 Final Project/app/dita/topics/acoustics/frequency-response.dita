@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="frequency_response">
+    <title>Frequency Response</title>
+    <shortdesc>Understanding how systems and spaces respond to different frequencies.</shortdesc>
+    <conbody>
+        <section>
+            <title>Defining Frequency Response</title>
+            <p>Frequency response describes how a system or space handles different frequencies, typically measured as amplitude variation across the frequency spectrum.</p>
+        </section>
+        <section>
+            <title>Measurement and Analysis</title>
+            <p>Frequency response is typically measured using:</p>
+            <ul>
+                <li><b>Sine sweeps:</b> Gradually changing single frequencies</li>
+                <li><b>Pink noise:</b> Equal energy per octave</li>
+                <li><b>Real-time analyzers (RTA):</b> For visual frequency analysis</li>
+                <li><b>Transfer function measurements:</b> Comparing input to output</li>
+            </ul>
+        </section>
+        <section>
+            <title>Common Characteristics</title>
+            <p>Key aspects of frequency response include:</p>
+            <ul>
+                <li><b>Bandwidth:</b> The range of frequencies reproduced</li>
+                <li><b>Flatness:</b> How evenly frequencies are reproduced</li>
+                <li><b>Roll-off:</b> Natural decrease at frequency extremes</li>
+                <li><b>Resonances:</b> Peaks in response at specific frequencies</li>
+            </ul>
+        </section>
+    </conbody>
+</concept>

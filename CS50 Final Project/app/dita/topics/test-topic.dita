@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "../../../dtd/concept.dtd">
-<concept id="test-topic">
-    <title>Test Topic</title>
-    <conceptbody>
-        <p>This is a test topic content.</p>
-    </conceptbody>
-</concept>

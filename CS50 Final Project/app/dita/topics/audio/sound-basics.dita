@@ -1,31 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "../../../dtd/concept.dtd">
-<concept id="sound-basics">
-    <title>Understanding Sound: Basic Principles</title>
-    <shortdesc>Sound is a form of energy that travels through media as mechanical waves.</shortdesc>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="sound_basics">
+    <title>Sound Basics</title>
+    <shortdesc>Understanding the fundamental properties and characteristics of sound.</shortdesc>
     <conbody>
         <section>
             <title>What is Sound?</title>
-            <p>Sound is a mechanical wave that results from the back and forth vibration of the particles of the medium through which the sound wave is moving. Most commonly, this medium is air, though sound can travel through any material medium.</p>
+            <p>Sound is a form of energy that travels through matter as mechanical waves. These waves are created by vibrating objects and propagate through a medium (typically air) as compressions and rarefactions of molecules.</p>
         </section>
         <section>
-            <title>Key Components</title>
+            <title>Key Properties of Sound</title>
+            <p>Sound has several basic properties that define its characteristics:</p>
             <ul>
-                <li><b>Vibration:</b> The source of all sound is a vibrating object</li>
-                <li><b>Medium:</b> The material through which sound travels</li>
-                <li><b>Wave Motion:</b> The transfer of energy through the medium</li>
-                <li><b>Reception:</b> The detection and interpretation of sound waves</li>
+                <li><b>Amplitude:</b> The strength or loudness of a sound wave, measured in decibels (dB)</li>
+                <li><b>Frequency:</b> The number of wave cycles per second, measured in Hertz (Hz)</li>
+                <li><b>Wavelength:</b> The physical distance between two consecutive peaks in a sound wave</li>
+                <li><b>Phase:</b> The position of a wave relative to a reference point in its cycle</li>
             </ul>
         </section>
         <section>
-            <title>Sound in Audio Engineering</title>
-            <p>Understanding the physical properties of sound is crucial for audio engineers as it forms the basis for:</p>
-            <ul>
-                <li>Microphone selection and placement</li>
-                <li>Room acoustics treatment</li>
-                <li>Signal processing decisions</li>
-                <li>Monitor speaker setup</li>
-            </ul>
+            <title>Human Perception of Sound</title>
+            <p>The human auditory system can typically perceive frequencies between 20 Hz and 20,000 Hz, with sensitivity varying across this range. Sound intensity is perceived logarithmically, which is why we use the decibel scale for measurement.</p>
         </section>
     </conbody>
 </concept>

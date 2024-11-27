@@ -19,6 +19,7 @@ class DITAProcessor:
     xsl_dir: Path
     parser: etree.XMLParser
 
+
     def __init__(self) -> None:
         # Initialize logger
         self.logger = logging.getLogger(__name__)
@@ -482,3 +483,90 @@ class DITAProcessor:
         except Exception as e:
             self.logger.error(f"Error extracting content preview: {str(e)}")
             return None
+
+    def list_maps(self) -> List[Dict[str, Any]]:
+        """List all available DITA maps"""
+        maps = []
+        self.logger.info(f"Searching for maps in: {self.maps_dir}")
+
+        if self.maps_dir.exists():
+            for map_file in self.maps_dir.glob('*.ditamap'):
+                try:
+                    self.logger.info(f"Processing map file: {map_file}")
+
+                    # Read and parse the map file
+                    with open(map_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
+
+                    # Parse XML content
+                    tree = etree.fromstring(content.encode('utf-8'), self.parser)
+
+                    # Get the map title
+                    title_elem = tree.find(".//title")  # Changed from _find_first_element
+                    title = title_elem.text if title_elem is not None else map_file.stem
+                    self.logger.info(f"Map title: {title}")
+
+                    # Process topic groups
+                    groups = []
+                    for topicgroup in tree.findall(".//topicgroup"):  # Changed from iter()
+                        navtitle = topicgroup.find(".//navtitle")
+                        group_title = navtitle.text if navtitle is not None else "Untitled Group"
+                        self.logger.info(f"Processing group: {group_title}")
+
+                        # Get topics in group
+                        topics = []
+                        for topicref in topicgroup.findall(".//topicref"):
+                            href = topicref.get('href')
+                            if href:
+                                self.logger.info(f"Processing topicref with href: {href}")
+                                # Clean up href path
+                                cleaned_href = href.replace('../', '')  # Remove relative path markers
+                                topic_id = Path(cleaned_href).stem
+
+                                # Try to find the topic file
+                                topic_path = self.get_topic_path(topic_id)
+                                if topic_path:
+                                    self.logger.info(f"Found topic at: {topic_path}")
+                                    try:
+                                        # Transform topic to HTML
+                                        html_content = self.transform_to_html(topic_path)
+                                        topics.append({
+                                            'id': topic_id,
+                                            'content': html_content
+                                        })
+                                    except Exception as e:
+                                        self.logger.error(f"Error transforming topic {topic_id}: {e}")
+                                        topics.append({
+                                            'id': topic_id,
+                                            'content': f'<div class="error">Error loading topic: {str(e)}</div>'
+                                        })
+                                else:
+                                    self.logger.warning(f"Topic not found: {topic_id}")
+                                    topics.append({
+                                        'id': topic_id,
+                                        'content': '<div class="error">Topic file not found</div>'
+                                    })
+
+                        groups.append({
+                            'navtitle': group_title,
+                            'topics': topics
+                        })
+
+                    map_data = {
+                        'id': map_file.stem,
+                        'title': title,
+                        'groups': groups
+                    }
+
+                    self.logger.info(f"Added map: {map_data}")
+                    maps.append(map_data)
+
+                except Exception as e:
+                    self.logger.error(f"Error reading map {map_file}: {e}")
+                    maps.append({
+                        'id': map_file.stem,
+                        'title': map_file.stem,
+                        'error': str(e)
+                    })
+
+        return maps

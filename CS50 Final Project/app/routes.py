@@ -58,6 +58,37 @@ def serve_static(filename: str) -> FlaskResponse:
         logger.error(f"Error serving static file {filename}: {str(e)}")
         return jsonify({'error': 'File not found'}), 404
 
+
+# Ditamap routes
+@bp.route('/api/maps', methods=['GET'])
+def get_maps() -> FlaskResponse:
+    """Get all DITA maps"""
+    try:
+        maps = dita_processor.list_maps()
+        return jsonify(maps)
+    except Exception as e:
+        logger.error(f"Error getting maps: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/api/maps/<map_id>', methods=['GET'])
+def get_map(map_id: str) -> FlaskResponse:
+    """Get a specific map with all its content"""
+    try:
+        logger.info(f"Fetching map: {map_id}")
+        maps = dita_processor.list_maps()
+        map_data = next((m for m in maps if m['id'] == map_id), None)
+
+        if map_data is None:
+            logger.error(f"Map not found: {map_id}")
+            return jsonify({'error': 'Map not found'}), 404
+
+        logger.info(f"Returning map data: {map_data}")
+        return jsonify(map_data)
+    except Exception as e:
+        logger.error(f"Error getting map {map_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # API Routes
 @bp.route('/api/topics', methods=['GET', 'POST'])
 def topics() -> FlaskResponse:
