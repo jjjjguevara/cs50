@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createRef } from "react";
+import React, { useState, useEffect } from "react";
 import MapView from "./MapView";
 import MapContent from "./MapContent";
 import { api } from "../utils/api";
@@ -29,13 +29,22 @@ export default function DocumentationInterface() {
   });
   const [viewMode, setViewMode] = useState("topics"); // 'topics' or 'maps'
 
-  // Fetch topics from our API
+  // Utility function to determine file icon
+  const getFileIcon = (topicPath) => {
+    const extension = topicPath.split(".").pop();
+    return extension === "md" ? (
+      <FileText size={14} className="mr-2 text-green-600" />
+    ) : (
+      <FileText size={14} className="mr-2" />
+    );
+  };
+
+  // Fetch topics from the API
   useEffect(() => {
     setLoading(true);
     api
       .get("/topics")
       .then((data) => {
-        console.log("Received topics:", data);
         const grouped = data.reduce((acc, topic) => {
           if (!acc[topic.type]) {
             acc[topic.type] = [];
@@ -60,6 +69,7 @@ export default function DocumentationInterface() {
     }
   }, [viewMode]);
 
+  // Load topic content
   const loadTopic = async (topicId) => {
     try {
       setLoading(true);
@@ -68,14 +78,18 @@ export default function DocumentationInterface() {
         return;
       }
 
-      // Remove any file extension or path if present
+      // Remove any file extension and path if present
       const cleanId = topicId
-        .replace(/\.dita$/, "")
+        .replace(/\.(dita|md)$/, "") // Handle both .dita and .md extensions
         .split("/")
         .pop();
 
       const content = await api.getText(`/view/${cleanId}`);
-      setSelectedTopic({ id: cleanId, content });
+      setSelectedTopic({
+        id: cleanId,
+        content,
+        isMarkdown: topicId.endsWith(".md"),
+      });
     } catch (err) {
       console.error("Error loading topic:", err);
       setError(`Error loading topic: ${err.message}`);
@@ -84,6 +98,7 @@ export default function DocumentationInterface() {
     }
   };
 
+  // Toggle category visibility in the sidebar
   const toggleCategory = (category) => {
     setExpandedCategories((prev) => ({
       ...prev,
@@ -213,8 +228,13 @@ export default function DocumentationInterface() {
                             : ""
                         }`}
                       >
-                        <FileText size={14} className="mr-2" />
-                        {topic.title}
+                        {getFileIcon(topic.path)}
+                        <span className="flex-1">{topic.title}</span>
+                        {topic.path?.endsWith(".md") && (
+                          <span className="text-xs text-green-600 px-1.5 py-0.5 rounded-full bg-green-50">
+                            MD
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -240,7 +260,11 @@ export default function DocumentationInterface() {
             </div>
           )
         ) : selectedTopic ? (
-          <div className="prose max-w-none dita-content">
+          <div
+            className={`prose max-w-none ${
+              selectedTopic.isMarkdown ? "markdown-content" : "dita-content"
+            }`}
+          >
             <div dangerouslySetInnerHTML={{ __html: selectedTopic.content }} />
           </div>
         ) : (

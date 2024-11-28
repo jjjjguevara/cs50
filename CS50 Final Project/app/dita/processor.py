@@ -455,58 +455,83 @@ class DITAProcessor:
             subdir_path = self.topics_dir / subdir
             if subdir_path.exists():
                 self.logger.info(f"Checking directory: {subdir_path}")
+
+                # Handle DITA files
                 for topic_file in subdir_path.glob('*.dita'):
                     try:
-                        self.logger.info(f"Found file: {topic_file}")
-
-                        # Read the file content
+                        self.logger.info(f"Found DITA file: {topic_file}")
                         with open(topic_file, 'r', encoding='utf-8') as f:
                             content = f.read()
-
-                        # Parse with a new parser instance for each file
                         tree = etree.fromstring(content.encode('utf-8'), self.parser)
 
-                        # Find the title element - simplified approach
                         title_elem = None
                         for elem in tree.iter():
-                            tag_name = etree.QName(elem).localname
-                            if tag_name == 'title':
+                            if etree.QName(elem).localname == 'title':
                                 title_elem = elem
                                 break
 
-                        # Get basic content for preview
                         content_preview = self._extract_content_preview(tree)
 
-                        # Create topic data with fallbacks
                         topic_data = {
                             'id': topic_file.stem,
                             'title': title_elem.text if title_elem is not None else topic_file.stem,
                             'path': str(topic_file.relative_to(self.dita_root)),
                             'type': subdir,
+                            'format': 'dita',
                             'fullPath': str(topic_file),
                             'preview': content_preview or "No content available",
                             'hasContent': bool(content_preview)
                         }
-
-                        self.logger.info(f"Adding topic: {topic_data}")
+                        self.logger.info(f"Adding DITA topic: {topic_data}")
                         topics.append(topic_data)
-
                     except Exception as e:
-                        self.logger.error(f"Error processing {topic_file}: {str(e)}")
-                        # Add the topic even if there are errors
-                        topics.append({
+                        self.logger.error(f"Error processing DITA file {topic_file}: {str(e)}")
+                        topics.append(self._create_error_topic(topic_file, subdir, str(e)))
+
+                # Handle Markdown files
+                for topic_file in subdir_path.glob('*.md'):
+                    try:
+                        self.logger.info(f"Found Markdown file: {topic_file}")
+                        with open(topic_file, 'r', encoding='utf-8') as f:
+                            content = f.read()
+
+                        # Parse frontmatter and content
+                        post = frontmatter.loads(content)
+                        metadata = post.metadata
+
+                        topic_data = {
                             'id': topic_file.stem,
-                            'title': topic_file.stem,
+                            'title': metadata.get('title', topic_file.stem),
                             'path': str(topic_file.relative_to(self.dita_root)),
-                            'type': subdir,
+                            'type': metadata.get('type', subdir),
+                            'format': 'markdown',
                             'fullPath': str(topic_file),
-                            'preview': "Error loading content",
-                            'hasContent': False,
-                            'error': str(e)
-                        })
+                            'preview': post.content[:200] + "..." if post.content else "No content available",
+                            'hasContent': bool(post.content),
+                            'metadata': metadata
+                        }
+                        self.logger.info(f"Adding Markdown topic: {topic_data}")
+                        topics.append(topic_data)
+                    except Exception as e:
+                        self.logger.error(f"Error processing Markdown file {topic_file}: {str(e)}")
+                        topics.append(self._create_error_topic(topic_file, subdir, str(e)))
 
         self.logger.info(f"Total topics found: {len(topics)}")
         return topics
+
+    def _create_error_topic(self, topic_file: Path, subdir: str, error: str) -> Dict[str, Any]:
+        """Create an error topic entry"""
+        return {
+            'id': topic_file.stem,
+            'title': topic_file.stem,
+            'path': str(topic_file.relative_to(self.dita_root)),
+            'type': subdir,
+            'format': 'dita' if topic_file.suffix == '.dita' else 'markdown',
+            'fullPath': str(topic_file),
+            'preview': "Error loading content",
+            'hasContent': False,
+            'error': error
+        }
 
     def get_topic_path(self, topic_id: str) -> Optional[Path]:
         """Get the full path for a topic by its ID"""

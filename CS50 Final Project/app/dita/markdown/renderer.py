@@ -8,43 +8,74 @@ class DITAHTMLRenderer:
         self.logger = logging.getLogger(__name__)
 
     def render_metadata(self, metadata: Dict[str, Any]) -> str:
-        """Render metadata section"""
-        html = ['<div class="metadata mb-6 bg-gray-50 p-4 rounded-lg">']
+        """Render metadata table with consistent styling"""
+        html = ['<div class="metadata mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">']
         html.append('<table class="min-w-full">')
+        html.append('<tbody>')
 
-        # Process each metadata field
-        for key, value in metadata.items():
-            if key and value:  # Skip empty values
+        # Process metadata fields
+        if metadata.get('authors'):
+            html.append('<tr>')
+            html.append('<td class="py-2 px-4 font-semibold">Authors</td>')
+            html.append(f'<td class="py-2 px-4">{", ".join(metadata["authors"])}</td>')
+            html.append('</tr>')
+
+        # Other metadata fields
+        standard_fields = [
+            ('journal', 'Journal'),
+            ('doi', 'DOI'),
+            ('publication-date', 'Publication Date'),
+            ('citation', 'Citation'),
+            ('institution', 'Institution'),
+            ('type', 'Type')
+        ]
+
+        for field, label in standard_fields:
+            if metadata.get(field):
                 html.append('<tr>')
-                html.append(f'<th class="py-2 px-4 text-left">{key.title()}</th>')
-
-                # Handle different value types
-                if isinstance(value, list):
-                    html.append(f'<td class="py-2 px-4">{", ".join(value)}</td>')
-                else:
-                    html.append(f'<td class="py-2 px-4">{value}</td>')
-
+                html.append(f'<td class="py-2 px-4 font-semibold">{label}</td>')
+                html.append(f'<td class="py-2 px-4">{metadata[field]}</td>')
                 html.append('</tr>')
 
+        # Categories with styling
+        if metadata.get('categories'):
+            html.append('<tr>')
+            html.append('<td class="py-2 px-4 font-semibold">Categories</td>')
+            html.append('<td class="py-2 px-4">')
+            for category in metadata['categories']:
+                html.append(f'<span class="category-tag">{category}</span>')
+            html.append('</td>')
+            html.append('</tr>')
+
+        # Keywords with styling
+        if metadata.get('keywords'):
+            html.append('<tr>')
+            html.append('<td class="py-2 px-4 font-semibold">Keywords</td>')
+            html.append('<td class="py-2 px-4">')
+            for keyword in metadata['keywords']:
+                html.append(f'<span class="keyword-tag">{keyword}</span>')
+            html.append('</td>')
+            html.append('</tr>')
+
+        html.append('</tbody>')
         html.append('</table>')
         html.append('</div>')
+
         return '\n'.join(html)
 
     def render_content(self, content: str, metadata: Dict[str, Any]) -> str:
-        """Render main content with DITA semantics"""
-        topic_type = metadata.get('type', 'topic')
+        """Render the main content with consistent styling"""
+        html = ['<div class="dita-content">']  # Use dita-content for both types
 
-        html = [f'<div class="dita-content dita-{topic_type}">']
-
-        # Add title if present
-        if 'title' in metadata:
+        # Add title
+        if metadata.get('title'):
             html.append(f'<h1 class="text-2xl font-bold mb-4">{metadata["title"]}</h1>')
 
-        # Add metadata section
+        # Add metadata
         html.append(self.render_metadata(metadata))
 
         # Add main content
-        html.append(content)
+        html.append(f'<div class="topic-content">{content}</div>')
 
         html.append('</div>')
         return '\n'.join(html)

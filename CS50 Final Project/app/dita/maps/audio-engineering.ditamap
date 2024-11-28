@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map id="audio-engineering">
     <title>Audio Engineering and Acoustics Fundamentals</title>
@@ -8,8 +8,11 @@
         <topicmeta>
             <navtitle>Fundamental Concepts</navtitle>
         </topicmeta>
-        <topicref href="../topics/audio/sound-basics.dita" type="concept"/>
-        <topicref href="../topics/audio/waveform-properties.dita" type="concept"/>
+        <topicref href="../topics/audio/sound-basics.dita" type="concept" />
+        <topicref
+            href="../topics/audio/waveform-properties.dita"
+            type="concept"
+        />
     </topicgroup>
 
     <!-- Physics and Acoustics -->
@@ -17,9 +20,18 @@
         <topicmeta>
             <navtitle>Physics of Sound</navtitle>
         </topicmeta>
-        <topicref href="../topics/acoustics/sound-propagation.dita" type="concept"/>
-        <topicref href="../topics/acoustics/room-acoustics.dita" type="concept"/>
-        <topicref href="../topics/acoustics/frequency-response.dita" type="concept"/>
+        <topicref
+            href="../topics/acoustics/sound-propagation.dita"
+            type="concept"
+        />
+        <topicref
+            href="../topics/acoustics/room-acoustics.dita"
+            type="concept"
+        />
+        <topicref
+            href="../topics/acoustics/frequency-response.dita"
+            type="concept"
+        />
     </topicgroup>
 
     <!-- Practical Applications -->
@@ -27,7 +39,21 @@
         <topicmeta>
             <navtitle>Recording and Mixing</navtitle>
         </topicmeta>
-        <topicref href="../topics/audio/microphone-placement.dita" type="task"/>
-        <topicref href="../topics/audio/eq-usage.dita" type="task"/>
+        <topicref
+            href="../topics/audio/microphone-placement.dita"
+            type="task"
+        />
+        <topicref href="../topics/audio/eq-usage.dita" type="task" />
+    </topicgroup>
+
+    <!-- Acoustics and the Environment -->
+    <topicgroup>
+        <topicmeta>
+            <navtitle>Health and Safety</navtitle>
+        </topicmeta>
+        <topicref
+            href="../topics/acoustics/health-and-safety.md"
+            type="concept"
+        />
     </topicgroup>
 </map>

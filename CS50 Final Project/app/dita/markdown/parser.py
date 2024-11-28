@@ -40,7 +40,7 @@ class MarkdownParser:
             return {}, ""
 
     def parse_content(self, content: str) -> Tuple[Dict[str, Any], str]:
-        """Parse Markdown content string and return metadata and HTML content"""
+        """Parse Markdown content and render with consistent metadata"""
         try:
             # Parse front matter
             post = frontmatter.loads(content)
@@ -49,13 +49,21 @@ class MarkdownParser:
             # Convert markdown to HTML using custom renderer
             html_content = self.md.convert(post.content)
 
-            # Get additional metadata from the YAML extension
-            metadata.update(self.yaml_ext.get_metadata())
+            # Render metadata in DITA style
+            metadata_html = self.renderer.render_metadata(metadata, 'markdown')
 
-            # Reset markdown instance for next use
-            self.md.reset()
+            # Combine metadata and content
+            final_html = f"""
+            <div class="dita-content">
+                <h1 class="text-2xl font-bold mb-4">{metadata.get('title', '')}</h1>
+                {metadata_html}
+                <div class="topic-content">
+                    {html_content}
+                </div>
+            </div>
+            """
 
-            return metadata, html_content
+            return metadata, final_html
         except Exception as e:
             self.logger.error(f"Error parsing markdown content: {e}")
             return {}, ""

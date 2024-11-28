@@ -1,3 +1,19 @@
+---
+title: Acoustical Health and Safety Facts Sheet
+type: concept
+authors:
+  - Audio Engineering Team
+categories:
+  - Acoustics
+  - Health & Safety
+keywords:
+  - safety
+  - health
+  - acoustics
+  - exposure limits
+  - regulations
+---
+
 ## Acoustical Health and Safety Facts Sheet
 
 | Category                     | Metric/Information                     | Value/Details                       |
