@@ -130,6 +130,38 @@ def topics() -> FlaskResponse:
         logger.error(f"Error in topics endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@bp.route('/api/topics/markdown', methods=['POST'])
+def create_markdown_topic() -> FlaskResponse:
+    """Handle Markdown topic creation"""
+    try:
+        if not request.is_json:
+            logger.warning("Received non-JSON request for markdown topic creation")
+            return jsonify({'error': 'Request must be JSON'}), 400
+
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({'error': 'Markdown content is required'}), 400
+
+        # Save markdown file with the same processing as regular topics
+        title = data.get('title', 'Untitled')
+        content = data.get('content')
+        topic_type = data.get('type', 'concept')
+
+        logger.info(f"Creating new markdown topic: {title}")
+        topic_path = dita_processor.create_topic(title, content, topic_type)
+
+        if topic_path:
+            return jsonify({
+                'message': 'Markdown topic created successfully',
+                'path': str(topic_path)
+            })
+        return jsonify({'error': 'Failed to create markdown topic'}), 500
+
+    except Exception as e:
+        logger.error(f"Error creating markdown topic: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
 @bp.route('/api/view/<topic_id>', methods=['GET'])
 def view_topic(topic_id: str) -> FlaskResponse:
     """View a topic as HTML"""
@@ -140,13 +172,13 @@ def view_topic(topic_id: str) -> FlaskResponse:
         topic_path = dita_processor.get_topic_path(topic_id)
 
         if not topic_path:
-            logger.error(f"Topic not found: {topic_id}")
-            return Response("""
-                <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-                    <h3 class="font-bold">Topic Not Found</h3>
-                    <p>The requested topic could not be found.</p>
-                </div>
-            """, mimetype='text/html')
+                    logger.error(f"Topic not found: {topic_id}")
+                    return Response("""
+                        <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                            <h3 class="font-bold">Topic Not Found</h3>
+                            <p>The requested topic could not be found (.dita or .md)</p>
+                        </div>
+                    """, mimetype='text/html')
 
         logger.info(f"Found topic at: {topic_path}")
 

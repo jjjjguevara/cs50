@@ -1,12 +1,16 @@
-from typing import Optional, List, Dict, TypeVar, Sequence, Union, cast, Any
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union, cast
 from pathlib import Path
 from lxml import etree
 import logging
+import frontmatter
+import markdown
+from markdown.extensions import fenced_code, tables, meta
 
 # Type aliases and generics
 HTMLString = str
 HTMLElements = List[str]
 XMLElement = Any
+MarkdownContent = TypeVar('MarkdownContent', bound=Dict[str, Any])
 
 class DITAProcessor:
     # Class variable type annotations
@@ -45,6 +49,13 @@ class DITAProcessor:
             load_dtd=False,
             no_network=True
         )
+
+        self.md = markdown.Markdown(extensions=[
+            'fenced_code',
+            'tables',
+            'meta',
+            'attr_list'
+        ])
 
         # Ensure directories exist
         self._create_directories()
@@ -162,6 +173,20 @@ class DITAProcessor:
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
 
+    def _parse_markdown(self, content: str) -> Tuple[Dict[str, Any], str]:
+        """Parse Markdown content with YAML front matter"""
+        try:
+            # Parse front matter and content
+            post = frontmatter.loads(content)
+
+            # Convert markdown to HTML
+            html_content = self.md.convert(post.content)
+
+            return post.metadata, html_content
+        except Exception as e:
+            self.logger.error(f"Error parsing markdown: {e}")
+            return {}, ""
+
     def _transform_list(self, list_elem: XMLElement) -> str:
         """Helper method to transform lists to HTML"""
         tag = etree.QName(list_elem).localname
@@ -177,11 +202,47 @@ class DITAProcessor:
     def transform_to_html(self, input_path: Path) -> HTMLString:
         """Transform DITA content to HTML"""
         try:
+            # Check if file is markdown
+            if input_path.suffix == '.md':
+                with open(input_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                metadata, html_content = self._parse_markdown(content)
+                return self._generate_markdown_html(metadata, html_content)
             self.logger.info(f"Transforming {input_path} to HTML")
             doc = self._parse_dita_file(input_path)
             return self._generate_html_content(doc, input_path)
         except Exception as e:
             return self._create_error_html(e, input_path)
+
+    def _generate_markdown_html(self, metadata: Dict[str, Any], content: str) -> HTMLString:
+        """Generate HTML from markdown content with metadata"""
+        html_content = ['<div class="markdown-content">']
+
+        # Add title if present
+        if 'title' in metadata:
+            html_content.append(
+                f'<h1 class="text-2xl font-bold mb-4">{metadata["title"]}</h1>'
+            )
+
+        # Add metadata table if present
+        if metadata:
+            html_content.append('<div class="metadata mb-6 bg-gray-50 p-4 rounded-lg">')
+            html_content.append('<table class="min-w-full">')
+            for key, value in metadata.items():
+                if key != 'title':  # Skip title as it's already shown
+                    html_content.append(f'<tr><td class="font-semibold">{key}</td>')
+                    if isinstance(value, list):
+                        html_content.append(f'<td>{", ".join(value)}</td>')
+                    else:
+                        html_content.append(f'<td>{value}</td>')
+                    html_content.append('</tr>')
+            html_content.append('</table></div>')
+
+        # Add main content
+        html_content.append(content)
+        html_content.append('</div>')
+
+        return '\n'.join(html_content)
 
     def _parse_dita_file(self, input_path: Path) -> XMLElement:
         """Parse DITA file into XML tree"""
@@ -450,6 +511,18 @@ class DITAProcessor:
     def get_topic_path(self, topic_id: str) -> Optional[Path]:
         """Get the full path for a topic by its ID"""
         self.logger.info(f"Looking for topic with ID: {topic_id}")
+
+        # First try with .dita extension
+        for subdir in ['acoustics', 'articles', 'audio', 'abstracts', 'journals']:
+            dita_path = self.topics_dir / subdir / f"{topic_id}.dita"
+            if dita_path.exists():
+                return dita_path
+
+        # Then try with .md extension
+        for subdir in ['acoustics', 'articles', 'audio', 'abstracts', 'journals']:
+            md_path = self.topics_dir / subdir / f"{topic_id}.md"
+            if md_path.exists():
+                return md_path
 
         for subdir in ['acoustics', 'articles', 'audio', 'abstracts', 'journals']:
             potential_path = self.topics_dir / subdir / f"{topic_id}.dita"
