@@ -1,0 +1,39 @@
+{% extends "base.html" %} {% block title %}{{ title }} - Academic
+Documentation{% endblock %} {% block css %}
+<link
+    href="{{ url_for('static', filename='css/academic.css') }}"
+    rel="stylesheet"
+/>
+<link href="{{ url_for('static', filename='css/nav.css') }}" rel="stylesheet" />
+{% endblock %} {% block header %}
+<header id="header-wrapper">
+    <div id="header">
+        <div id="branding">
+            <!-- Logo and site title will be populated by React -->
+            <div id="header-content"></div>
+        </div>
+        <!-- Navigation will be populated by React -->
+        <div id="main-nav"></div>
+    </div>
+</header>
+{% endblock %} {% block content %}
+<div id="content" class="container mx-auto">
+    <div class="flex">
+        <!-- Sidebar navigation will be populated by React -->
+        <div id="article-sidebar" class="w-64"></div>
+
+        <!-- Main article content will be populated by React -->
+        <div id="article-content" class="flex-1"></div>
+    </div>
+</div>
+{% endblock %} {% block footer %}
+<footer id="footer">
+    <!-- Footer content will be populated by React -->
+    <div id="footer-content"></div>
+</footer>
+{% endblock %} {% block scripts %}
+<script
+    type="module"
+    src="{{ url_for('static', filename='js/academic.jsx') }}"
+></script>
+{% endblock %}

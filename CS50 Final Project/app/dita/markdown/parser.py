@@ -50,7 +50,7 @@ class MarkdownParser:
             html_content = self.md.convert(post.content)
 
             # Render metadata in DITA style
-            metadata_html = self.renderer.render_metadata(metadata, 'markdown')
+            metadata_html = self.renderer.render_metadata(metadata)
 
             # Combine metadata and content
             final_html = f"""

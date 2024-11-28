@@ -1,0 +1,141 @@
+/* Article Layout */
+#content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Article Header */
+.article-header {
+    margin-bottom: 2rem;
+}
+
+.article-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 1rem;
+}
+
+.article-meta {
+    font-size: 0.875rem;
+    color: #4a5568;
+}
+
+/* Article Content */
+.article-content {
+    font-size: 1.125rem;
+    line-height: 1.75;
+    color: #2d3748;
+}
+
+/* Section Headings */
+.article-content h2 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin-top: 2.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.article-content h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+/* Academic Tools */
+.academic-tools {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+}
+
+.tool-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    color: #4a5568;
+    text-decoration: none;
+}
+
+.tool-item:hover {
+    background: #edf2f7;
+    border-radius: 0.375rem;
+}
+
+/* Bibliography */
+.bibliography {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid #e2e8f0;
+}
+
+.bibliography h2 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 1.5rem;
+}
+
+.bibliography-item {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+    text-indent: -2rem;
+}
+
+/* Footnotes */
+.footnotes {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.875rem;
+}
+
+.footnote-ref {
+    font-size: 0.75em;
+    vertical-align: super;
+    color: #2b6cb0;
+    text-decoration: none;
+}
+
+/* Related Entries */
+.related-entries {
+    margin-top: 3rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+}
+
+.related-entries h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 1rem;
+}
+
+.related-entries ul {
+    list-style: none;
+    padding: 0;
+}
+
+.related-entries li {
+    margin-bottom: 0.5rem;
+}
+
+.related-entries a {
+    color: #2b6cb0;
+    text-decoration: none;
+}
+
+.related-entries a:hover {
+    text-decoration: underline;
+}
