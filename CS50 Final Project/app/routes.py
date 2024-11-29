@@ -8,7 +8,6 @@ from flask import (
     render_template,
 )
 from typing import Union, Tuple, Any
-from pathlib import Path
 import logging
 from .dita.processor import DITAProcessor
 import traceback
@@ -30,7 +29,7 @@ bp = Blueprint(
 )
 dita_processor = DITAProcessor()
 
-# Define a type alias for Flask responses
+# Type alias for Flask responses
 FlaskResponse = Union[Response, Tuple[Response, int], Tuple[str, int], Any]
 
 # Main routes
@@ -58,133 +57,23 @@ def serve_static(filename: str) -> FlaskResponse:
         logger.error(f"Error serving static file {filename}: {str(e)}")
         return jsonify({'error': 'File not found'}), 404
 
-
-# Ditamap routes
-@bp.route('/api/maps', methods=['GET'])
-def get_maps() -> FlaskResponse:
-    """Get all DITA maps"""
-    try:
-        maps = dita_processor.list_maps()
-        return jsonify(maps)
-    except Exception as e:
-        logger.error(f"Error getting maps: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@bp.route('/api/maps/<map_id>', methods=['GET'])
-def get_map(map_id: str) -> FlaskResponse:
-    """Get a specific map with all its content"""
-    try:
-        logger.info(f"Fetching map: {map_id}")
-        maps = dita_processor.list_maps()
-        map_data = next((m for m in maps if m['id'] == map_id), None)
-
-        if map_data is None:
-            logger.error(f"Map not found: {map_id}")
-            return jsonify({'error': 'Map not found'}), 404
-
-        logger.info(f"Returning map data: {map_data}")
-        return jsonify(map_data)
-    except Exception as e:
-        logger.error(f"Error getting map {map_id}: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-# API Routes
-@bp.route('/api/topics', methods=['GET', 'POST'])
-def topics() -> FlaskResponse:
-    """Handle topic operations"""
-    try:
-        if request.method == 'GET':
-            logger.info("Fetching all topics")
-            topics = dita_processor.list_topics()
-            return jsonify(topics)
-
-        # POST handling
-        if not request.is_json:
-            logger.warning("Received non-JSON request for topic creation")
-            return jsonify({'error': 'Request must be JSON'}), 400
-
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'Empty request body'}), 400
-
-        title = data.get('title')
-        content = data.get('content')
-        topic_type = data.get('type', 'concept')
-
-        if not title or not content:
-            logger.warning("Missing required fields for topic creation")
-            return jsonify({'error': 'Title and content are required'}), 400
-
-        logger.info(f"Creating new topic: {title}")
-        topic_path = dita_processor.create_topic(title, content, topic_type)
-
-        if topic_path:
-            return jsonify({
-                'message': 'Topic created successfully',
-                'path': str(topic_path)
-            })
-        return jsonify({'error': 'Failed to create topic'}), 500
-
-    except Exception as e:
-        logger.error(f"Error in topics endpoint: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@bp.route('/api/topics/markdown', methods=['POST'])
-def create_markdown_topic() -> FlaskResponse:
-    """Handle Markdown topic creation"""
-    try:
-        if not request.is_json:
-            logger.warning("Received non-JSON request for markdown topic creation")
-            return jsonify({'error': 'Request must be JSON'}), 400
-
-        data = request.get_json()
-        if not data or 'content' not in data:
-            return jsonify({'error': 'Markdown content is required'}), 400
-
-        # Save markdown file with the same processing as regular topics
-        title = data.get('title', 'Untitled')
-        content = data.get('content')
-        topic_type = data.get('type', 'concept')
-
-        logger.info(f"Creating new markdown topic: {title}")
-        topic_path = dita_processor.create_topic(title, content, topic_type)
-
-        if topic_path:
-            return jsonify({
-                'message': 'Markdown topic created successfully',
-                'path': str(topic_path)
-            })
-        return jsonify({'error': 'Failed to create markdown topic'}), 500
-
-    except Exception as e:
-        logger.error(f"Error creating markdown topic: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-
+# API routes
 @bp.route('/api/view/<topic_id>', methods=['GET'])
 def view_topic(topic_id: str) -> FlaskResponse:
     """View a topic as HTML"""
     try:
         logger.info(f"Attempting to view topic: {topic_id}")
-
-        # Get topic path
         topic_path = dita_processor.get_topic_path(topic_id)
-
         if not topic_path:
-                    logger.error(f"Topic not found: {topic_id}")
-                    return Response("""
-                        <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-                            <h3 class="font-bold">Topic Not Found</h3>
-                            <p>The requested topic could not be found (.dita or .md)</p>
-                        </div>
-                    """, mimetype='text/html')
+            logger.error(f"Topic not found: {topic_id}")
+            return Response("""
+                <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                    <h3 class="font-bold">Topic Not Found</h3>
+                    <p>The requested topic could not be found (.dita or .md)</p>
+                </div>
+            """, mimetype='text/html')
 
-        logger.info(f"Found topic at: {topic_path}")
-
-        # Transform to HTML
         html_content = dita_processor.transform_to_html(topic_path)
-
         if html_content:
             return Response(html_content, mimetype='text/html')
         else:
@@ -204,6 +93,17 @@ def view_topic(topic_id: str) -> FlaskResponse:
             </div>
         """, mimetype='text/html')
 
+@bp.route('/api/search', methods=['GET'])
+def search() -> FlaskResponse:
+    """Search functionality"""
+    query = request.args.get('q', '')
+    try:
+        results = dita_processor.search_topics(query)
+        return jsonify(results)
+    except Exception as e:
+        logger.error(f"Search error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @bp.route('/api/debug/topics')
 def debug_topics() -> FlaskResponse:
     """Debug endpoint for topic listing"""
@@ -212,10 +112,6 @@ def debug_topics() -> FlaskResponse:
         debug_info = {
             'topics_found': len(topics),
             'topics': topics,
-            'directories_checked': [
-                str(dita_processor.topics_dir / subdir)
-                for subdir in ['abstracts', 'acoustics', 'articles', 'audio', 'journals']
-            ],
             'app_root': str(current_app.root_path),
             'dita_root': str(dita_processor.dita_root)
         }
