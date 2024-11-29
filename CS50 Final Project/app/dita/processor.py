@@ -225,19 +225,14 @@ class DITAProcessor:
             tree = etree.fromstring(content.encode('utf-8'), self.parser)
             html_content = ['<div class="map-content">']
 
-            # Add title
+            # Handle main title differently
             title_elem = tree.find(".//title")
-            if title_elem is not None:
-                html_content.append(f'<h1 class="map-title">{title_elem.text}</h1>')
+            if title_elem is not None and title_elem.text:
+                html_content.append(f'<h1 class="content-title">{title_elem.text}</h1>')
 
-            # Process each topic group
+            # Process each topic group - don't render navtitle
             for topicgroup in tree.findall(".//topicgroup"):
-                # Get group title
-                navtitle = topicgroup.find(".//navtitle")
-                if navtitle is not None:
-                    html_content.append(f'<h2 class="group-title">{navtitle.text}</h2>')
-
-                html_content.append('<div class="group-content">')
+                html_content.append('<div class="content-section">')
 
                 # Process topics in group
                 for topicref in topicgroup.findall(".//topicref"):

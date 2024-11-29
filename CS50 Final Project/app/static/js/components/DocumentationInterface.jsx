@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import MapView from "./MapView";
 import { api } from "../utils/api";
-import "../../css/dita.css";
+import "../../css/content.css";
 import {
   ChevronRight,
   ChevronDown,
