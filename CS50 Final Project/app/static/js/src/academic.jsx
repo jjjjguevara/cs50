@@ -75,3 +75,42 @@ root.render(
     </ErrorBoundary>
   </React.StrictMode>,
 );
+
+// Get the topic ID from the URL if available
+const getTopicId = () => {
+  const path = window.location.pathname;
+  const matches = path.match(/\/entry\/(.+)/);
+  return matches ? matches[1] : null;
+};
+
+// Mount components
+document.addEventListener("DOMContentLoaded", () => {
+  // Create roots for each mount point
+  const mountComponent = (id, Component, props = {}) => {
+    const container = document.getElementById(id);
+    if (container) {
+      const root = ReactDOM.createRoot(container);
+      root.render(
+        <React.StrictMode>
+          <Component {...props} />
+        </React.StrictMode>,
+      );
+    }
+  };
+
+  const topicId = getTopicId();
+
+  // Mount each component
+  mountComponent("header-content", TopNav);
+  mountComponent("main-nav", SearchBar);
+  mountComponent("article-sidebar", SideNav);
+
+  // Only mount content components if we have a topic ID
+  if (topicId) {
+    mountComponent("article-header", ArticleHeader);
+    mountComponent("table-of-contents", TableOfContents);
+    mountComponent("article-content", ArticleContent, { topicId });
+  }
+
+  mountComponent("footer-content", FooterNav);
+});

@@ -1,67 +1,42 @@
 <!-- app/templates/academic.html -->
 <!doctype html>
 <html>
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Academic View</title>
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='css/academic.css') }}"
-        />
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='css/nav.css') }}"
-        />
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='css/dita.css') }}"
-        />
-    </head>
+    <!-- ... head section ... -->
     <body>
         <div class="academic-layout">
-            <div id="header-content"></div>
-            <div id="main-nav"></div>
-            <div id="article-sidebar"></div>
-            <div id="article-content" class="content-wrapper">
-                {% if error %}
-                <div class="error">{{ error }}</div>
-                {% elif content %}
-                <article class="article-content">
-                    {% if metadata %}
-                    <div id="article-header"></div>
-                    {% endif %} {% if toc %}
-                    <div id="table-of-contents"></div>
-                    {% endif %}
-                    <div class="content-body">{{ content | safe }}</div>
-                    <div class="academic-tools">
-                        <h2>Academic Tools</h2>
-                        <ul>
-                            <li>
-                                <a href="#cite" class="tool-link"
-                                    >How to cite this entry</a
-                                >
-                            </li>
-                            <li>
-                                <a href="#pdf" class="tool-link"
-                                    >Preview PDF version</a
-                                >
-                            </li>
-                            <li>
-                                <a href="#lookup" class="tool-link"
-                                    >Look up topics</a
-                                >
-                            </li>
-                        </ul>
-                    </div>
-                </article>
-                {% endif %}
-            </div>
+            <!-- ... other divs ... -->
         </div>
 
         <script
             type="module"
             src="{{ url_for('static', filename='dist/academic.js') }}"
         ></script>
+        <script>
+            import React from "react";
+            import ReactDOM from "react-dom/client";
+            import MapView from "./components/MapView";
+
+            window.addEventListener("renderMap", (event) => {
+                const { mapId } = event.detail;
+                const mapContent = document.getElementById("map-content");
+                if (mapContent) {
+                    // Clear previous content
+                    while (mapContent.firstChild) {
+                        mapContent.removeChild(mapContent.firstChild);
+                    }
+
+                    // Create new React root and render MapView
+                    const root = ReactDOM.createRoot(mapContent);
+                    root.render(
+                        React.createElement(MapView, {
+                            mapId: mapId,
+                            onSelectTopic: (topicId) => {
+                                window.location.href = `/entry/${topicId}`;
+                            },
+                        }),
+                    );
+                }
+            });
+        </script>
     </body>
 </html>

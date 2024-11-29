@@ -536,25 +536,26 @@ class DITAProcessor:
         """Get the full path for a topic by its ID"""
         self.logger.info(f"Looking for topic with ID: {topic_id}")
 
-        # First try with .dita extension
+        # Remove any file extension from topic_id
+        topic_base = topic_id.replace('.md', '').replace('.dita', '')
+
+        # Search in each subdirectory
         for subdir in ['acoustics', 'articles', 'audio', 'abstracts', 'journals', 'reference']:
-            dita_path = self.topics_dir / subdir / f"{topic_id}.dita"
+            subdir_path = self.topics_dir / subdir
+
+            # Check for both .dita and .md files
+            dita_path = subdir_path / f"{topic_base}.dita"
+            md_path = subdir_path / f"{topic_base}.md"
+
+            self.logger.info(f"Checking DITA path: {dita_path}")
             if dita_path.exists():
+                self.logger.info(f"Found topic at: {dita_path}")
                 return dita_path
 
-        # Then try with .md extension
-        for subdir in ['acoustics', 'articles', 'audio', 'abstracts', 'journals', 'reference']:
-            md_path = self.topics_dir / subdir / f"{topic_id}.md"
+            self.logger.info(f"Checking MD path: {md_path}")
             if md_path.exists():
+                self.logger.info(f"Found topic at: {md_path}")
                 return md_path
-
-        for subdir in ['acoustics', 'articles', 'audio', 'abstracts', 'journals', 'reference']:
-            potential_path = self.topics_dir / subdir / f"{topic_id}.dita"
-            self.logger.info(f"Checking path: {potential_path}")
-
-            if potential_path.exists():
-                self.logger.info(f"Found topic at: {potential_path}")
-                return potential_path
 
         self.logger.error(f"No topic found with ID: {topic_id}")
         return None
@@ -591,75 +592,44 @@ class DITAProcessor:
                 try:
                     self.logger.info(f"Processing map file: {map_file}")
 
-                    # Read and parse the map file
                     with open(map_file, 'r', encoding='utf-8') as f:
                         content = f.read()
 
-                    # Parse XML content
                     tree = etree.fromstring(content.encode('utf-8'), self.parser)
 
                     # Get the map title
-                    title_elem = tree.find(".//title")  # Changed from _find_first_element
+                    title_elem = tree.find(".//title")
                     title = title_elem.text if title_elem is not None else map_file.stem
-                    self.logger.info(f"Map title: {title}")
 
                     # Process topic groups
                     groups = []
-                    for topicgroup in tree.findall(".//topicgroup"):  # Changed from iter()
+                    for topicgroup in tree.findall(".//topicgroup"):
                         navtitle = topicgroup.find(".//navtitle")
                         group_title = navtitle.text if navtitle is not None else "Untitled Group"
-                        self.logger.info(f"Processing group: {group_title}")
 
-                        # Get topics in group
                         topics = []
                         for topicref in topicgroup.findall(".//topicref"):
                             href = topicref.get('href')
                             if href:
-                                self.logger.info(f"Processing topicref with href: {href}")
-                                # Clean up href path
-                                cleaned_href = href.replace('../', '')  # Remove relative path markers
-                                topic_id = Path(cleaned_href).stem
-
-                                # Try to find the topic file
-                                topic_path = self.get_topic_path(topic_id)
-                                if topic_path:
-                                    self.logger.info(f"Found topic at: {topic_path}")
-                                    try:
-                                        # Transform topic to HTML
-                                        html_content = self.transform_to_html(topic_path)
-                                        topics.append({
-                                            'id': topic_id,
-                                            'content': html_content
-                                        })
-                                    except Exception as e:
-                                        self.logger.error(f"Error transforming topic {topic_id}: {e}")
-                                        topics.append({
-                                            'id': topic_id,
-                                            'content': f'<div class="error">Error loading topic: {str(e)}</div>'
-                                        })
-                                else:
-                                    self.logger.warning(f"Topic not found: {topic_id}")
-                                    topics.append({
-                                        'id': topic_id,
-                                        'content': '<div class="error">Topic file not found</div>'
-                                    })
+                                topic_id = Path(href).stem
+                                topics.append({
+                                    'id': topic_id,
+                                    'href': href
+                                })
 
                         groups.append({
                             'navtitle': group_title,
                             'topics': topics
                         })
 
-                    map_data = {
+                    maps.append({
                         'id': map_file.stem,
                         'title': title,
                         'groups': groups
-                    }
-
-                    self.logger.info(f"Added map: {map_data}")
-                    maps.append(map_data)
+                    })
 
                 except Exception as e:
-                    self.logger.error(f"Error reading map {map_file}: {e}")
+                    self.logger.error(f"Error processing map {map_file}: {e}")
                     maps.append({
                         'id': map_file.stem,
                         'title': map_file.stem,

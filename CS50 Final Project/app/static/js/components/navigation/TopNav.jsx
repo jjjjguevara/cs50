@@ -5,8 +5,12 @@ const TopNav = () => {
   return (
     <nav className="top-nav">
       {/* Logo Section */}
-      <div className="site-logo">
+      {/* <div className="site-logo">
         <img src="/static/img/logos/logo.png" alt="Site Logo" />
+        <h1 className="site-title">Documentation</h1>
+      </div>
+       */}
+      <div className="site-logo">
         <h1 className="site-title">Documentation</h1>
       </div>
 
