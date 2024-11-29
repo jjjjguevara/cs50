@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@babel/preset-react": "^7.25.9",
     "axios": "^1.7.8",
     "bootstrap": "^5.3.3",
     "lucide-react": "^0.461.0",

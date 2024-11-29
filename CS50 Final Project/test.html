@@ -1,0 +1,846 @@
+
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Academic View</title>
+        <!-- Bootstrap CSS -->
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+        <!-- Your existing CSS -->
+        <link
+            rel="stylesheet"
+            href="/static/css/global.css"
+        />
+        <link
+            rel="stylesheet"
+            href="/static/css/academic.css"
+        />
+        <link
+            rel="stylesheet"
+            href="/static/css/nav.css"
+        />
+        <link
+            rel="stylesheet"
+            href="/static/css/map.css"
+        />
+        <link
+            rel="stylesheet"
+            href="/static/css/content.css"
+        />
+    </head>
+    <body>
+        <div id="root"></div>
+            <!-- Top Navigation -->
+            <nav
+                class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top"
+                id="top-nav"
+            >
+                <div class="container-fluid px-4">
+                    <a class="navbar-brand" href="/">Home</a>
+                    <button
+                        class="navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#navbarContent"
+                    >
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+
+                    <div class="collapse navbar-collapse" id="navbarContent">
+                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/articles"
+                                    >Articles</a
+                                >
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a
+                                    class="nav-link dropdown-toggle"
+                                    href="#"
+                                    id="browseDropdown"
+                                    role="button"
+                                    data-bs-toggle="dropdown"
+                                >
+                                    Browse
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <!-- Your browse menu items -->
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a
+                                    class="nav-link dropdown-toggle"
+                                    href="#"
+                                    id="aboutDropdown"
+                                    role="button"
+                                    data-bs-toggle="dropdown"
+                                >
+                                    About
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <!-- Your about menu items -->
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <div class="d-flex">
+                <!-- Left Sidebar -->
+                <div class="sidebar left-sidebar" id="left-sidebar">
+                    <div class="sidebar-header">
+                        <button class="btn btn-link" id="toggle-sidebar">
+                            <i class="bi bi-list"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar-content">
+                        <!-- Your sidebar content will go here -->
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="main-content">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <!-- Article Content -->
+                            <div class="col-md-9">
+                                <div id="article-content">
+                                     <div class="map-content">
+<h1 class="content-title">Audio Engineering and Acoustics Fundamentals</h1>
+<div class="content-section">
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Sound Basics</h1>
+<p class="text-lg text-gray-600 mb-6">Understanding the fundamental properties and characteristics of sound.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">What is Sound?</h2>
+<p class="mb-4">Sound is a form of energy that travels through matter as mechanical waves. These waves are created by vibrating objects and propagate through a medium (typically air) as compressions and rarefactions of molecules.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Key Properties of Sound</h2>
+<p class="mb-4">Sound has several basic properties that define its characteristics:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Human Perception of Sound</h2>
+<p class="mb-4">The human auditory system can typically perceive frequencies between 20 Hz and 20,000 Hz, with sensitivity varying across this range. Sound intensity is perceived logarithmically, which is why we use the decibel scale for measurement.</p>
+</div>
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Waveform Properties</h1>
+<p class="text-lg text-gray-600 mb-6">Understanding the characteristics and behavior of audio waveforms.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Basic Waveform Types</h2>
+<p class="mb-4">Audio waveforms come in several basic forms:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Complex Waveforms</h2>
+<p class="mb-4">Most natural sounds consist of complex waveforms that combine multiple frequencies and harmonics. These can be analyzed using Fourier analysis, which breaks down complex waves into their constituent sine waves.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Harmonic Content</h2>
+<p class="mb-4">Harmonics are integer multiples of a fundamental frequency that contribute to a sound's timbre. The relative strength of different harmonics gives different instruments their distinctive sounds.</p>
+</div>
+</div>
+<div class="content-section">
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Sound Propagation</h1>
+<p class="text-lg text-gray-600 mb-6">Understanding how sound waves travel through different mediums.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Wave Motion</h2>
+<p class="mb-4">Sound propagates through elastic media as a longitudinal wave, where particles oscillate parallel to the direction of wave travel. The speed of sound varies depending on the medium's properties.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Propagation Speed</h2>
+<p class="mb-4">Sound travels at different speeds through different materials:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Air (20°C): approximately 343 meters per second</li>
+<li class="mb-2">Water: approximately 1,481 meters per second</li>
+<li class="mb-2">Steel: approximately 5,120 meters per second</li>
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Factors Affecting Propagation</h2>
+<p class="mb-4">Several factors influence sound propagation:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+</div>
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Room Acoustics</h1>
+<div class="metadata mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+<table class="min-w-full">
+<tbody>
+<tr>
+<td class="py-2 px-4 font-semibold">Authors</td>
+<td class="py-2 px-4">Dr. Jane Smith, Ph.D., Prof. Peter Anderson</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Institution</td>
+<td class="py-2 px-4">Audio Engineering Institute</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Categories</td>
+<td class="py-2 px-4">
+<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2 text-sm">Room Acoustics</span>
+<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2 text-sm">Studio Design</span>
+</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Keywords</td>
+<td class="py-2 px-4">
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">modal response</span>
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">room modes</span>
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">standing waves</span>
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">acoustic treatment</span>
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">reverberation time</span>
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">RT60</span>
+</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Journal</td>
+<td class="py-2 px-4">Journal of Audio Engineering and Acoustics</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Doi</td>
+<td class="py-2 px-4">10.1000/jaes.2024.11.001</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Publication-Date</td>
+<td class="py-2 px-4">2024-11-27</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Citation</td>
+<td class="py-2 px-4">Smith, J., `&` Anderson, P. (2024). Room Acoustics: Theory and Practice in Audio Engineering. Journal of Audio Engineering and Acoustics, 45(2), 112-128.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="text-lg text-gray-600 mb-6">A comprehensive analysis of room acoustics principles and their practical applications in modern audio engineering environments.</p>
+<p class="mb-4">This paper presents a detailed examination of room acoustics principles and their implementation in professional audio environments. We investigate the relationship between room dimensions, modal response, and acoustic treatment methods, providing evidence-based recommendations for optimizing critical listening spaces. The study combines theoretical acoustic modeling with real-world measurements from professional recording studios and control rooms.</p>
+<p class="text-lg text-gray-600 mb-6">Understanding how sound behaves within enclosed spaces.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Acoustic Phenomena</h2>
+<p class="mb-4">Room acoustics involve several key phenomena:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Room Modes</h2>
+<p class="mb-4">Room modes are resonant frequencies determined by room dimensions. They occur in three types:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Acoustic Treatment</h2>
+<p class="mb-4">Various materials and structures can be used to control room acoustics:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Bass traps for low-frequency control</li>
+<li class="mb-2">Diffusers for scattered reflections</li>
+<li class="mb-2">Absorptive panels for echo reduction</li>
+<li class="mb-2">Resonant absorbers for specific frequencies</li>
+</ul>
+</div>
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Frequency Response</h1>
+<p class="text-lg text-gray-600 mb-6">Understanding how systems and spaces respond to different frequencies.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Defining Frequency Response</h2>
+<p class="mb-4">Frequency response describes how a system or space handles different frequencies, typically measured as amplitude variation across the frequency spectrum.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Measurement and Analysis</h2>
+<p class="mb-4">Frequency response is typically measured using:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Common Characteristics</h2>
+<p class="mb-4">Key aspects of frequency response include:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+</div>
+</div>
+<div class="content-section">
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Microphone Placement Techniques</h1>
+<p class="text-lg text-gray-600 mb-6">Learn proper microphone placement for optimal audio recording.</p>
+<p class="mb-4">Before beginning, ensure you have:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Appropriate microphone(s) for the source</li>
+<li class="mb-2">Microphone stands or mounting equipment</li>
+<li class="mb-2">Understanding of the source's sound characteristics</li>
+<li class="mb-2">Acoustic treatment in the recording space (if possible)</li>
+</ul>
+<p class="mb-4">Identify where the strongest and most important sound emanates from the instrument or voice.</p>
+<p class="mb-4">Consider these general guidelines:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Close-miking: 6 inches or less for detailed sound</li>
+<li class="mb-2">Medium distance: 1-3 feet for balanced sound</li>
+<li class="mb-2">Room miking: 6+ feet for ambient sound</li>
+</ul>
+<p class="mb-4">Point the microphone slightly off-axis (10-20 degrees) to reduce plosives and sibilance.</p>
+</div>
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Effective EQ Usage</h1>
+<p class="text-lg text-gray-600 mb-6">Learn how to apply equalization effectively in audio mixing.</p>
+<p class="mb-4">Before beginning, ensure you have:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">A properly calibrated monitoring system</li>
+<li class="mb-2">Understanding of frequency ranges</li>
+<li class="mb-2">Reference tracks for comparison</li>
+<li class="mb-2">Basic knowledge of your EQ tool</li>
+</ul>
+<p class="mb-4">Listen for:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Muddy or boomy areas (typically 200-400 Hz)</li>
+<li class="mb-2">Harsh frequencies (typically 2-4 kHz)</li>
+<li class="mb-2">Excessive sibilance (typically 5-8 kHz)</li>
+</ul>
+<p class="mb-4">Cut problem frequencies before boosting desirable ones:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Use narrow Q for precise cuts</li>
+<li class="mb-2">Start with small cuts (2-3 dB)</li>
+<li class="mb-2">Listen in context with other tracks</li>
+</ul>
+<p class="mb-4">Verify that your EQ changes:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Maintain proper level balance</li>
+<li class="mb-2">Don't create masking problems</li>
+<li class="mb-2">Sound natural and musical</li>
+</ul>
+</div>
+</div>
+<div class="content-section">
+<div class="markdown-content">
+<h1 class="text-2xl font-bold mb-4">Acoustical Health and Safety Facts Sheet</h1>
+<div class="metadata mb-6 bg-gray-50 p-4 rounded-lg">
+<table class="min-w-full">
+<tr><td class="font-semibold">type</td>
+<td>concept</td>
+</tr>
+<tr><td class="font-semibold">authors</td>
+<td>Audio Engineering Team</td>
+</tr>
+<tr><td class="font-semibold">categories</td>
+<td>Acoustics, Health & Safety</td>
+</tr>
+<tr><td class="font-semibold">keywords</td>
+<td>safety, health, acoustics, exposure limits, regulations</td>
+</tr>
+</table></div>
+<h2>Acoustical Health and Safety Facts Sheet</h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Metric/Information</th>
+<th>Value/Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. Acoustical Phenomena</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Occupational Exposure Limit</td>
+<td>8-hour TWA (Time Weighted Average)</td>
+<td>85 dBA (OSHA standard)</td>
+</tr>
+<tr>
+<td></td>
+<td>Maximum Peak Sound Level</td>
+<td>140 dBC</td>
+</tr>
+<tr>
+<td>Non-occupational Exposure</td>
+<td>Entertainment Venue Limit (EU)</td>
+<td>100 dBA averaged over 4 hours</td>
+</tr>
+<tr>
+<td></td>
+<td>Recovery Time Needed</td>
+<td>16+ hours after exposure to 100 dBA</td>
+</tr>
+<tr>
+<td>Common Over-exposure Sources</td>
+<td>Club/Concert Average</td>
+<td>95-110 dBA</td>
+</tr>
+<tr>
+<td></td>
+<td>Personal Audio Devices</td>
+<td>Up to 110 dBA at max volume</td>
+</tr>
+<tr>
+<td>Anatomical Impact</td>
+<td>Hair Cell Recovery Period</td>
+<td>None - damage is permanent</td>
+</tr>
+<tr>
+<td></td>
+<td>Distance to Damage (100 dBA source)</td>
+<td>Within 15 meters</td>
+</tr>
+<tr>
+<td></td>
+<td>Temporary Threshold Shift</td>
+<td>24-48 hours recovery</td>
+</tr>
+<tr>
+<td></td>
+<td>Permanent Threshold Shift</td>
+<td>Occurs at &gt;85 dBA (8hr)</td>
+</tr>
+<tr>
+<td><strong>2. At-Risk Populations</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Genetic Predisposition</td>
+<td>Population with heightened sensitivity</td>
+<td>~15% of general population</td>
+</tr>
+<tr>
+<td></td>
+<td>Children under 12</td>
+<td>20 dB lower tolerance than adults</td>
+</tr>
+<tr>
+<td>Neurodivergent Impact</td>
+<td>Autism Spectrum</td>
+<td>87% report sound sensitivity</td>
+</tr>
+<tr>
+<td></td>
+<td>ADHD</td>
+<td>69% affected by noise distraction</td>
+</tr>
+<tr>
+<td>Communication Effects</td>
+<td>Speech Intelligibility</td>
+<td>Drops to 50% at 85+ dBA</td>
+</tr>
+<tr>
+<td></td>
+<td>Voice Strain Onset</td>
+<td>&gt;75 dBA ambient noise</td>
+</tr>
+<tr>
+<td>Mental Fatigue</td>
+<td>Cognitive Performance</td>
+<td>50% reduction after 4hr exposure</td>
+</tr>
+<tr>
+<td><strong>3. Regulatory Impact</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Economic Benefits</td>
+<td>Healthcare Cost Reduction</td>
+<td>$252M annual savings (WHO est.)</td>
+</tr>
+<tr>
+<td></td>
+<td>Property Value Impact</td>
+<td>+5-10% with noise reduction</td>
+</tr>
+<tr>
+<td>Successful Case Studies</td>
+<td>Melbourne, AU</td>
+<td>102 dBA limit + monitoring</td>
+</tr>
+<tr>
+<td></td>
+<td>Amsterdam, NL</td>
+<td>85 dBA residential limit</td>
+</tr>
+<tr>
+<td></td>
+<td>Zurich, CH</td>
+<td>Real-time monitoring network</td>
+</tr>
+<tr>
+<td>Compliance Rates</td>
+<td>After Implementation</td>
+<td>89% within first year</td>
+</tr>
+<tr>
+<td></td>
+<td>With Active Monitoring</td>
+<td>95% long-term compliance</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+                                </div>
+                            </div>
+
+                            <!-- Right Sidebar (TOC) -->
+                            <div class="col-md-3">
+                                <div class="right-sidebar" id="toc-sidebar">
+                                    <div class="toc-header">Contents</div>
+                                    <div class="toc-content">
+                                        <!-- TOC will be generated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer mt-auto py-3 bg-light">
+                <div class="container">
+                    <!-- Your footer content -->
+                </div>
+            </footer>
+        </div>
+
+
+        <!-- Pass the initial content to JavaScript -->
+        <script>
+            window.initialContent = `<div class="map-content">
+<h1 class="content-title">Audio Engineering and Acoustics Fundamentals</h1>
+<div class="content-section">
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Sound Basics</h1>
+<p class="text-lg text-gray-600 mb-6">Understanding the fundamental properties and characteristics of sound.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">What is Sound?</h2>
+<p class="mb-4">Sound is a form of energy that travels through matter as mechanical waves. These waves are created by vibrating objects and propagate through a medium (typically air) as compressions and rarefactions of molecules.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Key Properties of Sound</h2>
+<p class="mb-4">Sound has several basic properties that define its characteristics:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Human Perception of Sound</h2>
+<p class="mb-4">The human auditory system can typically perceive frequencies between 20 Hz and 20,000 Hz, with sensitivity varying across this range. Sound intensity is perceived logarithmically, which is why we use the decibel scale for measurement.</p>
+</div>
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Waveform Properties</h1>
+<p class="text-lg text-gray-600 mb-6">Understanding the characteristics and behavior of audio waveforms.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Basic Waveform Types</h2>
+<p class="mb-4">Audio waveforms come in several basic forms:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Complex Waveforms</h2>
+<p class="mb-4">Most natural sounds consist of complex waveforms that combine multiple frequencies and harmonics. These can be analyzed using Fourier analysis, which breaks down complex waves into their constituent sine waves.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Harmonic Content</h2>
+<p class="mb-4">Harmonics are integer multiples of a fundamental frequency that contribute to a sound's timbre. The relative strength of different harmonics gives different instruments their distinctive sounds.</p>
+</div>
+</div>
+<div class="content-section">
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Sound Propagation</h1>
+<p class="text-lg text-gray-600 mb-6">Understanding how sound waves travel through different mediums.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Wave Motion</h2>
+<p class="mb-4">Sound propagates through elastic media as a longitudinal wave, where particles oscillate parallel to the direction of wave travel. The speed of sound varies depending on the medium's properties.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Propagation Speed</h2>
+<p class="mb-4">Sound travels at different speeds through different materials:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Air (20°C): approximately 343 meters per second</li>
+<li class="mb-2">Water: approximately 1,481 meters per second</li>
+<li class="mb-2">Steel: approximately 5,120 meters per second</li>
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Factors Affecting Propagation</h2>
+<p class="mb-4">Several factors influence sound propagation:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+</div>
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Room Acoustics</h1>
+<div class="metadata mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+<table class="min-w-full">
+<tbody>
+<tr>
+<td class="py-2 px-4 font-semibold">Authors</td>
+<td class="py-2 px-4">Dr. Jane Smith, Ph.D., Prof. Peter Anderson</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Institution</td>
+<td class="py-2 px-4">Audio Engineering Institute</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Categories</td>
+<td class="py-2 px-4">
+<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2 text-sm">Room Acoustics</span>
+<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2 text-sm">Studio Design</span>
+</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Keywords</td>
+<td class="py-2 px-4">
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">modal response</span>
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">room modes</span>
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">standing waves</span>
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">acoustic treatment</span>
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">reverberation time</span>
+<span class="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded mr-2 text-sm">RT60</span>
+</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Journal</td>
+<td class="py-2 px-4">Journal of Audio Engineering and Acoustics</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Doi</td>
+<td class="py-2 px-4">10.1000/jaes.2024.11.001</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Publication-Date</td>
+<td class="py-2 px-4">2024-11-27</td>
+</tr>
+<tr>
+<td class="py-2 px-4 font-semibold">Citation</td>
+<td class="py-2 px-4">Smith, J., `&` Anderson, P. (2024). Room Acoustics: Theory and Practice in Audio Engineering. Journal of Audio Engineering and Acoustics, 45(2), 112-128.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="text-lg text-gray-600 mb-6">A comprehensive analysis of room acoustics principles and their practical applications in modern audio engineering environments.</p>
+<p class="mb-4">This paper presents a detailed examination of room acoustics principles and their implementation in professional audio environments. We investigate the relationship between room dimensions, modal response, and acoustic treatment methods, providing evidence-based recommendations for optimizing critical listening spaces. The study combines theoretical acoustic modeling with real-world measurements from professional recording studios and control rooms.</p>
+<p class="text-lg text-gray-600 mb-6">Understanding how sound behaves within enclosed spaces.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Acoustic Phenomena</h2>
+<p class="mb-4">Room acoustics involve several key phenomena:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Room Modes</h2>
+<p class="mb-4">Room modes are resonant frequencies determined by room dimensions. They occur in three types:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Acoustic Treatment</h2>
+<p class="mb-4">Various materials and structures can be used to control room acoustics:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Bass traps for low-frequency control</li>
+<li class="mb-2">Diffusers for scattered reflections</li>
+<li class="mb-2">Absorptive panels for echo reduction</li>
+<li class="mb-2">Resonant absorbers for specific frequencies</li>
+</ul>
+</div>
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Frequency Response</h1>
+<p class="text-lg text-gray-600 mb-6">Understanding how systems and spaces respond to different frequencies.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Defining Frequency Response</h2>
+<p class="mb-4">Frequency response describes how a system or space handles different frequencies, typically measured as amplitude variation across the frequency spectrum.</p>
+<h2 class="text-xl font-bold mt-6 mb-3">Measurement and Analysis</h2>
+<p class="mb-4">Frequency response is typically measured using:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+<h2 class="text-xl font-bold mt-6 mb-3">Common Characteristics</h2>
+<p class="mb-4">Key aspects of frequency response include:</p>
+<ul class="list-disc ml-6 mb-4">
+</ul>
+</div>
+</div>
+<div class="content-section">
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Microphone Placement Techniques</h1>
+<p class="text-lg text-gray-600 mb-6">Learn proper microphone placement for optimal audio recording.</p>
+<p class="mb-4">Before beginning, ensure you have:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Appropriate microphone(s) for the source</li>
+<li class="mb-2">Microphone stands or mounting equipment</li>
+<li class="mb-2">Understanding of the source's sound characteristics</li>
+<li class="mb-2">Acoustic treatment in the recording space (if possible)</li>
+</ul>
+<p class="mb-4">Identify where the strongest and most important sound emanates from the instrument or voice.</p>
+<p class="mb-4">Consider these general guidelines:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Close-miking: 6 inches or less for detailed sound</li>
+<li class="mb-2">Medium distance: 1-3 feet for balanced sound</li>
+<li class="mb-2">Room miking: 6+ feet for ambient sound</li>
+</ul>
+<p class="mb-4">Point the microphone slightly off-axis (10-20 degrees) to reduce plosives and sibilance.</p>
+</div>
+<div class="dita-content">
+<h1 class="text-2xl font-bold mb-4">Effective EQ Usage</h1>
+<p class="text-lg text-gray-600 mb-6">Learn how to apply equalization effectively in audio mixing.</p>
+<p class="mb-4">Before beginning, ensure you have:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">A properly calibrated monitoring system</li>
+<li class="mb-2">Understanding of frequency ranges</li>
+<li class="mb-2">Reference tracks for comparison</li>
+<li class="mb-2">Basic knowledge of your EQ tool</li>
+</ul>
+<p class="mb-4">Listen for:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Muddy or boomy areas (typically 200-400 Hz)</li>
+<li class="mb-2">Harsh frequencies (typically 2-4 kHz)</li>
+<li class="mb-2">Excessive sibilance (typically 5-8 kHz)</li>
+</ul>
+<p class="mb-4">Cut problem frequencies before boosting desirable ones:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Use narrow Q for precise cuts</li>
+<li class="mb-2">Start with small cuts (2-3 dB)</li>
+<li class="mb-2">Listen in context with other tracks</li>
+</ul>
+<p class="mb-4">Verify that your EQ changes:</p>
+<ul class="list-disc ml-6 mb-4">
+<li class="mb-2">Maintain proper level balance</li>
+<li class="mb-2">Don't create masking problems</li>
+<li class="mb-2">Sound natural and musical</li>
+</ul>
+</div>
+</div>
+<div class="content-section">
+<div class="markdown-content">
+<h1 class="text-2xl font-bold mb-4">Acoustical Health and Safety Facts Sheet</h1>
+<div class="metadata mb-6 bg-gray-50 p-4 rounded-lg">
+<table class="min-w-full">
+<tr><td class="font-semibold">type</td>
+<td>concept</td>
+</tr>
+<tr><td class="font-semibold">authors</td>
+<td>Audio Engineering Team</td>
+</tr>
+<tr><td class="font-semibold">categories</td>
+<td>Acoustics, Health & Safety</td>
+</tr>
+<tr><td class="font-semibold">keywords</td>
+<td>safety, health, acoustics, exposure limits, regulations</td>
+</tr>
+</table></div>
+<h2>Acoustical Health and Safety Facts Sheet</h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Metric/Information</th>
+<th>Value/Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. Acoustical Phenomena</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Occupational Exposure Limit</td>
+<td>8-hour TWA (Time Weighted Average)</td>
+<td>85 dBA (OSHA standard)</td>
+</tr>
+<tr>
+<td></td>
+<td>Maximum Peak Sound Level</td>
+<td>140 dBC</td>
+</tr>
+<tr>
+<td>Non-occupational Exposure</td>
+<td>Entertainment Venue Limit (EU)</td>
+<td>100 dBA averaged over 4 hours</td>
+</tr>
+<tr>
+<td></td>
+<td>Recovery Time Needed</td>
+<td>16+ hours after exposure to 100 dBA</td>
+</tr>
+<tr>
+<td>Common Over-exposure Sources</td>
+<td>Club/Concert Average</td>
+<td>95-110 dBA</td>
+</tr>
+<tr>
+<td></td>
+<td>Personal Audio Devices</td>
+<td>Up to 110 dBA at max volume</td>
+</tr>
+<tr>
+<td>Anatomical Impact</td>
+<td>Hair Cell Recovery Period</td>
+<td>None - damage is permanent</td>
+</tr>
+<tr>
+<td></td>
+<td>Distance to Damage (100 dBA source)</td>
+<td>Within 15 meters</td>
+</tr>
+<tr>
+<td></td>
+<td>Temporary Threshold Shift</td>
+<td>24-48 hours recovery</td>
+</tr>
+<tr>
+<td></td>
+<td>Permanent Threshold Shift</td>
+<td>Occurs at &gt;85 dBA (8hr)</td>
+</tr>
+<tr>
+<td><strong>2. At-Risk Populations</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Genetic Predisposition</td>
+<td>Population with heightened sensitivity</td>
+<td>~15% of general population</td>
+</tr>
+<tr>
+<td></td>
+<td>Children under 12</td>
+<td>20 dB lower tolerance than adults</td>
+</tr>
+<tr>
+<td>Neurodivergent Impact</td>
+<td>Autism Spectrum</td>
+<td>87% report sound sensitivity</td>
+</tr>
+<tr>
+<td></td>
+<td>ADHD</td>
+<td>69% affected by noise distraction</td>
+</tr>
+<tr>
+<td>Communication Effects</td>
+<td>Speech Intelligibility</td>
+<td>Drops to 50% at 85+ dBA</td>
+</tr>
+<tr>
+<td></td>
+<td>Voice Strain Onset</td>
+<td>&gt;75 dBA ambient noise</td>
+</tr>
+<tr>
+<td>Mental Fatigue</td>
+<td>Cognitive Performance</td>
+<td>50% reduction after 4hr exposure</td>
+</tr>
+<tr>
+<td><strong>3. Regulatory Impact</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Economic Benefits</td>
+<td>Healthcare Cost Reduction</td>
+<td>$252M annual savings (WHO est.)</td>
+</tr>
+<tr>
+<td></td>
+<td>Property Value Impact</td>
+<td>+5-10% with noise reduction</td>
+</tr>
+<tr>
+<td>Successful Case Studies</td>
+<td>Melbourne, AU</td>
+<td>102 dBA limit + monitoring</td>
+</tr>
+<tr>
+<td></td>
+<td>Amsterdam, NL</td>
+<td>85 dBA residential limit</td>
+</tr>
+<tr>
+<td></td>
+<td>Zurich, CH</td>
+<td>Real-time monitoring network</td>
+</tr>
+<tr>
+<td>Compliance Rates</td>
+<td>After Implementation</td>
+<td>89% within first year</td>
+</tr>
+<tr>
+<td></td>
+<td>With Active Monitoring</td>
+<td>95% long-term compliance</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>`;
+        </script>
+
+        <!-- Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script type="module" src="/static/dist/academic.js"></script>
+    </body>
+</html>
