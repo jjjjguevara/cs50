@@ -5,63 +5,59 @@ const TableOfContents = () => {
   const [headings, setHeadings] = useState([]);
 
   useEffect(() => {
-    const extractHeadings = () => {
+    const findHeadings = () => {
       const mapContent = document.querySelector(".map-content");
-      console.log("Map content found:", mapContent); // Debug log
+      console.log("Looking for headings in:", mapContent); // Debug log
 
       if (mapContent) {
         const headingElements = mapContent.querySelectorAll(
-          "h1.content-title, " +
-            ".dita-content h1.text-2xl, " +
-            ".dita-content h2.text-xl, " +
-            ".markdown-content h1.text-2xl, " +
-            ".markdown-content h2.text-xl",
+          "h1.content-title, " + // Main title
+            ".dita-content h1, " + // Topic titles
+            ".dita-content h2, " + // Section titles
+            ".markdown-content h1, " +
+            ".markdown-content h2",
         );
 
-        console.log("Found headings:", headingElements.length); // Debug log
-        console.log("Heading elements:", Array.from(headingElements)); // Debug log
-
         const headingsData = Array.from(headingElements).map((heading) => {
-          const id = heading.id || generateId(heading.textContent);
+          const headingText = heading.textContent; // Use full text, including numbering
+          let level = 1;
+
+          if (heading.classList.contains("content-title")) {
+            level = 1;
+          } else if (heading.tagName === "H1") {
+            level = 2;
+          } else if (heading.tagName === "H2") {
+            level = 3;
+          }
+
+          const id = heading.id || generateId(headingText);
           if (!heading.id) {
             heading.id = id; // Assign ID if missing
           }
 
-          let level = 1;
-          if (heading.classList.contains("content-title")) {
-            level = 1;
-          } else if (heading.classList.contains("text-2xl")) {
-            level = 2;
-          } else if (heading.classList.contains("text-xl")) {
-            level = 3;
-          }
-
           return {
             id,
-            text: heading.textContent,
+            text: headingText,
             level,
           };
         });
 
-        console.log("Processed headings:", headingsData); // Debug log
+        console.log("Found headings:", headingsData); // Debug log
         setHeadings(headingsData);
       }
     };
 
-    // Initial heading extraction
-    extractHeadings();
+    // Initial heading check
+    findHeadings();
 
-    // Set up MutationObserver
-    const observer = new MutationObserver(() => {
-      extractHeadings();
-    });
-
+    // Set up MutationObserver to monitor changes
+    const observer = new MutationObserver(findHeadings);
     observer.observe(document.body, {
       childList: true,
       subtree: true,
     });
 
-    // Cleanup observer
+    // Cleanup observer on component unmount
     return () => observer.disconnect();
   }, []);
 

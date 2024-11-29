@@ -3,6 +3,7 @@ from pathlib import Path
 from lxml import etree
 import logging
 import frontmatter
+from bs4 import BeautifulSoup
 import markdown
 from markdown.extensions import fenced_code, tables, meta
 
@@ -153,10 +154,6 @@ class DITAProcessor:
             return None
 
 
-
-
-
-
     def _create_directories(self) -> None:
         """Create necessary directories if they don't exist"""
         directories = [
@@ -217,7 +214,7 @@ class DITAProcessor:
             return self._create_error_html(e, input_path)
 
     def _transform_map_to_html(self, map_path: Path) -> HTMLString:
-        """Transform DITA map and its referenced topics to HTML"""
+        """Transform DITA map and its referenced topics to HTML with numbered headings"""
         try:
             with open(map_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -225,28 +222,33 @@ class DITAProcessor:
             tree = etree.fromstring(content.encode('utf-8'), self.parser)
             html_content = ['<div class="map-content">']
 
-            # Handle main title differently
+            # Handle main title (no numbering)
             title_elem = tree.find(".//title")
             if title_elem is not None and title_elem.text:
                 html_content.append(f'<h1 class="content-title">{title_elem.text}</h1>')
 
-            # Process each topic group - don't render navtitle
-            for topicgroup in tree.findall(".//topicgroup"):
-                html_content.append('<div class="content-section">')
+            # Initialize section counters
+            section_numbers = {
+                'h1': 0,
+                'h2': 0,
+                'current_h1': None
+            }
 
-                # Process topics in group
+            # First pass: collect all topics and their headings
+            all_topics = []
+            for topicgroup in tree.findall(".//topicgroup"):
                 for topicref in topicgroup.findall(".//topicref"):
                     href = topicref.get('href')
                     if href:
-                        # Convert relative path to absolute
                         topic_path = self._resolve_topic_path(map_path, href)
                         if topic_path and topic_path.exists():
-                            # Transform the referenced topic
-                            topic_content = self.transform_to_html(topic_path)
-                            html_content.append(topic_content)
-                        else:
-                            self.logger.warning(f"Referenced topic not found: {href}")
+                            all_topics.append(topic_path)
 
+            # Second pass: process topics with consistent numbering
+            for topic_path in all_topics:
+                html_content.append('<div class="content-section">')
+                topic_content = self._transform_topic_with_numbering(topic_path, section_numbers)
+                html_content.append(topic_content)
                 html_content.append('</div>')
 
             html_content.append('</div>')
@@ -255,6 +257,112 @@ class DITAProcessor:
         except Exception as e:
             self.logger.error(f"Error transforming map to HTML: {str(e)}")
             return self._create_error_html(e, map_path)
+
+    def _transform_topic_with_numbering(self, topic_path: Path, section_numbers: Dict[str, Any]) -> HTMLString:
+        """Transform a topic to HTML with numbered headings"""
+        try:
+            if topic_path.suffix == '.md':
+                with open(topic_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                metadata, html_content = self._parse_markdown(content)
+
+                # Create soup object for consistent handling
+                soup = BeautifulSoup(html_content, 'html.parser')
+
+                # Wrap content in markdown-content div if not already wrapped
+                if not soup.find('div', class_='markdown-content'):
+                    new_div = soup.new_tag('div', attrs={'class': 'markdown-content'})
+                    for tag in soup.contents[:]:
+                        new_div.append(tag.extract())
+                    soup.append(new_div)
+
+                # Find all headings and number them consistently
+                h1_elements = soup.find_all('h1')
+                h2_elements = soup.find_all('h2')
+
+                # First h1 gets the next section number
+                if h1_elements:
+                    section_numbers['h1'] += 1
+                    section_numbers['h2'] = 0
+                    section_numbers['current_h1'] = section_numbers['h1']
+                    first_h1 = h1_elements[0]
+                    original_text = first_h1.get_text()
+                    new_text = f"{section_numbers['h1']}. {original_text}"
+                    new_tag = soup.new_tag('h1', attrs={'class': 'text-2xl font-bold mb-4'})
+                    new_tag.string = new_text
+                    first_h1.replace_with(new_tag)
+
+                # Number all h2 elements
+                for h2 in h2_elements:
+                    section_numbers['h2'] += 1
+                    original_text = h2.get_text()
+                    new_text = f"{section_numbers['current_h1']}.{section_numbers['h2']}. {original_text}"
+                    new_tag = soup.new_tag('h2', attrs={'class': 'text-xl font-bold mt-6 mb-3'})
+                    new_tag.string = new_text
+                    h2.replace_with(new_tag)
+
+                return str(soup)
+            else:
+                doc = self._parse_dita_file(topic_path)
+                return self._generate_numbered_html_content(doc, section_numbers)
+
+        except Exception as e:
+            self.logger.error(f"Error transforming topic with numbering: {str(e)}")
+            return self._create_error_html(e, topic_path)
+
+    def _generate_numbered_html_content(self, doc: XMLElement, section_numbers: Dict[str, Any]) -> HTMLString:
+        """Generate HTML content with numbered headings"""
+        html_content = ['<div class="dita-content">']
+
+        # Handle h1 (main topic title)
+        title_elem = self._find_first_element(doc, 'title')
+        if title_elem is not None and title_elem.text:
+            section_numbers['h1'] += 1
+            section_numbers['h2'] = 0  # Reset h2 counter
+            section_numbers['current_h1'] = section_numbers['h1']
+            numbered_title = f"{section_numbers['h1']}. {title_elem.text}"
+            html_content.append(f'<h1 class="text-2xl font-bold mb-4">{numbered_title}</h1>')
+
+        # Add metadata if present
+        html_content.extend(self._transform_metadata(doc))
+
+        # Process sections with numbering
+        for elem in doc.iter():
+            tag = etree.QName(elem).localname
+            if tag == 'section':
+                section_title = self._find_first_element(elem, 'title')
+                if section_title is not None and section_title.text:
+                    section_numbers['h2'] += 1
+                    numbered_section = f"{section_numbers['current_h1']}.{section_numbers['h2']}. {section_title.text}"
+                    html_content.append(f'<h2 class="text-xl font-bold mt-6 mb-3">{numbered_section}</h2>')
+
+            elif tag == 'p' and elem.text:
+                html_content.append(f'<p class="mb-4">{elem.text}</p>')
+            elif tag == 'shortdesc' and elem.text:
+                html_content.append(f'<p class="text-lg text-gray-600 mb-6">{elem.text}</p>')
+            elif tag in ['ul', 'ol']:
+                html_content.append(self._transform_list(elem))
+
+        html_content.append('</div>')
+        return '\n'.join(html_content)
+
+    def _add_numbering_to_html(self, html_content: str, section_numbers: Dict[str, Any]) -> HTMLString:
+        """Add numbering to HTML content from Markdown"""
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Process h1 headings
+        for h1 in soup.find_all('h1'):
+            section_numbers['h1'] += 1
+            section_numbers['h2'] = 0
+            section_numbers['current_h1'] = section_numbers['h1']
+            h1.string = f"{section_numbers['h1']}. {h1.text}"
+
+        # Process h2 headings
+        for h2 in soup.find_all('h2'):
+            section_numbers['h2'] += 1
+            h2.string = f"{section_numbers['current_h1']}.{section_numbers['h2']}. {h2.text}"
+
+        return str(soup)
 
     def _resolve_topic_path(self, map_path: Path, href: str) -> Optional[Path]:
         """Resolve a topic reference path relative to the map file"""
