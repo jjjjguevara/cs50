@@ -1,6 +1,6 @@
 ---
 title: Markdown Syntax Reference
-type: concept
+type: reference
 authors:
   - Technical Documentation Team
 institution: Documentation Institute
@@ -17,9 +17,10 @@ keywords:
 
 # Markdown Syntax Reference
 
-## Basic Syntax
+## Headers
 
-### Headers
+Here's how to create headers:
+
 ```markdown
 # H1 Header
 ## H2 Header
@@ -29,7 +30,19 @@ keywords:
 ###### H6 Header
 ```
 
-### Emphasis
+And here's how they look:
+
+# H1 Header
+## H2 Header
+### H3 Header
+#### H4 Header
+##### H5 Header
+###### H6 Header
+
+## Emphasis
+
+Here's how to emphasize text:
+
 ```markdown
 *Italic text* or _italic text_
 **Bold text** or __bold text__
@@ -37,9 +50,22 @@ keywords:
 ~~Strikethrough text~~
 ```
 
-### Lists
+And here's how it looks:
 
-Unordered lists:
+*Italic text* or _italic text_
+
+**Bold text** or __bold text__
+
+***Bold and italic*** or ___bold and italic___
+
+~~Strikethrough text~~
+
+## Lists
+
+### Unordered Lists
+
+Here's how to create unordered lists:
+
 ```markdown
 * Item 1
 * Item 2
@@ -52,7 +78,22 @@ Unordered lists:
   - Subitem 2.1
 ```
 
-Ordered lists:
+And here's how they look:
+
+* Item 1
+* Item 2
+  * Subitem 2.1
+  * Subitem 2.2
+    * Subsubitem 2.2.1
+
+- Alternative item 1
+- Alternative item 2
+  - Subitem 2.1
+
+### Ordered Lists
+
+Here's how to create ordered lists:
+
 ```markdown
 1. First item
 2. Second item
@@ -61,7 +102,18 @@ Ordered lists:
       1. Subsubitem 2.2.1
 ```
 
-Task lists:
+And here's how they look:
+
+1. First item
+2. Second item
+   1. Subitem 2.1
+   2. Subitem 2.2
+      1. Subsubitem 2.2.1
+
+### Task Lists
+
+Here's how to create task lists:
+
 ```markdown
 - [x] Completed task
 - [ ] Incomplete task
@@ -69,9 +121,19 @@ Task lists:
   - [ ] Incomplete subtask
 ```
 
-### Links and Images
+And here's how they look:
 
-Links:
+- [x] Completed task
+- [ ] Incomplete task
+  - [x] Completed subtask
+  - [ ] Incomplete subtask
+
+## Links and Images
+
+### Links
+
+Here's how to create links:
+
 ```markdown
 [Link text](https://example.com)
 [Link with title](https://example.com "Link title")
@@ -80,77 +142,128 @@ Links:
 [reference]: https://example.com
 ```
 
-Images:
+And here's how they look:
+
+[Link text](https://example.com)
+[Link with title](https://example.com "Link title")
+[Reference link][reference]
+
+[reference]: https://example.com
+
+### Images
+
+Here's how to embed images:
+
 ```markdown
-![Alt text](path/to/image.jpg)
-![Alt text](path/to/image.jpg "Image title")
+![Alt text](/api/placeholder/400/300)
+![Alt text with title](/api/placeholder/400/300 "Image title")
 ![Reference image][image-ref]
 
-[image-ref]: path/to/image.jpg
+[image-ref]: /api/placeholder/400/300
 ```
 
-### Code
+And here's how they look:
 
-Inline code:
+![Alt text](/api/placeholder/400/300)
+![Alt text with title](/api/placeholder/400/300 "Image title")
+![Reference image][image-ref]
+
+[image-ref]: /api/placeholder/400/300
+
+## Code
+
+### Inline Code
+
+Here's how to use inline code:
+
 ```markdown
-Use `code` in your text.
+Use `code` in your text
 ```
 
-Fenced code blocks:
+And here's how it looks:
+
+Use `code` in your text
+
+### Code Blocks
+
+Here's how to create code blocks:
+
 ````markdown
 ```python
 def hello_world():
     print("Hello, world!")
 ```
-
-```javascript
-function helloWorld() {
-    console.log("Hello, world!");
-}
-```
 ````
 
-### Tables
+And here's how it looks:
 
-Basic table:
-```markdown
-| Header 1 | Header 2 |
-|----------|----------|
-| Cell 1   | Cell 2   |
-| Cell 3   | Cell 4   |
+```python
+def hello_world():
+    print("Hello, world!")
 ```
 
-Aligned table:
+## Tables
+
+Here's how to create tables:
+
 ```markdown
-| Left-aligned | Center-aligned | Right-aligned |
-|:-------------|:-------------:|-------------:|
-| Left         | Center        | Right        |
-| Left         | Center        | Right        |
+| Header 1 | Header 2 | Header 3 |
+|----------|:--------:|----------:|
+| Left     | Center   | Right     |
+| aligned  | aligned  | aligned   |
 ```
 
-### Blockquotes
+And here's how they look:
 
-Basic blockquote:
+| Header 1 | Header 2 | Header 3 |
+|----------|:--------:|----------:|
+| Left     | Center   | Right     |
+| aligned  | aligned  | aligned   |
+
+## Blockquotes
+
+Here's how to create blockquotes:
+
 ```markdown
 > This is a blockquote
 > Continued on next line
-
-> Nested blockquotes
->> Second level
->>> Third level
+>
+> > Nested blockquote
+> > > Third level
 ```
 
-### Horizontal Rules
+And here's how they look:
+
+> This is a blockquote
+> Continued on next line
+>
+> > Nested blockquote
+> > > Third level
+
+## Horizontal Rules
+
+Here's how to create horizontal rules:
 
 ```markdown
+Above the line
+
 ---
-***
-___
+
+Below the line
 ```
 
-## Extended Syntax
+And here's how they look:
 
-### Definition Lists
+Above the line
+
+---
+
+Below the line
+
+## Definition Lists
+
+Here's how to create definition lists:
+
 ```markdown
 Term 1
 : Definition 1
@@ -160,159 +273,105 @@ Term 2
 : Definition 2
 ```
 
-### Footnotes
+And here's how they look:
+
+Term 1
+: Definition 1
+: Another definition 1
+
+Term 2
+: Definition 2
+
+## Footnotes
+
+Here's how to create footnotes:
+
 ```markdown
 Here's a sentence with a footnote[^1].
-Here's another sentence with a footnote[^note].
+Here's another with a labeled footnote[^label].
 
-[^1]: This is the footnote content.
-[^note]: Named footnotes work too.
+[^1]: This is the first footnote.
+[^label]: This is a labeled footnote.
 ```
 
-### Abbreviations
+And here's how they look:
+
+Here's a sentence with a footnote[^1].
+Here's another with a labeled footnote[^label].
+
+[^1]: This is the first footnote.
+[^label]: This is a labeled footnote.
+
+## Custom Attributes
+
+Here's how to add custom attributes:
+
 ```markdown
-*[HTML]: Hyper Text Markup Language
-*[W3C]: World Wide Web Consortium
+This paragraph has a class and ID.
+{: .custom-class #custom-id }
 
-The HTML specification is maintained by the W3C.
+[This link has a class](https://example.com){: .link-class }
 ```
 
-### Custom Attributes
-```markdown
-This is a paragraph.
-{: .class-name #paragraph-id }
+And here's how they look:
 
-[Link](http://example.com){: .link-class }
-```
+This paragraph has a class and ID.
+{: .custom-class #custom-id }
 
-### Table of Contents
-```markdown
-[TOC]
+[This link has a class](https://example.com){: .link-class }
 
-# Your content starts here
-```
+## Math Expressions
 
-### Math Expressions
+Here's how to write math expressions:
+
 ```markdown
 Inline math: $E = mc^2$
 
 Block math:
 $$
-\begin{align}
-y = y(x,t) &= A e^{i\theta} \\
-&= A (\cos \theta + i \sin \theta) \\
-&= A (\cos(kx - \omega t) + i \sin(kx - \omega t))
-\end{align}
+\frac{n!}{k!(n-k)!} = \binom{n}{k}
 $$
 ```
 
-### Admonitions/Callouts
-```markdown
-!!! note "Optional Title"
-    This is a note admonition.
+And here's how they look:
 
-!!! warning ""
-    This is a warning admonition with no title.
+Inline math: $E = mc^2$
 
-??? tip "Collapsible"
-    This is a collapsible tip admonition.
-```
+Block math:
+$$
+\frac{n!}{k!(n-k)!} = \binom{n}{k}
+$$
 
-### Description Lists
-```markdown
-First Term
-: This is the definition of the first term.
+## Keyboard Keys
 
-Second Term
-: This is one definition of the second term.
-: This is another definition of the second term.
-```
+Here's how to show keyboard keys:
 
-### Line Numbers in Code Blocks
-````markdown
-```python linenums="1"
-def hello_world():
-    print("Hello, world!")
-    return True
-```
-````
-
-### Metadata Block (YAML Front Matter)
-```yaml
----
-title: Document Title
-subtitle: Document Subtitle
-author: Author Name
-date: 2024-11-28
-abstract: |
-  This is a multi-line
-  abstract for the document.
-keywords:
-  - keyword1
-  - keyword2
-references:
-  - id: ref1
-    title: Reference Title
-    author: Reference Author
-    year: 2024
-bibliography: references.bib
----
-```
-
-### Comments
-```markdown
-[//]: # (This is a comment that won't appear in the output)
-[//]: # "Also a comment"
-[//]: # 'Also a comment'
-```
-
-## Special Formatting Examples
-
-### Text Alignment
-```markdown
-<div style="text-align: center">
-Centered text
-</div>
-
-<div style="text-align: right">
-Right-aligned text
-</div>
-```
-
-### Subscript and Superscript
-```markdown
-H~2~O
-X^2^
-```
-
-### Keyboard Keys
 ```markdown
 Press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Delete</kbd>
 ```
 
-### Diagrams (Mermaid)
-````markdown
-```mermaid
-graph TD
-    A[Start] --> B{Is it?}
-    B -- Yes --> C[OK]
-    B -- No --> D[End]
-```
-````
+And here's how it looks:
 
-### Tabs
+Press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Delete</kbd>
+
+## Special Characters
+
+Here's how to handle special characters:
+
 ```markdown
-=== "Tab 1"
-    Content of tab 1
-
-=== "Tab 2"
-    Content of tab 2
+Copyright &copy; 2024
+&alpha;, &beta;, &gamma;
 ```
 
-Note: The actual availability and rendering of these features depends on:
-1. Which Python-Markdown extensions are enabled in our implementation
-2. Our custom CSS styling
-3. Additional libraries or processors installed
-4. The HTML sanitization settings in our environment
+And here's how they look:
 
-For the most reliable results, stick to basic Markdown syntax and the features explicitly supported by our processor configuration.
+Copyright &copy; 2024
+&alpha;, &beta;, &gamma;
+
+Note: Not all Markdown features might be available in our current implementation. Check the processor configuration for supported extensions.
+
+- [Python Frontmatter](https://python-frontmatter.readthedocs.io/en/latest/)
+- [Python Markdown](https://python-markdown.github.io/)
+
+
+[//]: # (End of document)

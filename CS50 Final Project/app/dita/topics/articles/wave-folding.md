@@ -12,6 +12,7 @@ keywords:
   - harmonic distortion
 ---
 
+
 # Acoustical Wave Folding Principles
 
 Wave folding is a phenomenon in acoustics where a waveform is manipulated to fold back on itself, creating harmonically rich and complex sounds. This paper explores the principles, applications, and mathematical underpinnings of wave folding.
@@ -20,9 +21,7 @@ Wave folding is a phenomenon in acoustics where a waveform is manipulated to fol
 
 Wave folding alters the original waveform by reflecting amplitudes beyond a threshold, producing harmonics that are musically or analytically useful in various contexts. This technique is widely employed in audio synthesis and signal processing.
 
-:::info
-**Key Concept:** Wave folding introduces nonlinearities, creating new frequencies while retaining the waveform's periodic structure.
-:::
+> **Key Concept:** Wave folding introduces nonlinearities, creating new frequencies while retaining the waveform's periodic structure.
 
 ## Fundamental Principles
 
@@ -47,9 +46,7 @@ Wave folding has applications in:
 2. **Signal Compression:** Reducing dynamic range while preserving tonal richness.
 3. **Noise Shaping:** Transforming noise signals into harmonically structured outputs.
 
-:::note
-Wave folding is particularly effective in modular synthesis for creating dynamic, evolving textures.
-:::
+> Wave folding is particularly effective in modular synthesis for creating dynamic, evolving textures.
 
 ## Experimental Data
 
@@ -68,6 +65,4 @@ Wave folding is particularly effective in modular synthesis for creating dynamic
 
 Acoustical wave folding is a powerful tool for audio manipulation, offering creative and technical benefits across disciplines. Further research into adaptive wave folding algorithms could address current limitations.
 
-:::tip
-Wave folding provides a unique method for generating harmonically dense signals from simple inputs.
-:::
+> Wave folding provides a unique method for generating harmonically dense signals from simple inputs.

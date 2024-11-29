@@ -19,15 +19,45 @@
         />
     </head>
     <body>
-        <div id="header-content"></div>
-        <div id="main-nav"></div>
-        <div id="article-sidebar"></div>
-        <div id="article-content">
-            {% if error %}
-            <div class="error">{{ error }}</div>
-            {% endif %} {% if content %} {{ content | safe }} {% endif %}
+        <div class="academic-layout">
+            <div id="header-content"></div>
+            <div id="main-nav"></div>
+            <div id="article-sidebar"></div>
+            <div id="article-content" class="content-wrapper">
+                {% if error %}
+                <div class="error">{{ error }}</div>
+                {% elif content %}
+                <article class="article-content">
+                    {% if metadata %}
+                    <div id="article-header"></div>
+                    {% endif %} {% if toc %}
+                    <div id="table-of-contents"></div>
+                    {% endif %}
+                    <div class="content-body">{{ content | safe }}</div>
+                    <div class="academic-tools">
+                        <h2>Academic Tools</h2>
+                        <ul>
+                            <li>
+                                <a href="#cite" class="tool-link"
+                                    >How to cite this entry</a
+                                >
+                            </li>
+                            <li>
+                                <a href="#pdf" class="tool-link"
+                                    >Preview PDF version</a
+                                >
+                            </li>
+                            <li>
+                                <a href="#lookup" class="tool-link"
+                                    >Look up topics</a
+                                >
+                            </li>
+                        </ul>
+                    </div>
+                </article>
+                {% endif %}
+            </div>
         </div>
-        <div id="footer-content"></div>
 
         <script
             type="module"

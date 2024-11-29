@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import AcademicLayout from "../components/AcademicLayout";
 import TopNav from "../components/navigation/TopNav";
 import SideNav from "../components/navigation/SideNav";
 import SearchBar from "../components/navigation/SearchBar";
@@ -7,7 +8,6 @@ import ArticleHeader from "../components/content/ArticleHeader";
 import ArticleContent from "../components/content/ArticleContent";
 import TableOfContents from "../components/content/TableOfContents";
 import FooterNav from "../components/footer/FooterNav";
-import { SearchProvider } from "../search";
 
 // Wrap components with error boundaries
 const renderComponent = (Component, elementId) => {
