@@ -22,8 +22,6 @@ class DITAProcessor:
     output_dir: Path
     xsl_dir: Path
     parser: etree.XMLParser
-    search_topics: Callable[[str], List[Dict[str, Any]]]  # Add this line
-
 
     def __init__(self) -> None:
         # Initialize logger
@@ -670,122 +668,122 @@ class DITAProcessor:
 
         return maps
 
-def generate_toc(self, topic_path: Path) -> List[Dict[str, Any]]:
-    """Generate table of contents from topic"""
-    try:
-        with open(topic_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+    def generate_toc(self, topic_path: Path) -> List[Dict[str, Any]]:
+        """Generate table of contents from topic"""
+        try:
+            with open(topic_path, 'r', encoding='utf-8') as f:
+                content = f.read()
 
-        tree = etree.fromstring(content.encode('utf-8'), self.parser)
-        toc = []
+            tree = etree.fromstring(content.encode('utf-8'), self.parser)
+            toc = []
 
-        # Process headers recursively
-        for section in tree.xpath('//*[contains(local-name(), "section")]'):
-            title_elem = section.find('.//title')
+            # Process headers recursively
+            for section in tree.xpath('//*[contains(local-name(), "section")]'):
+                title_elem = section.find('.//title')
+                if title_elem is not None:
+                    section_id = section.get('id', '')
+                    toc_item = {
+                        'id': section_id,
+                        'title': title_elem.text,
+                        'level': len(section.xpath('ancestor::*[contains(local-name(), "section")]')) + 1,
+                        'children': []
+                    }
+
+                    # Handle nested sections
+                    parent = toc
+                    for _ in range(toc_item['level'] - 1):
+                        if parent and parent[-1:]:
+                            parent = parent[-1]['children']
+                    parent.append(toc_item)
+
+            return toc
+        except Exception as e:
+            self.logger.error(f"Error generating TOC: {str(e)}")
+            return []
+
+    def get_topic_metadata(self, topic_path: Path) -> Dict[str, Any]:
+        """Extract metadata from topic"""
+        try:
+            with open(topic_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            tree = etree.fromstring(content.encode('utf-8'), self.parser)
+            metadata = {}
+
+            # Extract prolog metadata
+            prolog = tree.find('.//prolog')
+            if prolog is not None:
+                # Authors
+                metadata['authors'] = [
+                    author.text for author in prolog.findall('.//author')
+                ]
+
+                # Categories
+                metadata['categories'] = [
+                    category.text for category in prolog.findall('.//category')
+                ]
+
+                # Other metadata
+                for meta in prolog.findall('.//othermeta'):
+                    name = meta.get('name')
+                    content = meta.get('content')
+                    if name and content:
+                        metadata[name] = content
+
+            # Get title
+            title_elem = tree.find('.//title')
             if title_elem is not None:
-                section_id = section.get('id', '')
-                toc_item = {
-                    'id': section_id,
-                    'title': title_elem.text,
-                    'level': len(section.xpath('ancestor::*[contains(local-name(), "section")]')) + 1,
-                    'children': []
-                }
+                metadata['title'] = title_elem.text
 
-                # Handle nested sections
-                parent = toc
-                for _ in range(toc_item['level'] - 1):
-                    if parent and parent[-1:]:
-                        parent = parent[-1]['children']
-                parent.append(toc_item)
+            return metadata
+        except Exception as e:
+            self.logger.error(f"Error extracting metadata: {str(e)}")
+            return {}
 
-        return toc
-    except Exception as e:
-        self.logger.error(f"Error generating TOC: {str(e)}")
-        return []
+    def search_topics(self, query: str) -> List[Dict[str, Any]]:
+        """Search through topics"""
+        results = []
+        try:
+            topics = self.list_topics()
+            for topic in topics:
+                topic_path = self.get_topic_path(topic['id'])
+                if topic_path:
+                    with open(topic_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
 
-def get_topic_metadata(self, topic_path: Path) -> Dict[str, Any]:
-    """Extract metadata from topic"""
-    try:
-        with open(topic_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+                    # Simple text search (can be enhanced with better search algorithms)
+                    if query.lower() in content.lower():
+                        # Get a preview of the matching content
+                        preview = self._extract_preview(content, query)
+                        results.append({
+                            'id': topic['id'],
+                            'title': topic['title'],
+                            'preview': preview,
+                            'type': topic.get('type', 'topic')
+                        })
 
-        tree = etree.fromstring(content.encode('utf-8'), self.parser)
-        metadata = {}
+            return results
+        except Exception as e:
+            self.logger.error(f"Error searching topics: {str(e)}")
+            return []
 
-        # Extract prolog metadata
-        prolog = tree.find('.//prolog')
-        if prolog is not None:
-            # Authors
-            metadata['authors'] = [
-                author.text for author in prolog.findall('.//author')
-            ]
+    def _extract_preview(self, content: str, query: str, chars: int = 200) -> str:
+        """Extract a preview of the content around the search query"""
+        try:
+            lower_content = content.lower()
+            query_pos = lower_content.find(query.lower())
 
-            # Categories
-            metadata['categories'] = [
-                category.text for category in prolog.findall('.//category')
-            ]
+            if query_pos != -1:
+                start = max(0, query_pos - chars // 2)
+                end = min(len(content), query_pos + len(query) + chars // 2)
+                preview = content[start:end]
 
-            # Other metadata
-            for meta in prolog.findall('.//othermeta'):
-                name = meta.get('name')
-                content = meta.get('content')
-                if name and content:
-                    metadata[name] = content
+                if start > 0:
+                    preview = f"...{preview}"
+                if end < len(content):
+                    preview = f"{preview}..."
 
-        # Get title
-        title_elem = tree.find('.//title')
-        if title_elem is not None:
-            metadata['title'] = title_elem.text
-
-        return metadata
-    except Exception as e:
-        self.logger.error(f"Error extracting metadata: {str(e)}")
-        return {}
-
-def search_topics(self, query: str) -> List[Dict[str, Any]]:
-    """Search through topics"""
-    results = []
-    try:
-        topics = self.list_topics()
-        for topic in topics:
-            topic_path = self.get_topic_path(topic['id'])
-            if topic_path:
-                with open(topic_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-
-                # Simple text search (can be enhanced with better search algorithms)
-                if query.lower() in content.lower():
-                    # Get a preview of the matching content
-                    preview = self._extract_preview(content, query)
-                    results.append({
-                        'id': topic['id'],
-                        'title': topic['title'],
-                        'preview': preview,
-                        'type': topic.get('type', 'topic')
-                    })
-
-        return results
-    except Exception as e:
-        self.logger.error(f"Error searching topics: {str(e)}")
-        return []
-
-def _extract_preview(self, content: str, query: str, chars: int = 200) -> str:
-    """Extract a preview of the content around the search query"""
-    try:
-        lower_content = content.lower()
-        query_pos = lower_content.find(query.lower())
-
-        if query_pos != -1:
-            start = max(0, query_pos - chars // 2)
-            end = min(len(content), query_pos + len(query) + chars // 2)
-            preview = content[start:end]
-
-            if start > 0:
-                preview = f"...{preview}"
-            if end < len(content):
-                preview = f"{preview}..."
-
-            return preview
-        return ""
-    except Exception:
-        return ""
+                return preview
+            return ""
+        except Exception:
+            return ""

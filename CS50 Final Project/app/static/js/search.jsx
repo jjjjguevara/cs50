@@ -1,6 +1,28 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { api } from "./utils/api";
+// Update the import path to use the alias you defined in vite.config.js
+import { api } from "@utils/api";
 
+/**
+ * @typedef {Object} SearchContextType
+ * @property {string} searchQuery - Current search query
+ * @property {Function} setSearchQuery - Function to update search query
+ * @property {Array} searchResults - Array of search results
+ * @property {boolean} isLoading - Loading state
+ * @property {string|null} error - Error message if any
+ */
+
+/** @type {React.Context<SearchContextType>} */
+const SearchContext = React.createContext(null);
+
+/**
+ * @typedef {Object} SearchProviderProps
+ * @property {React.ReactNode} children - Child components
+ */
+
+/**
+ * Provider component for search functionality
+ * @param {SearchProviderProps} props
+ */
 const SearchProvider = ({ children }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -19,6 +41,7 @@ const SearchProvider = ({ children }) => {
       setSearchResults(response.data);
       setError(null);
     } catch (err) {
+      console.error("Search error:", err);
       setError("Failed to perform search");
       setSearchResults([]);
     } finally {
@@ -43,21 +66,26 @@ const SearchProvider = ({ children }) => {
     debouncedSearch(searchQuery);
   }, [searchQuery, debouncedSearch]);
 
+  const contextValue = {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    isLoading,
+    error,
+  };
+
   return (
-    <SearchContext.Provider
-      value={{
-        searchQuery,
-        setSearchQuery,
-        searchResults,
-        isLoading,
-        error,
-      }}
-    >
+    <SearchContext.Provider value={contextValue}>
       {children}
     </SearchContext.Provider>
   );
 };
 
+/**
+ * Hook to use search context
+ * @returns {SearchContextType}
+ * @throws {Error} When used outside of SearchProvider
+ */
 export const useSearch = () => {
   const context = React.useContext(SearchContext);
   if (!context) {
@@ -66,6 +94,4 @@ export const useSearch = () => {
   return context;
 };
 
-const SearchContext = React.createContext(null);
-
-export { SearchProvider };
+export { SearchContext, SearchProvider };

@@ -11,6 +11,7 @@ from typing import Union, Tuple, Any
 import logging
 from .dita.processor import DITAProcessor
 import traceback
+import os
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ bp = Blueprint(
     __name__,
     url_prefix='/',
     static_folder='static',
-    template_folder='static'
+    template_folder='templates'
 )
 dita_processor = DITAProcessor()
 
@@ -33,30 +34,86 @@ dita_processor = DITAProcessor()
 FlaskResponse = Union[Response, Tuple[Response, int], Tuple[str, int], Any]
 
 # Main routes
+# Main routes (modify the current index route and add new test route)
+@bp.route('/static/dist/<path:filename>')
+def serve_dist(filename: str) -> FlaskResponse:
+    """Serve built Vite assets"""
+    try:
+        dist_dir = os.path.join(current_app.root_path, 'static', 'dist')
+        if not os.path.exists(os.path.join(dist_dir, filename)):
+            logger.error(f"Dist file not found: {filename}")
+            return jsonify({'error': 'File not found'}), 404
+        return send_from_directory(dist_dir, filename)
+    except Exception as e:
+        logger.error(f"Error serving dist file {filename}: {str(e)}")
+        return jsonify({'error': 'File not found'}), 404
+
+
 @bp.route('/')
 def index() -> FlaskResponse:
-    """Serve the main application page"""
+    """Academic homepage"""
     try:
-        if current_app.debug:
-            logger.info("Serving development index.html")
-            return render_template('index.html')
-        logger.info("Serving production index.html")
-        return send_from_directory('../dist', 'index.html')
+        return render_template('academic.html')
+    except Exception as e:
+        logger.error(f"Error serving academic page: {str(e)}")
+        return jsonify({'error': 'Failed to load application'}), 500
+
+@bp.route('/test')
+def test_interface() -> FlaskResponse:
+    """Test interface"""
+    try:
+        logger.info("Serving development index.html")
+        return render_template('index.html')
     except Exception as e:
         logger.error(f"Error serving index page: {str(e)}")
         return jsonify({'error': 'Failed to load application'}), 500
+
+
+@bp.route('/entry/<topic_id>')
+def view_entry(topic_id: str) -> FlaskResponse:
+    """Academic article view"""
+    try:
+        topic_path = dita_processor.get_topic_path(topic_id)
+        if not topic_path:
+            logger.error(f"Topic not found: {topic_id}")
+            return render_template('academic.html', error="Entry not found"), 404
+
+        try:
+            content = dita_processor.transform_to_html(topic_path)
+            toc = dita_processor.generate_toc(topic_path)
+            metadata = dita_processor.get_topic_metadata(topic_path)
+
+            return render_template('academic.html',
+                               content=content,
+                               toc=toc,
+                               metadata=metadata,
+                               topic_id=topic_id)
+        except Exception as e:
+            logger.error(f"Error processing topic {topic_id}: {str(e)}")
+            return render_template('academic.html',
+                                error=f"Error processing topic: {str(e)}"), 500
+
+    except Exception as e:
+        logger.error(f"Error viewing entry: {str(e)}")
+        return render_template('academic.html', error=str(e)), 500
 
 @bp.route('/static/<path:filename>')
 def serve_static(filename: str) -> FlaskResponse:
     """Serve static files"""
     try:
-        if current_app.debug:
-            return send_from_directory('static', filename)
-        return send_from_directory('../dist', filename)
+        # Check if the file is in the dist directory
+        if filename.startswith('dist/'):
+            return serve_dist(filename.replace('dist/', '', 1))
+
+        # Serve regular static files
+        static_dir = os.path.join(current_app.root_path, 'static')
+        if not os.path.exists(os.path.join(static_dir, filename)):
+            logger.error(f"Static file not found: {filename}")
+            return jsonify({'error': 'File not found'}), 404
+        return send_from_directory(static_dir, filename)
     except Exception as e:
         logger.error(f"Error serving static file {filename}: {str(e)}")
         return jsonify({'error': 'File not found'}), 404
-
 # API routes
 @bp.route('/api/view/<topic_id>', methods=['GET'])
 def view_topic(topic_id: str) -> FlaskResponse:
@@ -121,6 +178,22 @@ def debug_topics() -> FlaskResponse:
         return jsonify({
             'error': str(e),
             'traceback': traceback.format_exc()
+        }), 500
+
+@bp.route('/api/topics', methods=['GET'])
+def get_topics() -> FlaskResponse:
+    """Get all available topics"""
+    try:
+        topics = dita_processor.list_topics()
+        return jsonify({
+            'success': True,
+            'topics': topics  # Return topics directly in the response
+        })
+    except Exception as e:
+        logger.error(f"Error getting topics: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500
 
 # Error handlers

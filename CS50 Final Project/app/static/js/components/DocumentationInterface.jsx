@@ -41,25 +41,36 @@ export default function DocumentationInterface() {
 
   // Fetch topics from the API
   useEffect(() => {
-    setLoading(true);
-    api
-      .get("/topics")
-      .then((data) => {
-        const grouped = data.reduce((acc, topic) => {
-          if (!acc[topic.type]) {
-            acc[topic.type] = [];
-          }
-          acc[topic.type].push(topic);
-          return acc;
-        }, {});
-        setTopics(grouped);
-        setLoading(false);
-      })
-      .catch((err) => {
+    const fetchTopics = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/topics");
+
+        // Check if response.data exists and has topics
+        if (response.data && response.data.topics) {
+          // Group topics by type
+          const grouped = response.data.topics.reduce((acc, topic) => {
+            const type = topic.type || "uncategorized";
+            if (!acc[type]) {
+              acc[type] = [];
+            }
+            acc[type].push(topic);
+            return acc;
+          }, {});
+
+          setTopics(grouped);
+        } else {
+          throw new Error("Invalid response format");
+        }
+      } catch (err) {
         console.error("Error fetching topics:", err);
-        setError(err.message);
+        setError(err.message || "Failed to load topics");
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchTopics();
   }, []);
 
   // Effect to handle map view initialization
@@ -80,14 +91,16 @@ export default function DocumentationInterface() {
 
       // Remove any file extension and path if present
       const cleanId = topicId
-        .replace(/\.(dita|md)$/, "") // Handle both .dita and .md extensions
+        .replace(/\.(dita|md)$/, "")
         .split("/")
         .pop();
 
-      const content = await api.getText(`/view/${cleanId}`);
+      const response = await api.get(`/view/${cleanId}`);
+      const content = response.data || response; // Handle both possible response formats
+
       setSelectedTopic({
         id: cleanId,
-        content,
+        content: typeof content === "string" ? content : content.html || "",
         isMarkdown: topicId.endsWith(".md"),
       });
     } catch (err) {
