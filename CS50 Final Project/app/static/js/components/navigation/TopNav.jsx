@@ -1,25 +1,19 @@
+// app/static/js/components/navigation/TopNav.jsx
 import React from "react";
 import { Book, Menu, ChevronDown } from "lucide-react";
 
 const TopNav = () => {
   return (
     <nav className="top-nav">
-      {/* Logo Section */}
-      {/* <div className="site-logo">
-        <img src="/static/img/logos/logo.png" alt="Site Logo" />
-        <h1 className="site-title">Documentation</h1>
-      </div>
-       */}
       <div className="site-logo">
         <h1 className="site-title">Documentation</h1>
       </div>
 
-      {/* Main Navigation */}
       <div className="nav-menu">
         <div className="dropdown">
-          <button className="flex items-center gap-2">
+          <button>
             <Book size={18} />
-            Browse
+            <span>Browse</span>
             <ChevronDown size={14} />
           </button>
           <ul className="dropdown-menu">
@@ -39,9 +33,9 @@ const TopNav = () => {
         </div>
 
         <div className="dropdown">
-          <button className="flex items-center gap-2">
+          <button>
             <Menu size={18} />
-            About
+            <span>About</span>
             <ChevronDown size={14} />
           </button>
           <ul className="dropdown-menu">

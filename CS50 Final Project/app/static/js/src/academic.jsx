@@ -1,54 +1,95 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import AcademicLayout from "../components/AcademicLayout";
+// app/static/js/src/academic.jsx
+import React, { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
 import TopNav from "../components/navigation/TopNav";
 import SideNav from "../components/navigation/SideNav";
 import SearchBar from "../components/navigation/SearchBar";
-import ArticleHeader from "../components/content/ArticleHeader";
-import TableOfContents from "../components/content/TableOfContents";
 import FooterNav from "../components/footer/FooterNav";
+import AcademicLayout from "../components/AcademicLayout";
 
-// Initialize all React roots after DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
-  // Mount Header Components
-  const headerContent = ReactDOM.createRoot(
-    document.getElementById("header-content"),
-  );
-  headerContent.render(
-    <React.StrictMode>
-      <TopNav />
-    </React.StrictMode>,
-  );
+const Academic = () => {
+  const [isNavVisible, setIsNavVisible] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [lastScroll, setLastScroll] = useState(0);
 
-  // Mount Search
-  const mainNav = ReactDOM.createRoot(document.getElementById("main-nav"));
-  mainNav.render(
-    <React.StrictMode>
-      <SearchBar />
-    </React.StrictMode>,
-  );
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScroll = window.pageYOffset;
 
-  // Mount Sidebar Navigation
-  const sidebarNav = ReactDOM.createRoot(
-    document.getElementById("article-sidebar"),
-  );
-  sidebarNav.render(
-    <React.StrictMode>
-      <SideNav />
-    </React.StrictMode>,
-  );
+      if (currentScroll > lastScroll && currentScroll > 100) {
+        setIsNavVisible(false);
+      } else {
+        setIsNavVisible(true);
+      }
 
-  // Let the server handle main article content rendering; removed ArticleContent mount
+      setLastScroll(currentScroll);
+    };
 
-  // Mount Footer
-  const footerContent = ReactDOM.createRoot(
-    document.getElementById("footer-content"),
-  );
-  footerContent.render(
-    <React.StrictMode>
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [lastScroll]);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
+  return (
+    <AcademicLayout>
+      <div
+        className={`navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top ${!isNavVisible ? "nav-hidden" : ""}`}
+      >
+        <TopNav />
+        <SearchBar />
+      </div>
+
+      <div className="d-flex">
+        <div
+          className={`left-sidebar ${isSidebarCollapsed ? "collapsed" : ""}`}
+        >
+          <button
+            className="btn btn-link sidebar-toggle"
+            onClick={toggleSidebar}
+          >
+            <i
+              className={`bi bi-${isSidebarCollapsed ? "chevron-right" : "chevron-left"}`}
+            ></i>
+          </button>
+          <SideNav />
+        </div>
+
+        <div className={`main-content ${isSidebarCollapsed ? "expanded" : ""}`}>
+          <div className="container-fluid">
+            <div className="row">
+              <div className="col-md-9">
+                <div id="article-content">
+                  {/* Content will be rendered here */}
+                </div>
+              </div>
+
+              <div className="col-md-3">
+                <div className="right-sidebar">
+                  <div className="toc-header">Contents</div>
+                  <div className="toc-content">
+                    {/* Table of Contents will be generated here */}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <FooterNav />
-    </React.StrictMode>,
+    </AcademicLayout>
   );
+};
 
-  // Removed both map event listeners as they are no longer needed
-});
+// Mount the React application
+const container = document.getElementById("root");
+const root = createRoot(container);
+root.render(<Academic />);
+
+export default Academic;
