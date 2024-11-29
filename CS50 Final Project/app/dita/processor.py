@@ -201,17 +201,87 @@ class DITAProcessor:
     def transform_to_html(self, input_path: Path) -> HTMLString:
         """Transform DITA content to HTML"""
         try:
-            # Check if file is markdown
+            # Handle different file types
             if input_path.suffix == '.md':
                 with open(input_path, 'r', encoding='utf-8') as f:
                     content = f.read()
                 metadata, html_content = self._parse_markdown(content)
                 return self._generate_markdown_html(metadata, html_content)
-            self.logger.info(f"Transforming {input_path} to HTML")
-            doc = self._parse_dita_file(input_path)
-            return self._generate_html_content(doc, input_path)
+            elif input_path.suffix == '.ditamap':  # Add this condition
+                return self._transform_map_to_html(input_path)
+            else:
+                self.logger.info(f"Transforming {input_path} to HTML")
+                doc = self._parse_dita_file(input_path)
+                return self._generate_html_content(doc, input_path)
         except Exception as e:
             return self._create_error_html(e, input_path)
+
+    def _transform_map_to_html(self, map_path: Path) -> HTMLString:
+        """Transform DITA map and its referenced topics to HTML"""
+        try:
+            with open(map_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            tree = etree.fromstring(content.encode('utf-8'), self.parser)
+            html_content = ['<div class="map-content">']
+
+            # Add title
+            title_elem = tree.find(".//title")
+            if title_elem is not None:
+                html_content.append(f'<h1 class="map-title">{title_elem.text}</h1>')
+
+            # Process each topic group
+            for topicgroup in tree.findall(".//topicgroup"):
+                # Get group title
+                navtitle = topicgroup.find(".//navtitle")
+                if navtitle is not None:
+                    html_content.append(f'<h2 class="group-title">{navtitle.text}</h2>')
+
+                html_content.append('<div class="group-content">')
+
+                # Process topics in group
+                for topicref in topicgroup.findall(".//topicref"):
+                    href = topicref.get('href')
+                    if href:
+                        # Convert relative path to absolute
+                        topic_path = self._resolve_topic_path(map_path, href)
+                        if topic_path and topic_path.exists():
+                            # Transform the referenced topic
+                            topic_content = self.transform_to_html(topic_path)
+                            html_content.append(topic_content)
+                        else:
+                            self.logger.warning(f"Referenced topic not found: {href}")
+
+                html_content.append('</div>')
+
+            html_content.append('</div>')
+            return '\n'.join(html_content)
+
+        except Exception as e:
+            self.logger.error(f"Error transforming map to HTML: {str(e)}")
+            return self._create_error_html(e, map_path)
+
+    def _resolve_topic_path(self, map_path: Path, href: str) -> Optional[Path]:
+        """Resolve a topic reference path relative to the map file"""
+        try:
+            # Remove any leading ../ from href
+            clean_href = href.replace('../', '')
+
+            # Try to find the topic in the topics directory
+            topic_path = self.topics_dir / clean_href
+
+            if topic_path.exists():
+                return topic_path
+
+            # If not found, try relative to map location
+            relative_path = map_path.parent / href
+            if relative_path.exists():
+                return relative_path
+
+            return None
+        except Exception as e:
+            self.logger.error(f"Error resolving topic path: {str(e)}")
+            return None
 
     def _generate_markdown_html(self, metadata: Dict[str, Any], content: str) -> HTMLString:
         """Generate HTML from markdown content with metadata"""
@@ -536,22 +606,37 @@ class DITAProcessor:
         """Get the full path for a topic by its ID"""
         self.logger.info(f"Looking for topic with ID: {topic_id}")
 
+        # First check if this is a .ditamap file
+        if topic_id.endswith('.ditamap'):
+            map_path = self.maps_dir / topic_id
+            if map_path.exists():
+                self.logger.info(f"Found map at: {map_path}")
+                return map_path
+            # Remove .ditamap extension and continue search
+            topic_id = topic_id.replace('.ditamap', '')
+
         # Remove any file extension from topic_id
         topic_base = topic_id.replace('.md', '').replace('.dita', '')
 
-        # Search in each subdirectory
+        # Check in maps directory first for .ditamap
+        map_path = self.maps_dir / f"{topic_base}.ditamap"
+        if map_path.exists():
+            self.logger.info(f"Found map at: {map_path}")
+            return map_path
+
+        # Then check in topic directories
         for subdir in ['acoustics', 'articles', 'audio', 'abstracts', 'journals', 'reference']:
             subdir_path = self.topics_dir / subdir
 
-            # Check for both .dita and .md files
+            # Check for .dita file
             dita_path = subdir_path / f"{topic_base}.dita"
-            md_path = subdir_path / f"{topic_base}.md"
-
             self.logger.info(f"Checking DITA path: {dita_path}")
             if dita_path.exists():
                 self.logger.info(f"Found topic at: {dita_path}")
                 return dita_path
 
+            # Check for .md file
+            md_path = subdir_path / f"{topic_base}.md"
             self.logger.info(f"Checking MD path: {md_path}")
             if md_path.exists():
                 self.logger.info(f"Found topic at: {md_path}")

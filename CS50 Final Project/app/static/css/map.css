@@ -1,9 +1,18 @@
-* app/static/css/map.css */ .map-content {
+.map-content {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     padding: 2rem;
-    height: 100%;
-    overflow-y: auto;
 }
 
+.group-content {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: white;
+    border-radius: 0.5rem;
+}
 .map-loading,
 .map-error,
 .map-empty {
@@ -106,4 +115,12 @@
 .topic-item.selected .topic-icon,
 .topic-item.selected .topic-title {
     color: #2563eb;
+}
+
+#map-view-container {
+    padding: 2rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
 }

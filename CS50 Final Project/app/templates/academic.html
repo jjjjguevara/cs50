@@ -1,42 +1,46 @@
 <!-- app/templates/academic.html -->
 <!doctype html>
 <html>
-    <!-- ... head section ... -->
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Academic View</title>
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='css/global.css') }}"
+        />
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='css/academic.css') }}"
+        />
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='css/nav.css') }}"
+        />
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='css/map.css') }}"
+        />
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='css/dita.css') }}"
+        />
+    </head>
     <body>
         <div class="academic-layout">
-            <!-- ... other divs ... -->
+            <div id="header-content"></div>
+            <div id="main-nav"></div>
+            <div id="article-sidebar"></div>
+            <div id="article-content">
+                <div id="map-view-container"></div>
+                {% if content %} {{ content | safe }} {% endif %}
+            </div>
+            <div id="footer-content"></div>
         </div>
 
         <script
             type="module"
             src="{{ url_for('static', filename='dist/academic.js') }}"
         ></script>
-        <script>
-            import React from "react";
-            import ReactDOM from "react-dom/client";
-            import MapView from "./components/MapView";
-
-            window.addEventListener("renderMap", (event) => {
-                const { mapId } = event.detail;
-                const mapContent = document.getElementById("map-content");
-                if (mapContent) {
-                    // Clear previous content
-                    while (mapContent.firstChild) {
-                        mapContent.removeChild(mapContent.firstChild);
-                    }
-
-                    // Create new React root and render MapView
-                    const root = ReactDOM.createRoot(mapContent);
-                    root.render(
-                        React.createElement(MapView, {
-                            mapId: mapId,
-                            onSelectTopic: (topicId) => {
-                                window.location.href = `/entry/${topicId}`;
-                            },
-                        }),
-                    );
-                }
-            });
-        </script>
     </body>
 </html>

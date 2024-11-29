@@ -10,20 +10,6 @@ export default defineConfig(({ command, mode }) => {
     root: path.resolve(__dirname, "app/static"),
     base: "/static/dist/",
 
-    server: {
-      port: 5173,
-      proxy:
-        command === "serve"
-          ? {
-              "/api": {
-                target: env.VITE_API_BASE_URL,
-                changeOrigin: true,
-                secure: false,
-              },
-            }
-          : undefined,
-    },
-
     build: {
       outDir: path.resolve(__dirname, "app/static/dist"),
       emptyOutDir: true,

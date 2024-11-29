@@ -1,3 +1,4 @@
+// app/static/js/components/navigation/SideNav.jsx
 import React, { useState, useEffect } from "react";
 import {
   BookOpen,
@@ -8,7 +9,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { api } from "@/utils/api";
-import MapView from "../MapView";
 
 const SideNav = () => {
   const [isArticlesOpen, setIsArticlesOpen] = useState(true);
@@ -17,18 +17,21 @@ const SideNav = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch available .ditamap files
   useEffect(() => {
     const fetchDitaMaps = async () => {
       try {
-        const response = await api.get("/ditamaps"); // New endpoint to list .ditamap files
-        if (response.data && response.data.maps) {
+        setLoading(true);
+        const response = await api.get("/ditamaps");
+        console.log("DitaMaps response:", response); // Debug log
+
+        if (response.data?.success && response.data.maps) {
           setDitaMaps(response.data.maps);
+        } else {
+          throw new Error("Invalid response format");
         }
-        setError(null);
       } catch (err) {
-        setError("Failed to load articles");
         console.error("Error loading ditamaps:", err);
+        setError("Failed to load articles");
       } finally {
         setLoading(false);
       }
@@ -37,36 +40,13 @@ const SideNav = () => {
     fetchDitaMaps();
   }, []);
 
-  const handleArticleClick = (articleId) => {
-    // Remove any file extension before navigation
-    const cleanId = articleId.replace(/\.(dita|md)$/, "");
-    window.location.href = `/entry/${cleanId}`;
-  };
-
-  const handleMapSelect = async (mapId) => {
-    try {
-      // Dispatch the renderMap event instead of directly manipulating DOM
-      const event = new CustomEvent("renderMap", {
-        detail: {
-          mapId,
-          onSelectTopic: (topicId) => {
-            window.location.href = `/entry/${topicId}`;
-          },
-        },
-      });
-      window.dispatchEvent(event);
-
-      // Update selected state
-      setSelectedMap(mapId);
-    } catch (error) {
-      console.error("Error loading map:", error);
-      setError("Failed to load map content");
-    }
+  const handleMapSelect = (mapId) => {
+    // Instead of dispatching a renderMap event, we should navigate to the map entry
+    window.location.href = `/entry/${mapId}.ditamap`;
   };
 
   return (
     <nav className="article-nav">
-      {/* DITA Maps Section */}
       <div className="nav-section">
         <button
           className="nav-title-button"
@@ -108,10 +88,7 @@ const SideNav = () => {
         )}
       </div>
 
-      {/* Rest of the component remains the same */}
-      {/* ... Tools Section ... */}
-      {/* ... Other Resources Section ... */}
-      {/* ... Back to Top Button ... */}
+      {/* Rest of your nav sections */}
     </nav>
   );
 };

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import MapView from "./MapView";
-import MapContent from "./MapContent";
 import { api } from "../utils/api";
 import "../../css/dita.css";
 import {
@@ -27,9 +26,8 @@ export default function DocumentationInterface() {
     articles: true,
     audio: true,
   });
-  const [viewMode, setViewMode] = useState("topics"); // 'topics' or 'maps'
+  const [viewMode, setViewMode] = useState("topics");
 
-  // Utility function to determine file icon
   const getFileIcon = (topicPath) => {
     const extension = topicPath.split(".").pop();
     return extension === "md" ? (
@@ -39,16 +37,13 @@ export default function DocumentationInterface() {
     );
   };
 
-  // Fetch topics from the API
   useEffect(() => {
     const fetchTopics = async () => {
       try {
         setLoading(true);
         const response = await api.get("/topics");
 
-        // Check if response.data exists and has topics
         if (response.data && response.data.topics) {
-          // Group topics by type
           const grouped = response.data.topics.reduce((acc, topic) => {
             const type = topic.type || "uncategorized";
             if (!acc[type]) {
@@ -73,14 +68,12 @@ export default function DocumentationInterface() {
     fetchTopics();
   }, []);
 
-  // Effect to handle map view initialization
   useEffect(() => {
     if (viewMode === "maps" && !selectedMap) {
       setSelectedMap("audio-engineering");
     }
   }, [viewMode]);
 
-  // Load topic content
   const loadTopic = async (topicId) => {
     try {
       setLoading(true);
@@ -89,14 +82,13 @@ export default function DocumentationInterface() {
         return;
       }
 
-      // Remove any file extension and path if present
       const cleanId = topicId
         .replace(/\.(dita|md)$/, "")
         .split("/")
         .pop();
 
       const response = await api.get(`/view/${cleanId}`);
-      const content = response.data || response; // Handle both possible response formats
+      const content = response.data || response;
 
       setSelectedTopic({
         id: cleanId,
@@ -111,7 +103,6 @@ export default function DocumentationInterface() {
     }
   };
 
-  // Toggle category visibility in the sidebar
   const toggleCategory = (category) => {
     setExpandedCategories((prev) => ({
       ...prev,
@@ -119,7 +110,6 @@ export default function DocumentationInterface() {
     }));
   };
 
-  // Handle view mode changes
   const handleViewModeChange = (mode) => {
     setViewMode(mode);
     if (mode === "topics") {
@@ -256,23 +246,14 @@ export default function DocumentationInterface() {
             ))
           ) : (
             // Maps View
-            <MapView onSelectTopic={loadTopic} />
+            <MapView mapId={selectedMap} onSelectTopic={loadTopic} />
           )}
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-6">
-        {viewMode === "maps" ? (
-          selectedMap ? (
-            <MapContent mapId={selectedMap} />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500">
-              <Book size={48} />
-              <p className="mt-4">Select a map to view its content</p>
-            </div>
-          )
-        ) : selectedTopic ? (
+        {selectedTopic ? (
           <div
             className={`prose max-w-none ${
               selectedTopic.isMarkdown ? "markdown-content" : "dita-content"

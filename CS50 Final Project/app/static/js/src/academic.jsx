@@ -5,112 +5,50 @@ import TopNav from "../components/navigation/TopNav";
 import SideNav from "../components/navigation/SideNav";
 import SearchBar from "../components/navigation/SearchBar";
 import ArticleHeader from "../components/content/ArticleHeader";
-import ArticleContent from "../components/content/ArticleContent";
 import TableOfContents from "../components/content/TableOfContents";
 import FooterNav from "../components/footer/FooterNav";
 
-// Wrap components with error boundaries
-const renderComponent = (Component, elementId) => {
-  const container = document.getElementById(elementId);
-  if (container) {
-    const root = ReactDOM.createRoot(container);
-    root.render(
-      <React.StrictMode>
-        <ErrorBoundary>
-          <Component />
-        </ErrorBoundary>
-      </React.StrictMode>,
-    );
-  }
-};
-
-// Error Boundary Component
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error("React Error:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return <div className="error">Something went wrong.</div>;
-    }
-    return this.props.children;
-  }
-}
-
-// Wrap the entire app with SearchProvider
-const App = () => (
-  <SearchProvider>
-    <div className="academic-layout">
-      {renderComponent(TopNav, "header-content")}
-      {renderComponent(SearchBar, "main-nav")}
-      {renderComponent(SideNav, "article-sidebar")}
-      <div id="article-content">
-        <ArticleHeader />
-        <TableOfContents />
-        <ArticleContent />
-      </div>
-      {renderComponent(FooterNav, "footer-content")}
-    </div>
-  </SearchProvider>
-);
-
-// Mount the main app
-const rootElement = document.createElement("div");
-document.body.appendChild(rootElement);
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </React.StrictMode>,
-);
-
-// Get the topic ID from the URL if available
-const getTopicId = () => {
-  const path = window.location.pathname;
-  const matches = path.match(/\/entry\/(.+)/);
-  return matches ? matches[1] : null;
-};
-
-// Mount components
+// Initialize all React roots after DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
-  // Create roots for each mount point
-  const mountComponent = (id, Component, props = {}) => {
-    const container = document.getElementById(id);
-    if (container) {
-      const root = ReactDOM.createRoot(container);
-      root.render(
-        <React.StrictMode>
-          <Component {...props} />
-        </React.StrictMode>,
-      );
-    }
-  };
+  // Mount Header Components
+  const headerContent = ReactDOM.createRoot(
+    document.getElementById("header-content"),
+  );
+  headerContent.render(
+    <React.StrictMode>
+      <TopNav />
+    </React.StrictMode>,
+  );
 
-  const topicId = getTopicId();
+  // Mount Search
+  const mainNav = ReactDOM.createRoot(document.getElementById("main-nav"));
+  mainNav.render(
+    <React.StrictMode>
+      <SearchBar />
+    </React.StrictMode>,
+  );
 
-  // Mount each component
-  mountComponent("header-content", TopNav);
-  mountComponent("main-nav", SearchBar);
-  mountComponent("article-sidebar", SideNav);
+  // Mount Sidebar Navigation
+  const sidebarNav = ReactDOM.createRoot(
+    document.getElementById("article-sidebar"),
+  );
+  sidebarNav.render(
+    <React.StrictMode>
+      <SideNav />
+    </React.StrictMode>,
+  );
 
-  // Only mount content components if we have a topic ID
-  if (topicId) {
-    mountComponent("article-header", ArticleHeader);
-    mountComponent("table-of-contents", TableOfContents);
-    mountComponent("article-content", ArticleContent, { topicId });
-  }
+  // Let the server handle main article content rendering; removed ArticleContent mount
 
-  mountComponent("footer-content", FooterNav);
+  // Mount Footer
+  const footerContent = ReactDOM.createRoot(
+    document.getElementById("footer-content"),
+  );
+  footerContent.render(
+    <React.StrictMode>
+      <FooterNav />
+    </React.StrictMode>,
+  );
+
+  // Removed both map event listeners as they are no longer needed
 });

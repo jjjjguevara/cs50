@@ -38,12 +38,23 @@
     height: calc(100vh - 120px); /* Adjust based on header + search height */
 }
 
-/* Main content area */
-.article-content {
+/* Main layout grid area */
+#article-content {
     grid-area: main;
     padding: 2rem;
     overflow-y: auto;
     height: calc(100vh - 120px);
+    background-color: #f8fafc;
+}
+
+/* Content styling */
+.article-content {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
 }
 
 /* Responsive adjustments */

@@ -20,17 +20,15 @@ export default function MapView({ mapId, onSelectTopic }) {
   useEffect(() => {
     if (mapId) {
       setLoading(true);
+      console.log("Fetching map:", mapId); // Debug log
+
       api
         .get(`/map/${mapId}`)
         .then((response) => {
+          console.log("Map response:", response); // Debug log
           if (response.data && response.data.success) {
-            console.log("Received map data:", response.data.map);
             setMap(response.data.map);
-            // Auto-expand first group
-            if (
-              response.data.map.groups &&
-              response.data.map.groups.length > 0
-            ) {
+            if (response.data.map.groups?.length > 0) {
               const initialExpanded = {};
               response.data.map.groups.forEach((_, index) => {
                 initialExpanded[index] = true;
@@ -41,7 +39,7 @@ export default function MapView({ mapId, onSelectTopic }) {
           setLoading(false);
         })
         .catch((err) => {
-          console.error("Error loading map:", err);
+          console.error("Error loading map:", err); // Debug log
           setError(err.message);
           setLoading(false);
         });

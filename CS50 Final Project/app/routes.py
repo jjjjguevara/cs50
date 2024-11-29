@@ -130,30 +130,19 @@ def view_entry(topic_id: str) -> FlaskResponse:
 def serve_static(filename: str) -> FlaskResponse:
     """Serve static files"""
     try:
-        # Check if the file is in the dist directory
-        if filename.startswith('dist/'):
-            return serve_dist(filename.replace('dist/', '', 1))
-
-        # Serve regular static files
-        static_dir = os.path.join(current_app.root_path, 'static')
-        if not os.path.exists(os.path.join(static_dir, filename)):
-            logger.error(f"Static file not found: {filename}")
-            return jsonify({'error': 'File not found'}), 404
-        return send_from_directory(static_dir, filename)
+        return send_from_directory('static', filename)
     except Exception as e:
         logger.error(f"Error serving static file {filename}: {str(e)}")
         return jsonify({'error': 'File not found'}), 404
-
 
 @bp.route('/api/ditamaps')
 def get_ditamaps():
     """Get list of available DITA maps"""
     try:
-        # Use current_app instead of app
         maps_dir = Path(current_app.root_path) / 'dita' / 'maps'
         maps = []
 
-        # Initialize XML parser
+        # Initialize parser
         parser = etree.XMLParser(
             recover=True,
             remove_blank_text=True,
@@ -163,30 +152,29 @@ def get_ditamaps():
             no_network=True
         )
 
-        logger.info(f"Scanning for DITA maps in: {maps_dir}")
-
         for map_file in maps_dir.glob('*.ditamap'):
             try:
-                # Parse the .ditamap file to get its title
-                with open(map_file, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                tree = etree.fromstring(content.encode('utf-8'), parser)
-                title_elem = tree.find(".//title")
-                title = title_elem.text if title_elem is not None else map_file.stem
+                # Only process non-empty files
+                if map_file.stat().st_size > 0:
+                    logger.info(f"Processing map file: {map_file}")
+                    with open(map_file, 'r', encoding='utf-8') as f:
+                        content = f.read().strip()
+                        if content:
+                            tree = etree.fromstring(content.encode('utf-8'), parser)
+                            title_elem = tree.find(".//title")
+                            title = title_elem.text if title_elem is not None else map_file.stem
 
-                map_data = {
-                    'id': map_file.stem,
-                    'title': title,
-                    'path': str(map_file.relative_to(maps_dir))
-                }
-
-                logger.info(f"Found DITA map: {map_data}")
-                maps.append(map_data)
-
+                            map_data = {
+                                'id': map_file.stem,
+                                'title': title,
+                                'path': str(map_file.relative_to(maps_dir))
+                            }
+                            maps.append(map_data)
+                            logger.info(f"Found DITA map: {map_data}")
             except Exception as e:
-                logger.error(f"Error processing map file {map_file}: {e}")
+                logger.warning(f"Skipping invalid map file {map_file}: {str(e)}")
+                continue
 
-        logger.info(f"Found {len(maps)} DITA maps")
         return jsonify({
             'success': True,
             'maps': maps
@@ -306,9 +294,7 @@ def debug_files():
 def get_map_content(map_id: str):
     """Get content of a specific DITA map"""
     try:
-        # Ensure we're looking for a .ditamap file
         map_path = Path(current_app.root_path) / 'dita' / 'maps' / f"{map_id}.ditamap"
-
         logger.info(f"Loading map from: {map_path}")
 
         if not map_path.exists():
@@ -318,7 +304,7 @@ def get_map_content(map_id: str):
                 'error': 'Map not found'
             }), 404
 
-        # Parse the .ditamap file
+        # Initialize parser
         parser = etree.XMLParser(
             recover=True,
             remove_blank_text=True,
@@ -330,7 +316,7 @@ def get_map_content(map_id: str):
 
         with open(map_path, 'r', encoding='utf-8') as f:
             content = f.read()
-            logger.info(f"Map content: {content[:200]}...")  # Log first 200 chars
+            logger.info(f"Processing map content...")
 
         tree = etree.fromstring(content.encode('utf-8'), parser)
 
@@ -354,7 +340,7 @@ def get_map_content(map_id: str):
                 'topics': []
             }
 
-            # Get group title
+            # Get group title from topicmeta/navtitle
             navtitle = topicgroup.find(".//navtitle")
             if navtitle is not None:
                 group['navtitle'] = navtitle.text
