@@ -1,14 +1,20 @@
 /* app/static/css/global.css */
 :root {
     /* Colors - Using the pastel palette */
-    --color-primary: #dee4f9; /* Light blue */
+    --color-primary: rgba(171, 169, 175, 0.2); /* Pale purple */
     --color-primary-dark: #c5cef7; /* Darker shade for contrast */
     --color-secondary: #e5def9; /* Light purple */
     --color-accent: #f3def9; /* Darker purple */
     --color-highlight: #f9def2; /* Soft pink */
-    --color-border: #ccd2e7; /* Pink border */
+    --color-border: rgba(171, 169, 175, 0.2); /* Pale purple border */
     --color-background: #ffffff;
     --color-surface: rgba(222, 228, 249, 0.05); /* Very light blue background */
+    --bs-border-color: rgba(171, 169, 175, 0.2);
+
+    /* Shared properties for alignment */
+    --content-max-width: 1100px;
+    --offcanvas-space: 350px;
+    --content-margin: calc(var(--spacing-xl));
 
     /* Text Colors - Maintaining readability */
     --color-text: #1e293b; /* Dark text for contrast */
@@ -21,7 +27,7 @@
 
     /* Spacing */
     --spacing-sm: 0.5rem;
-    --spacing-md: 1rem;
+    --spacing-md: 0rem;
     --spacing-lg: 1.5rem;
     --spacing-xl: 2rem;
 
@@ -32,7 +38,7 @@
 
     /* Shadows */
     --shadow-sm: 0 1px 3px rgba(222, 228, 249, 0.2);
-    --shadow-md: 0 4px 6px rgba(229, 222, 249, 0.15);
+    --shadow-md: 0 4px 6px rgba(229, 222, 249, 0.4);
     --shadow-lg: 0 10px 15px rgba(243, 222, 249, 0.1);
 }
 
@@ -65,7 +71,7 @@ h1 {
     color: var(--color-text);
     margin-bottom: var(--spacing-lg);
     padding-bottom: var(--spacing-sm);
-    border-bottom: 2px solid var(--color-primary);
+    border-bottom: 1px solid rgba(222, 228, 249, 0.5); /* Replace with actual RGB values */
 }
 
 h2 {

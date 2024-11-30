@@ -1,39 +1,108 @@
+/* Add font declaration at the top */
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-Italic.ttf") format("truetype");
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-Light.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-LightItalic.ttf") format("truetype");
+    font-weight: 300;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-MediumItalic.ttf") format("truetype");
+    font-weight: 500;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-DemiBold.ttf") format("truetype");
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-DemiBoldItalic.ttf") format("truetype");
+    font-weight: 600;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-BoldItalic.ttf") format("truetype");
+    font-weight: 700;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-ExtraLight.ttf") format("truetype");
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Austera Text";
+    src: url("../fonts/AusteraText-ExtraLightItalic.ttf") format("truetype");
+    font-weight: 200;
+    font-style: italic;
+}
+
 /* Article body */
 
 /* Article wrapper with increased left margin for offcanvas */
 .article-wrapper {
-    max-width: 1100px;
-    margin: 0 auto;
-    margin-left: calc(var(--spacing-xl) + 350px); /* Add space for offcanvas */
+    max-width: var(--content-max-width);
+    margin: var(--content-margin);
+    margin-left: calc(var(--content-margin) + var(--offcanvas-space));
     padding: var(--spacing-xl);
     background-color: var(--color-background);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--color-primary);
+    font-family: "Austera Text", Georgia, serif;
 }
-
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-    .article-wrapper {
-        margin-left: auto; /* Reset margin on smaller screens */
-        margin-right: auto;
-    }
-
-    .main-content {
-        padding: 1rem;
-    }
-}
-
-.left-sidebar.show {
-    transform: translateX(0);
-}
-
-/* Base content styles - apply to both DITA and Markdown */
 
 /* Typography */
 .dita-content h1,
 .markdown-content h1,
 .map-content .content-title {
+    font-family: "Austera Text", Georgia, serif; /* Add font-family */
     font-size: 2.5rem;
     font-weight: 700;
     color: var(--color-text);
@@ -46,6 +115,7 @@
 .dita-content h2,
 .markdown-content h2,
 .map-content .content-section h2 {
+    font-family: "Austera Text", Georgia, serif; /* Add font-family */
     font-size: 1.5rem;
     font-weight: 600;
     color: var(--color-text);
@@ -55,6 +125,7 @@
 /* Section titles in included topics */
 .map-content .dita-content h1,
 .map-content .markdown-content h1 {
+    font-family: "Austera Text", Georgia, serif; /* Add font-family */
     font-size: 2rem;
     color: var(--color-text);
     margin: 2rem 0 1rem;
@@ -65,6 +136,7 @@
 /* Paragraphs */
 .dita-content p,
 .markdown-content p {
+    font-family: "Austera Text", Georgia, serif; /* Add font-family */
     margin-bottom: 1.25rem;
     line-height: 1.6;
 }
@@ -235,6 +307,12 @@ h6:hover .heading-anchor {
     max-height: calc(100vh - 4rem);
     overflow-y: auto;
     padding: 1rem;
+    padding-left: 0; /* Remove left padding */
+    margin-left: -1rem;
+}
+
+.right-sidebar {
+    margin-left: 0rem; /* Controls TOC left alignment */
 }
 
 .toc-header h2 {

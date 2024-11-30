@@ -30,11 +30,8 @@
     <body>
         <div class="academic-layout">
             <!-- Top Navigation -->
-            <nav
-                class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top"
-                id="top-nav"
-            >
-                <div class="container-fluid px-4">
+            <nav class="main-navbar">
+                <div class="navbar-container">
                     <a class="navbar-brand" href="/">Home</a>
                     <button
                         class="navbar-toggler"
@@ -46,7 +43,7 @@
                     </button>
 
                     <div class="collapse navbar-collapse" id="navbarContent">
-                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <ul class="navbar-nav">
                             <li class="nav-item">
                                 <a class="nav-link" href="/articles"
                                     >Articles</a
@@ -57,13 +54,15 @@
                                     class="nav-link dropdown-toggle"
                                     href="#"
                                     id="browseDropdown"
-                                    role="button"
                                     data-bs-toggle="dropdown"
                                 >
                                     Browse
                                 </a>
-                                <ul class="dropdown-menu">
-                                    <!-- Your browse menu items -->
+                                <ul
+                                    class="dropdown-menu"
+                                    aria-labelledby="browseDropdown"
+                                >
+                                    <!-- Dropdown items -->
                                 </ul>
                             </li>
                             <li class="nav-item dropdown">
@@ -71,13 +70,15 @@
                                     class="nav-link dropdown-toggle"
                                     href="#"
                                     id="aboutDropdown"
-                                    role="button"
                                     data-bs-toggle="dropdown"
                                 >
                                     About
                                 </a>
-                                <ul class="dropdown-menu">
-                                    <!-- Your about menu items -->
+                                <ul
+                                    class="dropdown-menu"
+                                    aria-labelledby="aboutDropdown"
+                                >
+                                    <!-- Dropdown items -->
                                 </ul>
                             </li>
                         </ul>
