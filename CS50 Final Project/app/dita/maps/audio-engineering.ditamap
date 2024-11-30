@@ -8,6 +8,10 @@
         <topicmeta>
             <navtitle>Fundamental Concepts</navtitle>
         </topicmeta>
+        <topicref
+            href="../topics/acoustics/room-acoustics.dita"
+            type="concept"
+        />
         <topicref href="../topics/audio/sound-basics.dita" type="concept" />
         <topicref
             href="../topics/audio/waveform-properties.dita"
@@ -22,10 +26,6 @@
         </topicmeta>
         <topicref
             href="../topics/acoustics/sound-propagation.dita"
-            type="concept"
-        />
-        <topicref
-            href="../topics/acoustics/room-acoustics.dita"
             type="concept"
         />
         <topicref

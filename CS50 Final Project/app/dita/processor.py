@@ -269,37 +269,59 @@ class DITAProcessor:
                 # Create soup object for consistent handling
                 soup = BeautifulSoup(html_content, 'html.parser')
 
-                # Wrap content in markdown-content div if not already wrapped
+                # Find all headings
+                headings = soup.find_all(['h1', 'h2'])
+
+                # Process headings in order
+                for heading in headings:
+                    if heading.name == 'h1':
+                        section_numbers['h1'] += 1
+                        section_numbers['h2'] = 0
+                        section_numbers['current_h1'] = section_numbers['h1']
+                        original_text = heading.get_text(strip=True)
+                        new_text = f"{section_numbers['h1']}. {original_text}"
+                        heading_id = self._generate_id(new_text)
+
+                        # Update heading
+                        heading['id'] = heading_id
+                        heading.string = new_text
+                        heading['class'] = 'text-2xl font-bold mb-4'
+
+                        # Add anchor
+                        anchor = soup.new_tag('a', attrs={
+                            'href': f'#{heading_id}',
+                            'class': 'heading-anchor',
+                            'aria-label': 'Link to this heading'
+                        })
+                        anchor.string = '§'
+                        heading.append(anchor)
+
+                    elif heading.name == 'h2':
+                        section_numbers['h2'] += 1
+                        original_text = heading.get_text(strip=True)
+                        new_text = f"{section_numbers['current_h1']}.{section_numbers['h2']}. {original_text}"
+                        heading_id = self._generate_id(new_text)
+
+                        # Update heading
+                        heading['id'] = heading_id
+                        heading.string = new_text
+                        heading['class'] = 'text-xl font-bold mt-6 mb-3'
+
+                        # Add anchor
+                        anchor = soup.new_tag('a', attrs={
+                            'href': f'#{heading_id}',
+                            'class': 'heading-anchor',
+                            'aria-label': 'Link to this heading'
+                        })
+                        anchor.string = '§'
+                        heading.append(anchor)
+
+                # Wrap in markdown-content div if not already wrapped
                 if not soup.find('div', class_='markdown-content'):
-                    new_div = soup.new_tag('div', attrs={'class': 'markdown-content'})
+                    wrapper = soup.new_tag('div', attrs={'class': 'markdown-content'})
                     for tag in soup.contents[:]:
-                        new_div.append(tag.extract())
-                    soup.append(new_div)
-
-                # Find all headings and number them consistently
-                h1_elements = soup.find_all('h1')
-                h2_elements = soup.find_all('h2')
-
-                # First h1 gets the next section number
-                if h1_elements:
-                    section_numbers['h1'] += 1
-                    section_numbers['h2'] = 0
-                    section_numbers['current_h1'] = section_numbers['h1']
-                    first_h1 = h1_elements[0]
-                    original_text = first_h1.get_text()
-                    new_text = f"{section_numbers['h1']}. {original_text}"
-                    new_tag = soup.new_tag('h1', attrs={'class': 'text-2xl font-bold mb-4'})
-                    new_tag.string = new_text
-                    first_h1.replace_with(new_tag)
-
-                # Number all h2 elements
-                for h2 in h2_elements:
-                    section_numbers['h2'] += 1
-                    original_text = h2.get_text()
-                    new_text = f"{section_numbers['current_h1']}.{section_numbers['h2']}. {original_text}"
-                    new_tag = soup.new_tag('h2', attrs={'class': 'text-xl font-bold mt-6 mb-3'})
-                    new_tag.string = new_text
-                    h2.replace_with(new_tag)
+                        wrapper.append(tag.extract())
+                    soup.append(wrapper)
 
                 return str(soup)
             else:
@@ -308,43 +330,73 @@ class DITAProcessor:
 
         except Exception as e:
             self.logger.error(f"Error transforming topic with numbering: {str(e)}")
-            return self._create_error_html(e, topic_path)
+            return f"""
+            <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                <h3 class="font-bold">Error Processing Content</h3>
+                <p>{str(e)}</p>
+            </div>
+            """
 
     def _generate_numbered_html_content(self, doc: XMLElement, section_numbers: Dict[str, Any]) -> HTMLString:
         """Generate HTML content with numbered headings"""
-        html_content = ['<div class="dita-content">']
+        try:
+            html_content = ['<div class="dita-content">']
 
-        # Handle h1 (main topic title)
-        title_elem = self._find_first_element(doc, 'title')
-        if title_elem is not None and title_elem.text:
-            section_numbers['h1'] += 1
-            section_numbers['h2'] = 0  # Reset h2 counter
-            section_numbers['current_h1'] = section_numbers['h1']
-            numbered_title = f"{section_numbers['h1']}. {title_elem.text}"
-            html_content.append(f'<h1 class="text-2xl font-bold mb-4">{numbered_title}</h1>')
+            # Handle h1 (main topic title)
+            title_elem = self._find_first_element(doc, 'title')
+            if title_elem is not None and title_elem.text:
+                section_numbers['h1'] += 1
+                section_numbers['h2'] = 0
+                section_numbers['current_h1'] = section_numbers['h1']
+                numbered_title = f"{section_numbers['h1']}. {title_elem.text}"
+                heading_id = self._generate_id(numbered_title)
+                html_content.append(
+                    f'<h1 id="{heading_id}" class="text-2xl font-bold mb-4">'
+                    f'{numbered_title}'
+                    f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">§</a>'
+                    f'</h1>'
+                )
 
-        # Add metadata if present
-        html_content.extend(self._transform_metadata(doc))
+            # Add metadata if present
+            html_content.extend(self._transform_metadata(doc))
 
-        # Process sections with numbering
-        for elem in doc.iter():
-            tag = etree.QName(elem).localname
-            if tag == 'section':
-                section_title = self._find_first_element(elem, 'title')
-                if section_title is not None and section_title.text:
-                    section_numbers['h2'] += 1
-                    numbered_section = f"{section_numbers['current_h1']}.{section_numbers['h2']}. {section_title.text}"
-                    html_content.append(f'<h2 class="text-xl font-bold mt-6 mb-3">{numbered_section}</h2>')
+            # Process sections with numbering
+            for elem in doc.iter():
+                tag = etree.QName(elem).localname
+                if tag == 'section':
+                    section_title = self._find_first_element(elem, 'title')
+                    if section_title is not None and section_title.text:
+                        section_numbers['h2'] += 1
+                        numbered_section = f"{section_numbers['current_h1']}.{section_numbers['h2']}. {section_title.text}"
+                        heading_id = self._generate_id(numbered_section)
+                        html_content.append(
+                            f'<h2 id="{heading_id}" class="text-xl font-bold mt-6 mb-3">'
+                            f'{numbered_section}'
+                            f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">§</a>'
+                            f'</h2>'
+                        )
+                elif tag == 'p' and elem.text:
+                    html_content.append(f'<p class="mb-4">{elem.text}</p>')
+                elif tag == 'shortdesc' and elem.text:
+                    html_content.append(f'<p class="text-lg text-gray-600 mb-6">{elem.text}</p>')
+                elif tag in ['ul', 'ol']:
+                    html_content.append(self._transform_list(elem))
 
-            elif tag == 'p' and elem.text:
-                html_content.append(f'<p class="mb-4">{elem.text}</p>')
-            elif tag == 'shortdesc' and elem.text:
-                html_content.append(f'<p class="text-lg text-gray-600 mb-6">{elem.text}</p>')
-            elif tag in ['ul', 'ol']:
-                html_content.append(self._transform_list(elem))
+            html_content.append('</div>')
+            return '\n'.join(html_content)
 
-        html_content.append('</div>')
-        return '\n'.join(html_content)
+        except Exception as e:
+            self.logger.error(f"Error generating numbered HTML content: {str(e)}")
+            return f"""
+            <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                <h3 class="font-bold">Error Processing Content</h3>
+                <p>{str(e)}</p>
+            </div>
+            """
+
+    def _generate_id(self, text: str) -> str:
+        """Generate a URL-friendly ID from text"""
+        return text.lower().replace(' ', '-').replace('.', '-').replace('(', '').replace(')', '').replace(',', '')
 
     def _add_numbering_to_html(self, html_content: str, section_numbers: Dict[str, Any]) -> HTMLString:
         """Add numbering to HTML content from Markdown"""
@@ -390,10 +442,19 @@ class DITAProcessor:
         """Generate HTML from markdown content with metadata"""
         html_content = ['<div class="markdown-content">']
 
-        # Add title if present
-        if 'title' in metadata:
+        # Create a BeautifulSoup object for the markdown content
+        soup = BeautifulSoup(content, 'html.parser')
+
+        # Find the first h1 or create one from metadata title
+        h1 = soup.find('h1')
+        if not h1 and 'title' in metadata:
+            # Create a new h1 element with the metadata title
+            heading_id = self._generate_id(metadata['title'])
             html_content.append(
-                f'<h1 class="text-2xl font-bold mb-4">{metadata["title"]}</h1>'
+                f'<h1 id="{heading_id}" class="text-2xl font-bold mb-4">'
+                f'{metadata["title"]}'
+                f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">§</a>'
+                f'</h1>'
             )
 
         # Add metadata table if present
@@ -410,8 +471,41 @@ class DITAProcessor:
                     html_content.append('</tr>')
             html_content.append('</table></div>')
 
-        # Add main content
-        html_content.append(content)
+        # Process the main content with proper heading structure
+        # If we created an h1 from metadata, we want to preserve that structure
+        if 'title' in metadata:
+            # Remove any existing h1 elements to avoid duplication
+            for h1 in soup.find_all('h1'):
+                h1.name = 'h2'  # Convert to h2 to maintain hierarchy
+                heading_id = self._generate_id(h1.text)
+                h1['id'] = heading_id
+                h1['class'] = 'text-xl font-bold mt-6 mb-3'
+                # Add anchor link
+                anchor = soup.new_tag('a', attrs={
+                    'href': f'#{heading_id}',
+                    'class': 'heading-anchor',
+                    'aria-label': 'Link to this heading'
+                })
+                anchor.string = '§'
+                h1.append(anchor)
+
+        # Process all remaining headings
+        for heading in soup.find_all(['h2', 'h3', 'h4', 'h5', 'h6']):
+            heading_id = self._generate_id(heading.text)
+            heading['id'] = heading_id
+            if heading.name == 'h2':
+                heading['class'] = 'text-xl font-bold mt-6 mb-3'
+            # Add anchor link
+            anchor = soup.new_tag('a', attrs={
+                'href': f'#{heading_id}',
+                'class': 'heading-anchor',
+                'aria-label': 'Link to this heading'
+            })
+            anchor.string = '§'
+            heading.append(anchor)
+
+        # Add the processed content
+        html_content.append(str(soup))
         html_content.append('</div>')
 
         return '\n'.join(html_content)

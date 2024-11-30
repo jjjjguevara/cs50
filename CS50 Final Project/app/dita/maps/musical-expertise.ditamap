@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map id="musical-expertise-study">
+    <title
+    >Neural Correlates of Musical Expertise: A Comprehensive Review</title>
+
+    <!-- Front Matter -->
+    <topicgroup>
+        <topicmeta>
+            <navtitle>Front Matter</navtitle>
+        </topicmeta>
+        <topicref
+            href="../topics/acoustics/abstract-and-introduction.md"
+            format="markdown"
+            type="concept"
+        />
+    </topicgroup>
+
+    <!-- Methods -->
+    <topicgroup>
+        <topicmeta>
+            <navtitle>Methodology</navtitle>
+        </topicmeta>
+        <topicref
+            href="../topics/acoustics/methods.md"
+            format="markdown"
+            type="concept"
+        />
+    </topicgroup>
+
+    <!-- Results -->
+    <topicgroup>
+        <topicmeta>
+            <navtitle>Research Findings</navtitle>
+        </topicmeta>
+        <topicref
+            href="../topics/acoustics/results.md"
+            format="markdown"
+            type="concept"
+        />
+    </topicgroup>
+
+    <!-- Discussion -->
+    <topicgroup>
+        <topicmeta>
+            <navtitle>Discussion and Conclusions</navtitle>
+        </topicmeta>
+        <topicref
+            href="../topics/acoustics/discussion.md"
+            format="markdown"
+            type="concept"
+        />
+    </topicgroup>
+</map>
