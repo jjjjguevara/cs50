@@ -24,10 +24,6 @@
         />
         <link
             rel="stylesheet"
-            href="{{ url_for('static', filename='css/map.css') }}"
-        />
-        <link
-            rel="stylesheet"
             href="{{ url_for('static', filename='css/content.css') }}"
         />
     </head>
@@ -112,9 +108,12 @@
 
                             <!-- Right Sidebar (TOC) -->
                             <div class="col-md-3">
-                                <div class="right-sidebar">
+                                <div
+                                    class="right-sidebar position-sticky"
+                                    style="top: 80px"
+                                >
+                                    <!-- Add these -->
                                     <div id="toc-root"></div>
-                                    <!-- This is where TableOfContents will mount -->
                                 </div>
                             </div>
                         </div>
@@ -125,7 +124,25 @@
             <!-- Footer -->
             <footer class="footer mt-auto py-3 bg-light">
                 <div class="container">
-                    <!-- Your footer content -->
+                    <div class="d-flex justify-content-center gap-4">
+                        <a href="#" class="text-decoration-none text-muted"
+                            >Home</a
+                        >
+                        <a href="#" class="text-decoration-none text-muted"
+                            >FAQs</a
+                        >
+                        <a href="#" class="text-decoration-none text-muted"
+                            >Journal</a
+                        >
+                        <a href="#" class="text-decoration-none text-muted"
+                            >Contribute</a
+                        >
+                        <a href="#" class="text-decoration-none text-muted"
+                            >About</a
+                        >
+                    </div>
+                    <hr class="my-4" />
+                    <p class="text-center text-muted">© 2024 Company, Inc</p>
                 </div>
             </footer>
         </div>

@@ -1,16 +1,34 @@
-/* Base content styles - apply to both DITA and Markdown */
-.dita-content,
-.markdown-content,
-.map-content {
-    max-width: 800px;
+/* Article body */
+
+/* Article wrapper with increased left margin for offcanvas */
+.article-wrapper {
+    max-width: 1100px;
     margin: 0 auto;
-    font-family:
-        system-ui,
-        -apple-system,
-        sans-serif;
-    line-height: 1.6;
-    color: var(--color-text);
+    margin-left: calc(var(--spacing-xl) + 350px); /* Add space for offcanvas */
+    padding: var(--spacing-xl);
+    background-color: var(--color-background);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-primary);
 }
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .article-wrapper {
+        margin-left: auto; /* Reset margin on smaller screens */
+        margin-right: auto;
+    }
+
+    .main-content {
+        padding: 1rem;
+    }
+}
+
+.left-sidebar.show {
+    transform: translateX(0);
+}
+
+/* Base content styles - apply to both DITA and Markdown */
 
 /* Typography */
 .dita-content h1,
@@ -161,6 +179,36 @@
     text-decoration: underline;
 }
 
+/* Anchor links */
+/* Apply styles to all heading levels */
+h1:hover .heading-anchor,
+h2:hover .heading-anchor,
+h3:hover .heading-anchor,
+h4:hover .heading-anchor,
+h5:hover .heading-anchor,
+h6:hover .heading-anchor {
+    opacity: 1;
+    color: #dee4f9;
+}
+
+.heading-anchor {
+    opacity: 0;
+    margin-left: 0.5em;
+    text-decoration: none;
+    font-size: 0.8em;
+    color: #f2def9;
+}
+
+.heading-anchor:hover {
+    text-decoration: none;
+    color: #dee4f9;
+}
+
+/* Hide pilcrow in TOC but keep links functional */
+.toc-nav a {
+    text-decoration: none;
+}
+
 /* Images */
 .dita-content img,
 .markdown-content img {
@@ -177,4 +225,61 @@
 
 .map-content .content-section > :last-child {
     margin-bottom: 0;
+}
+
+/* Table of contents */
+
+.toc-nav {
+    position: sticky;
+    top: 2rem;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.toc-header h2 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc-item {
+    margin: 0.5rem 0;
+}
+
+.toc-item a {
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+/* Hierarchical indentation */
+.toc-level-1 {
+    margin-left: 0;
+}
+
+.toc-level-2 {
+    margin-left: 1rem;
+}
+
+.toc-level-3 {
+    margin-left: 2rem;
+}
+
+/* Basic hierarchy indicators through font weight */
+.toc-level-1 > a {
+    font-weight: 600;
+}
+
+.toc-level-2 > a {
+    font-weight: 500;
+}
+
+.toc-level-3 > a {
+    font-weight: 400;
+    font-size: 0.85rem;
 }

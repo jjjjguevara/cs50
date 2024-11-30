@@ -1,11 +1,14 @@
-from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union, cast, Callable
-from pathlib import Path
-from lxml import etree
+import json
 import logging
+import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union, cast, Callable
+from .citations import parse_citations
 import frontmatter
-from bs4 import BeautifulSoup
 import markdown
-from markdown.extensions import fenced_code, tables, meta
+from bs4 import BeautifulSoup
+from lxml import etree
+from markdown.extensions import fenced_code, meta, tables
 
 # Type aliases and generics
 HTMLString = str
@@ -222,99 +225,131 @@ class DITAProcessor:
             tree = etree.fromstring(content.encode('utf-8'), self.parser)
             html_content = ['<div class="map-content">']
 
-            # Handle main title (no numbering)
+            # Handle main title
             title_elem = tree.find(".//title")
             if title_elem is not None and title_elem.text:
                 html_content.append(f'<h1 class="content-title">{title_elem.text}</h1>')
 
-            # Initialize section counters
+            # Initialize section counters and reference counter
             section_numbers = {
                 'h1': 0,
                 'h2': 0,
+                'h3': 0,
                 'current_h1': None
             }
 
-            # First pass: collect all topics and their headings
-            all_topics = []
+            # Initialize global reference counter and collection
+            reference_counter = 1
+            all_references = []
+
+            # Process all topics and collect references
             for topicgroup in tree.findall(".//topicgroup"):
                 for topicref in topicgroup.findall(".//topicref"):
                     href = topicref.get('href')
                     if href:
                         topic_path = self._resolve_topic_path(map_path, href)
                         if topic_path and topic_path.exists():
-                            all_topics.append(topic_path)
+                            html_content.append('<div class="content-section">')
 
-            # Second pass: process topics with consistent numbering
-            for topic_path in all_topics:
-                html_content.append('<div class="content-section">')
-                topic_content = self._transform_topic_with_numbering(topic_path, section_numbers)
-                html_content.append(topic_content)
-                html_content.append('</div>')
+                            # Process topic and get its references
+                            topic_content, topic_references = self._transform_topic_with_numbering(
+                                topic_path,
+                                section_numbers,
+                                reference_counter
+                            )
+
+                            # Update reference counter and collect references
+                            if topic_references:
+                                for ref in topic_references:
+                                    all_references.append(ref)
+                                    reference_counter = max(reference_counter, int(ref['id'])) + 1
+
+                            html_content.append(topic_content)
+                            html_content.append('</div>')
+
+
 
             html_content.append('</div>')
             return '\n'.join(html_content)
 
         except Exception as e:
             self.logger.error(f"Error transforming map to HTML: {str(e)}")
-            return self._create_error_html(e, map_path)
+            return f"""
+            <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                <h3 class="font-bold">Error Processing Content</h3>
+                <p>{str(e)}</p>
+                <p class="text-sm mt-2">File: {map_path}</p>
+            </div>
+            """
 
-    def _transform_topic_with_numbering(self, topic_path: Path, section_numbers: Dict[str, Any]) -> HTMLString:
+
+    def _transform_topic_with_numbering(
+        self,
+        topic_path: Path,
+        section_numbers: Dict[str, Any],
+        start_ref_number: int
+    ) -> Tuple[HTMLString, List[Dict[str, str]]]:
         """Transform a topic to HTML with numbered headings"""
         try:
+            references = []
             if topic_path.suffix == '.md':
                 with open(topic_path, 'r', encoding='utf-8') as f:
                     content = f.read()
+
                 metadata, html_content = self._parse_markdown(content)
 
                 # Create soup object for consistent handling
                 soup = BeautifulSoup(html_content, 'html.parser')
 
+                # Initialize h3 counter in section_numbers if not present
+                if 'h3' not in section_numbers:
+                    section_numbers['h3'] = 0
+
                 # Find all headings
-                headings = soup.find_all(['h1', 'h2'])
+                headings = soup.find_all(['h1', 'h2', 'h3'])
 
                 # Process headings in order
                 for heading in headings:
+                    original_text = heading.get_text(strip=True)
+                    heading_id = self._generate_id(original_text)  # Generate ID first
+                    new_text = original_text  # Default value
+
                     if heading.name == 'h1':
                         section_numbers['h1'] += 1
                         section_numbers['h2'] = 0
+                        section_numbers['h3'] = 0
                         section_numbers['current_h1'] = section_numbers['h1']
-                        original_text = heading.get_text(strip=True)
                         new_text = f"{section_numbers['h1']}. {original_text}"
-                        heading_id = self._generate_id(new_text)
-
-                        # Update heading
-                        heading['id'] = heading_id
-                        heading.string = new_text
-                        heading['class'] = 'text-2xl font-bold mb-4'
-
-                        # Add anchor
-                        anchor = soup.new_tag('a', attrs={
-                            'href': f'#{heading_id}',
-                            'class': 'heading-anchor',
-                            'aria-label': 'Link to this heading'
-                        })
-                        anchor.string = '§'
-                        heading.append(anchor)
 
                     elif heading.name == 'h2':
                         section_numbers['h2'] += 1
-                        original_text = heading.get_text(strip=True)
+                        section_numbers['h3'] = 0
                         new_text = f"{section_numbers['current_h1']}.{section_numbers['h2']}. {original_text}"
-                        heading_id = self._generate_id(new_text)
 
-                        # Update heading
-                        heading['id'] = heading_id
-                        heading.string = new_text
+                    elif heading.name == 'h3':
+                        section_numbers['h3'] += 1
+                        new_text = f"{section_numbers['current_h1']}.{section_numbers['h2']}.{section_numbers['h3']}. {original_text}"
+
+                    # Update heading
+                    heading['id'] = heading_id
+                    heading.string = new_text
+
+                    # Set appropriate classes based on heading level
+                    if heading.name == 'h1':
+                        heading['class'] = 'text-2xl font-bold mb-4'
+                    elif heading.name == 'h2':
                         heading['class'] = 'text-xl font-bold mt-6 mb-3'
+                    elif heading.name == 'h3':
+                        heading['class'] = 'text-lg font-bold mt-4 mb-2'
 
-                        # Add anchor
-                        anchor = soup.new_tag('a', attrs={
-                            'href': f'#{heading_id}',
-                            'class': 'heading-anchor',
-                            'aria-label': 'Link to this heading'
-                        })
-                        anchor.string = '§'
-                        heading.append(anchor)
+                    # Add anchor
+                    anchor = soup.new_tag('a', attrs={
+                        'href': f'#{heading_id}',
+                        'class': 'heading-anchor',
+                        'aria-label': 'Link to this heading'
+                    })
+                    anchor.string = '¶'
+                    heading.append(anchor)
 
                 # Wrap in markdown-content div if not already wrapped
                 if not soup.find('div', class_='markdown-content'):
@@ -323,23 +358,34 @@ class DITAProcessor:
                         wrapper.append(tag.extract())
                     soup.append(wrapper)
 
-                return str(soup)
+                return str(soup), references
+
             else:
                 doc = self._parse_dita_file(topic_path)
-                return self._generate_numbered_html_content(doc, section_numbers)
+                content = self._generate_numbered_html_content(doc, section_numbers, start_ref_number)
+                return content, references
 
         except Exception as e:
             self.logger.error(f"Error transforming topic with numbering: {str(e)}")
-            return f"""
-            <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-                <h3 class="font-bold">Error Processing Content</h3>
-                <p>{str(e)}</p>
-            </div>
-            """
+            return self._create_error_html(e, topic_path), []
 
-    def _generate_numbered_html_content(self, doc: XMLElement, section_numbers: Dict[str, Any]) -> HTMLString:
+
+
+    def _validate_json(self, json_str: str) -> bool:
+        """Validate JSON string"""
+        try:
+            json.loads(json_str)
+            return True
+        except Exception as e:
+            self.logger.error(f"Invalid JSON: {e}")
+            self.logger.error(f"JSON string: {json_str}")
+            return False
+
+
+    def _generate_numbered_html_content(self, doc: XMLElement, section_numbers: Dict[str, Any], start_ref_number: int) -> HTMLString:
         """Generate HTML content with numbered headings"""
         try:
+
             html_content = ['<div class="dita-content">']
 
             # Handle h1 (main topic title)
@@ -352,8 +398,8 @@ class DITAProcessor:
                 heading_id = self._generate_id(numbered_title)
                 html_content.append(
                     f'<h1 id="{heading_id}" class="text-2xl font-bold mb-4">'
-                    f'{numbered_title}'
-                    f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">§</a>'
+                    f'<span class="heading-text">{numbered_title}</span>'  # Wrap the text in span
+                    f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">¶</a>'
                     f'</h1>'
                 )
 
@@ -371,8 +417,8 @@ class DITAProcessor:
                         heading_id = self._generate_id(numbered_section)
                         html_content.append(
                             f'<h2 id="{heading_id}" class="text-xl font-bold mt-6 mb-3">'
-                            f'{numbered_section}'
-                            f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">§</a>'
+                            f'<span class="heading-text">{numbered_section}</span>'  # Wrap the text in span
+                            f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">¶</a>'
                             f'</h2>'
                         )
                 elif tag == 'p' and elem.text:
@@ -448,12 +494,11 @@ class DITAProcessor:
         # Find the first h1 or create one from metadata title
         h1 = soup.find('h1')
         if not h1 and 'title' in metadata:
-            # Create a new h1 element with the metadata title
             heading_id = self._generate_id(metadata['title'])
             html_content.append(
                 f'<h1 id="{heading_id}" class="text-2xl font-bold mb-4">'
-                f'{metadata["title"]}'
-                f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">§</a>'
+                f'<span class="heading-text">{metadata["title"]}</span>'  # Wrap the text in span
+                f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">¶</a>'
                 f'</h1>'
             )
 
@@ -486,7 +531,7 @@ class DITAProcessor:
                     'class': 'heading-anchor',
                     'aria-label': 'Link to this heading'
                 })
-                anchor.string = '§'
+                anchor.string = '¶'
                 h1.append(anchor)
 
         # Process all remaining headings
@@ -501,7 +546,7 @@ class DITAProcessor:
                 'class': 'heading-anchor',
                 'aria-label': 'Link to this heading'
             })
-            anchor.string = '§'
+            anchor.string = '¶'
             heading.append(anchor)
 
         # Add the processed content

@@ -1,4 +1,3 @@
-// app/static/js/components/navigation/SideNav.jsx
 import React, { useState, useEffect } from "react";
 import {
   BookOpen,
@@ -7,11 +6,12 @@ import {
   Book,
   ChevronDown,
   ChevronRight,
+  Building,
+  LibraryBig,
 } from "lucide-react";
 import { api } from "@/utils/api";
 
 const SideNav = () => {
-  const [isArticlesOpen, setIsArticlesOpen] = useState(true);
   const [ditaMaps, setDitaMaps] = useState([]);
   const [selectedMap, setSelectedMap] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,8 +22,6 @@ const SideNav = () => {
       try {
         setLoading(true);
         const response = await api.get("/ditamaps");
-        console.log("DitaMaps response:", response); // Debug log
-
         if (response.data?.success && response.data.maps) {
           setDitaMaps(response.data.maps);
         } else {
@@ -41,55 +39,99 @@ const SideNav = () => {
   }, []);
 
   const handleMapSelect = (mapId) => {
-    // Instead of dispatching a renderMap event, we should navigate to the map entry
     window.location.href = `/entry/${mapId}.ditamap`;
   };
 
   return (
-    <nav className="article-nav">
-      <div className="nav-section">
-        <button
-          className="nav-title-button"
-          onClick={() => setIsArticlesOpen(!isArticlesOpen)}
-        >
-          <div className="flex items-center gap-2">
-            <Book size={16} />
-            <span>Articles</span>
-          </div>
-          {isArticlesOpen ? (
-            <ChevronDown size={16} />
-          ) : (
-            <ChevronRight size={16} />
-          )}
-        </button>
+    <>
+      {/* Floating Button */}
+      <button
+        className="btn btn-dark position-fixed d-flex align-items-center justify-content-center"
+        type="button"
+        data-bs-toggle="offcanvas"
+        data-bs-target="#sidebarOffcanvas"
+        aria-controls="sidebarOffcanvas"
+        style={{
+          top: "70px", // Position below navbar
+          left: "20px",
+          zIndex: 1030,
+          width: "40px",
+          height: "40px",
+          borderRadius: "50%",
+        }}
+      >
+        <LibraryBig size={40} />
+      </button>
 
-        {isArticlesOpen && (
-          <div className="articles-list">
+      {/* Offcanvas Sidebar */}
+      <div
+        className="offcanvas offcanvas-start"
+        data-bs-scroll="true"
+        data-bs-backdrop="false"
+        tabIndex="-1"
+        id="sidebarOffcanvas"
+        aria-labelledby="sidebarOffcanvasLabel"
+        style={{
+          top: "56px", // Start below navbar
+          height: "calc(100vh - 56px)", // Adjust height to account for navbar
+        }}
+      >
+        <div className="offcanvas-header">
+          <h5 className="offcanvas-title" id="sidebarOffcanvasLabel">
+            Articles
+          </h5>
+          <button
+            type="button"
+            className="btn-close"
+            data-bs-dismiss="offcanvas"
+            aria-label="Close"
+          ></button>
+        </div>
+
+        <div className="offcanvas-body">
+          <div className="list-group list-group-flush">
             {loading ? (
-              <div className="nav-loading">Loading articles...</div>
+              <div className="text-center p-3">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+              </div>
             ) : error ? (
-              <div className="nav-error">{error}</div>
+              <div className="alert alert-danger" role="alert">
+                {error}
+              </div>
             ) : (
-              <ul className="nav-list">
-                {ditaMaps.map((map) => (
-                  <li key={map.id}>
-                    <button
-                      onClick={() => handleMapSelect(map.id)}
-                      className={`nav-item ${selectedMap === map.id ? "active" : ""}`}
-                    >
-                      <Book size={14} />
-                      <span>{map.title}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              ditaMaps.map((map) => (
+                <a
+                  key={map.id}
+                  href={`/entry/${map.id}.ditamap`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleMapSelect(map.id);
+                  }}
+                  className={`list-group-item list-group-item-action ${
+                    selectedMap === map.id ? "active" : ""
+                  }`}
+                >
+                  <div className="d-flex w-100 justify-content-between">
+                    <h6 className="mb-1">{map.title}</h6>
+                  </div>
+                  {map.groups &&
+                    map.groups.map((group, index) => (
+                      <small
+                        key={index}
+                        className={`d-block ${selectedMap === map.id ? "" : "text-body-secondary"}`}
+                      >
+                        {group.navtitle}
+                      </small>
+                    ))}
+                </a>
+              ))
             )}
           </div>
-        )}
+        </div>
       </div>
-
-      {/* Rest of your nav sections */}
-    </nav>
+    </>
   );
 };
 

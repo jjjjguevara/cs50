@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map id="musical-expertise-study">
-    <title
-    >Neural Correlates of Musical Expertise: A Comprehensive Review</title>
+    <title>Neural Correlates of Musical Expertise</title>
 
     <!-- Front Matter -->
     <topicgroup>
@@ -10,7 +9,7 @@
             <navtitle>Front Matter</navtitle>
         </topicmeta>
         <topicref
-            href="../topics/acoustics/abstract-and-introduction.md"
+            href="../topics/acoustics/abstract-introduction.md"
             format="markdown"
             type="concept"
         />
