@@ -1,11 +1,14 @@
-from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union, cast, Callable
-from pathlib import Path
-from lxml import etree
+import json
 import logging
+import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union, cast, Callable
+
 import frontmatter
-from bs4 import BeautifulSoup
 import markdown
-from markdown.extensions import fenced_code, tables, meta
+from bs4 import BeautifulSoup
+from lxml import etree
+from markdown.extensions import fenced_code, meta, tables
 
 # Type aliases and generics
 HTMLString = str
@@ -222,99 +225,159 @@ class DITAProcessor:
             tree = etree.fromstring(content.encode('utf-8'), self.parser)
             html_content = ['<div class="map-content">']
 
-            # Handle main title (no numbering)
+            # Handle main title
             title_elem = tree.find(".//title")
             if title_elem is not None and title_elem.text:
                 html_content.append(f'<h1 class="content-title">{title_elem.text}</h1>')
 
-            # Initialize section counters
+            # Initialize section counters and reference counter
             section_numbers = {
                 'h1': 0,
                 'h2': 0,
+                'h3': 0,
                 'current_h1': None
             }
 
-            # First pass: collect all topics and their headings
-            all_topics = []
+            # Initialize global reference counter and collection
+            reference_counter = 1
+            all_references = []
+
+            # Process all topics and collect references
             for topicgroup in tree.findall(".//topicgroup"):
                 for topicref in topicgroup.findall(".//topicref"):
                     href = topicref.get('href')
                     if href:
                         topic_path = self._resolve_topic_path(map_path, href)
                         if topic_path and topic_path.exists():
-                            all_topics.append(topic_path)
+                            html_content.append('<div class="content-section">')
 
-            # Second pass: process topics with consistent numbering
-            for topic_path in all_topics:
-                html_content.append('<div class="content-section">')
-                topic_content = self._transform_topic_with_numbering(topic_path, section_numbers)
-                html_content.append(topic_content)
-                html_content.append('</div>')
+                            # Process topic and get its references
+                            topic_content, topic_references = self._transform_topic_with_numbering(
+                                topic_path,
+                                section_numbers,
+                                reference_counter
+                            )
+
+                            # Update reference counter and collect references
+                            if topic_references:
+                                for ref in topic_references:
+                                    all_references.append(ref)
+                                    reference_counter = max(reference_counter, int(ref['id'])) + 1
+
+                            html_content.append(topic_content)
+                            html_content.append('</div>')
+
+            # Add bibliography section if references exist
+            if all_references:
+                self.logger.info(f"Adding {len(all_references)} references to bibliography")
+                try:
+                    encoded_refs = self._encode_references_for_json(all_references)
+                    if self._validate_json(encoded_refs):  # Add validation here
+                        bibliography_div = f'''
+                            <div
+                                class="bibliography-section"
+                                data-references='{encoded_refs}'
+                            ></div>
+                        '''
+                        html_content.append(bibliography_div)
+                    else:
+                        self.logger.error("Invalid JSON generated for references")
+                        html_content.append(
+                            '<div class="error-message">Error encoding references</div>'
+                        )
+
+                except Exception as e:
+                    self.logger.error(f"Error adding bibliography: {e}")
+                    self.logger.error(f"References that failed: {all_references}")
+                    html_content.append(
+                        '<div class="error-message">Error loading references</div>'
+                    )
 
             html_content.append('</div>')
             return '\n'.join(html_content)
 
         except Exception as e:
             self.logger.error(f"Error transforming map to HTML: {str(e)}")
-            return self._create_error_html(e, map_path)
+            return f"""
+            <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                <h3 class="font-bold">Error Processing Content</h3>
+                <p>{str(e)}</p>
+                <p class="text-sm mt-2">File: {map_path}</p>
+            </div>
+            """
 
-    def _transform_topic_with_numbering(self, topic_path: Path, section_numbers: Dict[str, Any]) -> HTMLString:
-        """Transform a topic to HTML with numbered headings"""
+
+    def _transform_topic_with_numbering(
+        self,
+        topic_path: Path,
+        section_numbers: Dict[str, Any],
+        start_ref_number: int
+    ) -> Tuple[HTMLString, List[Dict[str, str]]]:
+        """Transform a topic to HTML with numbered headings and return references"""
         try:
+            references = []
             if topic_path.suffix == '.md':
                 with open(topic_path, 'r', encoding='utf-8') as f:
                     content = f.read()
+
+                # Convert markdown references to XML format and get references
+                content, refs = self._preprocess_markdown_references(content, start_ref_number)
+                references.extend(refs)
+
                 metadata, html_content = self._parse_markdown(content)
 
                 # Create soup object for consistent handling
                 soup = BeautifulSoup(html_content, 'html.parser')
 
+                # Initialize h3 counter in section_numbers if not present
+                if 'h3' not in section_numbers:
+                    section_numbers['h3'] = 0
+
                 # Find all headings
-                headings = soup.find_all(['h1', 'h2'])
+                headings = soup.find_all(['h1', 'h2', 'h3'])
 
                 # Process headings in order
                 for heading in headings:
+                    original_text = heading.get_text(strip=True)
+                    heading_id = self._generate_id(original_text)  # Generate ID first
+                    new_text = original_text  # Default value
+
                     if heading.name == 'h1':
                         section_numbers['h1'] += 1
                         section_numbers['h2'] = 0
+                        section_numbers['h3'] = 0
                         section_numbers['current_h1'] = section_numbers['h1']
-                        original_text = heading.get_text(strip=True)
                         new_text = f"{section_numbers['h1']}. {original_text}"
-                        heading_id = self._generate_id(new_text)
-
-                        # Update heading
-                        heading['id'] = heading_id
-                        heading.string = new_text
-                        heading['class'] = 'text-2xl font-bold mb-4'
-
-                        # Add anchor
-                        anchor = soup.new_tag('a', attrs={
-                            'href': f'#{heading_id}',
-                            'class': 'heading-anchor',
-                            'aria-label': 'Link to this heading'
-                        })
-                        anchor.string = '§'
-                        heading.append(anchor)
 
                     elif heading.name == 'h2':
                         section_numbers['h2'] += 1
-                        original_text = heading.get_text(strip=True)
+                        section_numbers['h3'] = 0
                         new_text = f"{section_numbers['current_h1']}.{section_numbers['h2']}. {original_text}"
-                        heading_id = self._generate_id(new_text)
 
-                        # Update heading
-                        heading['id'] = heading_id
-                        heading.string = new_text
+                    elif heading.name == 'h3':
+                        section_numbers['h3'] += 1
+                        new_text = f"{section_numbers['current_h1']}.{section_numbers['h2']}.{section_numbers['h3']}. {original_text}"
+
+                    # Update heading
+                    heading['id'] = heading_id
+                    heading.string = new_text
+
+                    # Set appropriate classes based on heading level
+                    if heading.name == 'h1':
+                        heading['class'] = 'text-2xl font-bold mb-4'
+                    elif heading.name == 'h2':
                         heading['class'] = 'text-xl font-bold mt-6 mb-3'
+                    elif heading.name == 'h3':
+                        heading['class'] = 'text-lg font-bold mt-4 mb-2'
 
-                        # Add anchor
-                        anchor = soup.new_tag('a', attrs={
-                            'href': f'#{heading_id}',
-                            'class': 'heading-anchor',
-                            'aria-label': 'Link to this heading'
-                        })
-                        anchor.string = '§'
-                        heading.append(anchor)
+                    # Add anchor
+                    anchor = soup.new_tag('a', attrs={
+                        'href': f'#{heading_id}',
+                        'class': 'heading-anchor',
+                        'aria-label': 'Link to this heading'
+                    })
+                    anchor.string = '¶'
+                    heading.append(anchor)
 
                 # Wrap in markdown-content div if not already wrapped
                 if not soup.find('div', class_='markdown-content'):
@@ -323,23 +386,171 @@ class DITAProcessor:
                         wrapper.append(tag.extract())
                     soup.append(wrapper)
 
-                return str(soup)
+                return str(soup), references
+
             else:
                 doc = self._parse_dita_file(topic_path)
-                return self._generate_numbered_html_content(doc, section_numbers)
+                # Process DITA references with starting number
+                doc, refs = self._process_dita_references(doc, start_ref_number)
+                references.extend(refs)
+                content = self._generate_numbered_html_content(doc, section_numbers, start_ref_number)
+                return content, references
 
         except Exception as e:
             self.logger.error(f"Error transforming topic with numbering: {str(e)}")
-            return f"""
-            <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-                <h3 class="font-bold">Error Processing Content</h3>
-                <p>{str(e)}</p>
-            </div>
-            """
+            return self._create_error_html(e, topic_path), []
 
-    def _generate_numbered_html_content(self, doc: XMLElement, section_numbers: Dict[str, Any]) -> HTMLString:
+
+    def _encode_references_for_json(self, references: List[Dict[str, str]]) -> str:
+            """Safely encode references for JSON output"""
+            try:
+                # Clean and escape reference texts
+                cleaned_refs = []
+                for ref in references:
+                    cleaned_ref = {
+                        'id': str(ref['id']),
+                        'text': ref['text'].replace('"', '&quot;')  # Use HTML entities
+                            .replace("'", '&apos;')
+                            .replace('\n', ' ')
+                            .replace('\r', '')
+                            .replace('<', '&lt;')
+                            .replace('>', '&gt;')
+                    }
+                    cleaned_refs.append(cleaned_ref)
+
+                # Use json.dumps with proper encoding and escaping
+                json_str = json.dumps(cleaned_refs, ensure_ascii=False)
+                # Escape the JSON string for HTML attributes
+                html_safe_json = json_str.replace('"', '&quot;')
+
+                self.logger.debug(f"Encoded JSON (pre-escape): {json_str}")
+                self.logger.debug(f"Encoded JSON (HTML-safe): {html_safe_json}")
+
+                return html_safe_json
+
+            except Exception as e:
+                self.logger.error(f"Error encoding references: {e}")
+                return '[]'
+
+    def _validate_json(self, json_str: str) -> bool:
+        """Validate JSON string"""
+        try:
+            json.loads(json_str)
+            return True
+        except Exception as e:
+            self.logger.error(f"Invalid JSON: {e}")
+            self.logger.error(f"JSON string: {json_str}")
+            return False
+
+    def _preprocess_markdown_references(self, content: str, start_number: int) -> Tuple[str, List[Dict[str, str]]]:
+        """Convert markdown references to XML format before processing."""
+        self.logger.info(f"Processing markdown references starting at number {start_number}")  # Debug log
+        references = []
+
+        # Find all footnote definitions
+        footnote_pattern = r'\[\^(\d+)\]:\s*(.+?)(?=\[\^|$|\n\n)'
+        ref_map = {}  # Map original numbers to new sequential numbers
+        current_number = start_number
+
+        # First pass: collect reference definitions and build mapping
+        matches = list(re.finditer(footnote_pattern, content, flags=re.DOTALL))
+        self.logger.info(f"Found {len(matches)} reference definitions")  # Debug log for found references
+        for match in matches:
+            original_num = match.group(1)
+            ref_text = match.group(2).strip()
+            ref_map[original_num] = str(current_number)
+
+            # Clean reference text
+            clean_text = ref_text.replace('\n', ' ').replace('\r', '').strip()
+
+            references.append({
+                'id': str(current_number),
+                'text': clean_text
+            })
+            self.logger.info(f"Mapped original reference {original_num} to {current_number} with text: {clean_text}")  # Debug log for mapping
+            current_number += 1
+
+        # Remove reference definitions from content
+        for match in reversed(matches):
+            content = content[:match.start()] + content[match.end():]
+        self.logger.info("Removed reference definitions from content")  # Debug log for content modification
+
+        # Replace inline references with XML elements
+        def replace_inline_ref(match):
+            ref_num = match.group(1)
+            if ref_num in ref_map:
+                new_num = ref_map[ref_num]
+                return f'<reference id="{new_num}">[{new_num}]</reference>'
+            return match.group(0)
+
+        # Process inline references - matches [^X] but not [^X]:
+        content = re.sub(r'\[\^(\d+)\](?!:)', replace_inline_ref, content)
+        self.logger.info("Replaced inline references with XML elements")  # Debug log for inline replacements
+
+        self.logger.info(f"Processed references: {references}")  # Debug log for processed references
+        return content, references
+
+    def _process_references(self, soup: BeautifulSoup) -> List[Dict[str, str]]:
+        """Process references in the HTML content"""
+        references = []
+        ref_elements = soup.find_all('reference')
+
+        for ref in ref_elements:
+            ref_id = ref.get('id')
+            ref_text = ref.string
+
+            # Create reference link
+            ref_link = soup.new_tag('a', attrs={
+                'href': f'#ref-{ref_id}',
+                'id': f'cite-{ref_id}',
+                'class': 'reference-link'
+            })
+            ref_link.string = f'[{ref_id}]'
+
+            # Replace reference element with link
+            ref.replace_with(ref_link)
+
+            # Add to references list
+            references.append({
+                'id': ref_id,
+                'text': ref_text
+            })
+
+        return references
+
+    def _process_dita_references(self, doc: XMLElement, start_ref_number: int) -> Tuple[XMLElement, List[Dict[str, str]]]:
+        """Process references in DITA content"""
+        references = []
+        current_ref_number = start_ref_number
+
+        for fn in doc.xpath('//fn'):
+            ref_id = str(current_ref_number)
+            ref_text = fn.text.strip() if fn.text else ''
+
+            # Create reference element
+            ref_elem = etree.Element('reference')
+            ref_elem.set('id', ref_id)
+            ref_elem.text = ref_text
+
+            # Replace footnote with reference
+            fn.getparent().replace(fn, ref_elem)
+
+            references.append({
+                'id': ref_id,
+                'text': ref_text
+            })
+
+            current_ref_number += 1
+
+        return doc, references
+
+
+    def _generate_numbered_html_content(self, doc: XMLElement, section_numbers: Dict[str, Any], start_ref_number: int) -> HTMLString:
         """Generate HTML content with numbered headings"""
         try:
+            # Process references first
+            doc, references = self._process_dita_references(doc, start_ref_number)
+
             html_content = ['<div class="dita-content">']
 
             # Handle h1 (main topic title)
@@ -353,7 +564,7 @@ class DITAProcessor:
                 html_content.append(
                     f'<h1 id="{heading_id}" class="text-2xl font-bold mb-4">'
                     f'{numbered_title}'
-                    f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">§</a>'
+                    f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">¶</a>'
                     f'</h1>'
                 )
 
@@ -372,7 +583,7 @@ class DITAProcessor:
                         html_content.append(
                             f'<h2 id="{heading_id}" class="text-xl font-bold mt-6 mb-3">'
                             f'{numbered_section}'
-                            f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">§</a>'
+                            f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">¶</a>'
                             f'</h2>'
                         )
                 elif tag == 'p' and elem.text:
@@ -453,7 +664,7 @@ class DITAProcessor:
             html_content.append(
                 f'<h1 id="{heading_id}" class="text-2xl font-bold mb-4">'
                 f'{metadata["title"]}'
-                f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">§</a>'
+                f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">¶</a>'
                 f'</h1>'
             )
 
@@ -486,7 +697,7 @@ class DITAProcessor:
                     'class': 'heading-anchor',
                     'aria-label': 'Link to this heading'
                 })
-                anchor.string = '§'
+                anchor.string = '¶'
                 h1.append(anchor)
 
         # Process all remaining headings
@@ -501,7 +712,7 @@ class DITAProcessor:
                 'class': 'heading-anchor',
                 'aria-label': 'Link to this heading'
             })
-            anchor.string = '§'
+            anchor.string = '¶'
             heading.append(anchor)
 
         # Add the processed content

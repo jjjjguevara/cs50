@@ -7,42 +7,50 @@ const TableOfContents = () => {
   useEffect(() => {
     const findHeadings = () => {
       const mapContent = document.querySelector(".map-content");
-      console.log("Looking for headings in:", mapContent); // Debug log
 
       if (mapContent) {
         const headingElements = mapContent.querySelectorAll(
           "h1.content-title, " + // Main title
             ".dita-content h1, " + // Topic titles
             ".dita-content h2, " + // Section titles
+            ".dita-content h3, " + // Subsection titles
             ".markdown-content h1, " +
-            ".markdown-content h2",
+            ".markdown-content h2, " +
+            ".markdown-content h3",
         );
 
         const headingsData = Array.from(headingElements).map((heading) => {
-          const headingText = heading.textContent; // Use full text, including numbering
-          let level = 1;
+          // Remove the anchor element before getting the text
+          const headingText = heading.cloneNode(true);
+          const anchor = headingText.querySelector(".heading-anchor");
+          if (anchor) {
+            anchor.remove();
+          }
+          const text = headingText.textContent.trim();
 
+          let level = 1;
           if (heading.classList.contains("content-title")) {
             level = 1;
           } else if (heading.tagName === "H1") {
             level = 2;
           } else if (heading.tagName === "H2") {
             level = 3;
+          } else if (heading.tagName === "H3") {
+            level = 4;
           }
 
-          const id = heading.id || generateId(headingText);
+          const id = heading.id || generateId(text);
           if (!heading.id) {
-            heading.id = id; // Assign ID if missing
+            heading.id = id;
           }
 
           return {
             id,
-            text: headingText,
+            text,
             level,
           };
         });
 
-        console.log("Found headings:", headingsData); // Debug log
         setHeadings(headingsData);
       }
     };
