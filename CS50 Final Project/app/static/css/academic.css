@@ -196,11 +196,32 @@ h2:focus-within .heading-anchor {
     margin-top: 2rem;
 }
 
+.reference-link {
+    color: #2563eb; /* blue-600 */
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.reference-link:hover {
+    text-decoration: underline;
+}
+
 .bibliography-item {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    line-height: 1.5;
+    scroll-margin-top: 2rem;
+}
+
+.reference-number a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.reference-number a:hover {
+    color: #2563eb;
+}
+
+/* Smooth scrolling for reference navigation */
+html {
+    scroll-behavior: smooth;
 }
 
 .reference-number {
