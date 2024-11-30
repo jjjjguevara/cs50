@@ -2,7 +2,7 @@
 
 ## Structural Brain Differences
 
-Analysis revealed consistent patterns of gray matter differences in musicians[^9]:
+Analysis revealed[^1] consistent patterns of gray matter differences in musicians:
 
 | Brain Region | Effect Size | Confidence Interval | p-value |
 |--------------|-------------|:------------------:|--------:|
@@ -12,7 +12,7 @@ Analysis revealed consistent patterns of gray matter differences in musicians[^9
 
 ## Functional Connectivity
 
-Resting-state fMRI analyses showed enhanced connectivity patterns[^10]:
+Resting-state fMRI analyses showed[^2] enhanced connectivity patterns:
 
 > "Musicians demonstrated significantly stronger functional connectivity between auditory and motor regions compared to non-musicians (p < 0.001)"
 
@@ -29,5 +29,5 @@ def calculate_network_metrics(connectivity_matrix):
     return metrics
 ```
 
-[^9]: Gaser, C., & Schlaug, G. (2003). Brain structures differ between musicians and non-musicians. *Journal of Neuroscience*, 23(27), 9240-9245.
-[^10]: Palomar-García, M. Á., Zatorre, R. J., Ventura-Campos, N., Bueichekú, E., & Ávila, C. (2017). Modulation of functional connectivity in auditory–motor networks in musicians compared with nonmusicians. *Cerebral Cortex*, 27(5), 2768-2778.
+[^1]: Gaser, C., & Schlaug, G. (2003). Brain structures differ between musicians and non-musicians. *Journal of Neuroscience*, 23(27), 9240-9245.
+[^2]: Palomar-García, M. Á., Zatorre, R. J., Ventura-Campos, N., Bueichekú, E., & Ávila, C. (2017). Modulation of functional connectivity in auditory–motor networks in musicians compared with nonmusicians. *Cerebral Cortex*, 27(5), 2768-2778.

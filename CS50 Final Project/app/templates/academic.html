@@ -103,6 +103,12 @@
                                         {% if content %} {{ content | safe }} {%
                                         endif %}
                                     </div>
+                                    <!-- Add Bibliography mounting point here -->
+                                    <div
+                                        id="bibliography-root"
+                                        class="bibliography-section"
+                                        data-references="{{ references | tojson | safe if references else '[]' }}"
+                                    ></div>
                                 </div>
                             </div>
 
