@@ -376,6 +376,54 @@ Then `citations.py` should return:
 
 ## Database implementation
 
+> An _ideal_ database implementation for this project would use a structure such as this.
+
+![Ideal Database Implementation](media/ideal_db.svg)
+
+
+1. Content Storage Layer:
+- Articles are stored in their original formats (typically PDF)
+- Full text is extracted and indexed for searching
+- Supplementary materials (data sets, images, etc.) are linked to main articles
+- Each article gets a unique identifier (DOI) for permanent reference
+
+2. Metadata Management:
+- Stores structured information about each article:
+  * Title, abstract, publication date
+  * Author names and affiliations
+  * Keywords and subject classifications
+  * Citations and references
+- Enables efficient searching and categorization
+
+3. Relational Connections:
+- Maps citation networks (what cites what)
+- Tracks author collaborations
+- Links related articles based on content similarity
+- Connects institutional affiliations
+- Maintains subject hierarchy relationships
+
+4. User Experience Integration:
+- Powers advanced search capabilities
+- Enables personalized recommendations
+- Supports reading history and preferences
+- Facilitates citation exports and bibliography management
+- Enables social features like sharing and annotations
+
+The system uses multiple specialized databases:
+- Document stores for full-text content
+- Relational databases for structured metadata
+- Graph databases for relationship mapping
+- Search indices for fast retrieval
+- Cache layers for performance
+
+Deep dive:
+- Search optimization techniques
+- Citation network analysis
+- Recommendation algorithms
+- Data integration methods
+
+
+
 ### Database structure
 
 ```python

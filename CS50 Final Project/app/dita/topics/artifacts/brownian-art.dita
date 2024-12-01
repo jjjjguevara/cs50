@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="brownian-motion-theory">
+    <title>Brownian Motion Theory</title>
+    <conbody>
+        <section id="introduction">
+            <title>Introduction</title>
+            <p
+            >In this paper it will be shown that according to the molecular-kinetic theory of heat...</p>
+        </section>
+        <section id="osmotic-pressure">
+            <title>Osmotic Pressure Theory</title>
+            <p
+            >Let z gram-molecules of a non-electrolyte be dissolved in a volume V*...</p>
+            <equation>pV* = RTz</equation>
+        </section>
+        <section id="molecular-kinetic">
+            <title>Molecular-Kinetic Theory</title>
+            <p
+            >According to this theory a dissolved molecule is differentiated...</p>
+        </section>
+        <section id="experimental">
+            <title>Experimental Results</title>
+            <p>We will calculate how great λx is for one second...</p>
+            <equation>λ_x = \sqrt{t}\sqrt{\frac{RT}{N}\frac{1}{3πkP}}</equation>
+        </section>
+    </conbody>
+</concept>

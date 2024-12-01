@@ -36,6 +36,7 @@ gantt
 ```
 
 ## TODO
+- [ ] Add LaTeX support
 - [ ] Develop logic to store pages in the Output folder and replace them only if a change to the dita topics or dita map is detected
 - [ ] Develop XML metadata usage structure to toggle UI elements
 - [ ] Develop Bibliography component with topic parser and JSON support

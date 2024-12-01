@@ -17,6 +17,7 @@ import logging
 from .dita.processor import DITAProcessor
 import traceback
 import os
+import json
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -153,6 +154,34 @@ def articles() -> FlaskResponse:
         logger.error(f"Error in articles redirect: {str(e)}")
         return jsonify({'error': 'Failed to load articles'}), 500
 
+
+## Artifact-specific routes
+@bp.route('/api/artifacts/<path:artifact_id>')
+def get_artifact(artifact_id: str) -> FlaskResponse:
+    """Get rendered artifact content"""
+    try:
+        artifact_path = dita_processor.dita_root / 'artifacts' / artifact_id
+        if not artifact_path.exists():
+            return jsonify({'error': 'Artifact not found'}), 404
+
+        context_str = request.args.get('context', '{}')
+        try:
+            context = json.loads(context_str)
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid context JSON: {e}")
+            return jsonify({'error': 'Invalid context format'}), 400
+
+        rendered_content = dita_processor.artifact_renderer.render_artifact(
+            artifact_path,
+            context
+        )
+        return Response(rendered_content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error serving artifact: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+## Topic test environment
 @bp.route('/test')
 def test_interface() -> FlaskResponse:
     """Test interface"""
@@ -190,12 +219,19 @@ def view_entry(topic_id: str) -> FlaskResponse:
             # Get clean topic ID (without extension) for links
             clean_topic_id = Path(topic_id).stem
 
+            # Add artifact scripts to template context
+            artifact_scripts = [
+                url_for('static', filename='js/utils/ReactWebComponentWrapper.js'),
+                url_for('static', filename='js/utils/componentRegistry.js')
+            ]
+
             return render_template('academic.html',
                                content=content,
                                toc=toc,
                                metadata=metadata,
                                topic_id=clean_topic_id,  # Use clean ID
-                               title=metadata.get('title', 'Academic View'))
+                               title=metadata.get('title', 'Academic View'),
+                               artifact_scripts=artifact_scripts)  # Pass to template
         except Exception as e:
             logger.error(f"Error processing topic {topic_id}: {str(e)}")
             return render_template('academic.html',

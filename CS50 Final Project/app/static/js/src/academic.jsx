@@ -4,11 +4,18 @@ import { createRoot } from "react-dom/client";
 import SideNav from "../components/navigation/SideNav";
 import TableOfContents from "../components/navigation/TableOfContents";
 import Bibliography from "../components/bibliography/bibliography.jsx";
+import "../utils/ReactWebComponentWrapper";
+import "../utils/componentRegistry";
 
 const Academic = () => {
-  const [references, setReferences] = useState([]);
-
   useEffect(() => {
+    // Initialize web components
+    const artifacts = document.querySelectorAll(".artifact-wrapper");
+    artifacts.forEach((artifact) => {
+      // Force web component update
+      artifact.connectedCallback?.();
+    });
+
     // Find bibliography section and extract references
     const bibSection = document.querySelector(".bibliography-section");
     if (bibSection) {

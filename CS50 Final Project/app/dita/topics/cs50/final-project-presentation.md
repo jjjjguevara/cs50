@@ -13,3 +13,4 @@ Our main codebase and processing logic are original, but they rely on crucial re
 - [DITA Open Toolkit](https://www.dita-ot.org/)
 - [Python-Markdown](https://python-markdown.github.io/)
 - [Pandoc](https://pandoc.org/)
+- [LaTeX](https://www.latex-project.org/)

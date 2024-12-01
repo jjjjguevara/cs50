@@ -3,6 +3,9 @@ import logging
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union, cast, Callable
+from .artifacts.parser import ArtifactParser
+from .artifacts.renderer import ArtifactRenderer
+from .utils.heading import HeadingIDGenerator
 from .citations import parse_citations
 import frontmatter
 import markdown
@@ -27,6 +30,10 @@ class DITAProcessor:
     output_dir: Path
     xsl_dir: Path
     parser: etree.XMLParser
+    md: markdown.Markdown
+    artifact_parser: ArtifactParser
+    artifact_renderer: ArtifactRenderer
+    heading_generator: HeadingIDGenerator
 
     def __init__(self) -> None:
         # Initialize logger
@@ -60,6 +67,10 @@ class DITAProcessor:
             'meta',
             'attr_list'
         ])
+
+        self.artifact_parser = ArtifactParser(self.dita_root)
+        self.artifact_renderer = ArtifactRenderer(self.dita_root / 'artifacts')
+        self.heading_generator = HeadingIDGenerator()
 
         # Ensure directories exist
         self._create_directories()
@@ -199,23 +210,55 @@ class DITAProcessor:
         html.append(f'</{tag}>')
         return '\n'.join(html)
 
+
+    # Adds artifacts to article sections based on DITA coordinates
+    def _inject_artifacts(self, html_content: str, artifacts: List[Dict]) -> str:
+        """Inject artifacts into HTML content at specified locations"""
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Add required scripts if not already present
+        head = soup.find('head')
+        if head:
+            # Add React scripts if not present
+            react_scripts = [
+                'https://unpkg.com/react@18/umd/react.development.js',
+                'https://unpkg.com/react-dom@18/umd/react-dom.development.js'
+            ]
+            for script_src in react_scripts:
+                if not soup.find('script', src=script_src):
+                    script_tag = soup.new_tag('script', src=script_src)
+                    head.append(script_tag)
+
+        # Inject artifacts
+        for artifact in artifacts:
+            target = soup.find(id=artifact['target_heading'])
+            if target:
+                artifact_html = self.artifact_renderer.render_artifact(
+                    self.dita_root / artifact['source']
+                )
+                target.insert_after(BeautifulSoup(artifact_html, 'html.parser'))
+
+        return str(soup)
+
     def transform_to_html(self, input_path: Path) -> HTMLString:
-        """Transform DITA content to HTML"""
-        try:
-            # Handle different file types
-            if input_path.suffix == '.md':
-                with open(input_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                metadata, html_content = self._parse_markdown(content)
-                return self._generate_markdown_html(metadata, html_content, input_path)
-            elif input_path.suffix == '.ditamap':
-                return self._transform_map_to_html(input_path)
-            else:
-                self.logger.info(f"Transforming {input_path} to HTML")
-                doc = self._parse_dita_file(input_path)
-                return self._generate_html_content(doc, input_path)
-        except Exception as e:
-            return self._create_error_html(e, input_path)
+            """Transform DITA content to HTML, with artifact handling"""
+            try:
+                # Handle different file types
+                if input_path.suffix == '.md':
+                    with open(input_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    metadata, html_content = self._parse_markdown(content)
+                    return self._generate_markdown_html(metadata, html_content, input_path)
+                elif input_path.suffix == '.ditamap':
+                    artifacts = self.artifact_parser.parse_artifact_references(input_path)
+                    html_content = self._transform_map_to_html(input_path)
+                    return self._inject_artifacts(html_content, artifacts)
+                else:
+                    self.logger.info(f"Transforming {input_path} to HTML")
+                    doc = self._parse_dita_file(input_path)
+                    return self._generate_html_content(doc, input_path)
+            except Exception as e:
+                return self._create_error_html(e, input_path)
 
     def _transform_map_to_html(self, map_path: Path) -> HTMLString:
         """Transform DITA map and its referenced topics to HTML"""
