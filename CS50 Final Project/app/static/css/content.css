@@ -241,7 +241,7 @@
 /* Links */
 .dita-content a,
 .markdown-content a {
-    color: var(--color-primary);
+    color: var(--color-textlink);
     text-decoration: none;
     transition: color 0.2s;
 }

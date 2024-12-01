@@ -21,6 +21,11 @@
     --color-text-secondary: #64748b;
     --color-text-muted: #94a3b8;
 
+    /* Link Text Colors */
+    --color-textlink: #8a8da1;
+    --color-textlink-secondary: #64748b;
+    --color-textlink-hover: #94a3b8;
+
     /* Interactive Colors */
     --color-hover: rgba(243, 222, 249, 0.1); /* Light purple hover */
     --color-active: rgba(249, 229, 222, 0.2); /* Light orange active */
