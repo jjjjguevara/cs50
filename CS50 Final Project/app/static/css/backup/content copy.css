@@ -102,7 +102,7 @@
 .dita-content h1,
 .markdown-content h1,
 .map-content .content-title {
-    font-family: "Austera Text", Georgia, serif;
+    font-family: "Austera Text", Georgia, serif; /* Add font-family */
     font-size: 2.5rem;
     font-weight: 700;
     color: var(--color-text);
@@ -115,7 +115,7 @@
 .dita-content h2,
 .markdown-content h2,
 .map-content .content-section h2 {
-    font-family: "Austera Text", Georgia, serif;
+    font-family: "Austera Text", Georgia, serif; /* Add font-family */
     font-size: 1.5rem;
     font-weight: 600;
     color: var(--color-text);
@@ -125,7 +125,7 @@
 /* Section titles in included topics */
 .map-content .dita-content h1,
 .map-content .markdown-content h1 {
-    font-family: "Austera Text", Georgia, serif;
+    font-family: "Austera Text", Georgia, serif; /* Add font-family */
     font-size: 2rem;
     color: var(--color-text);
     margin: 2rem 0 1rem;
@@ -136,7 +136,7 @@
 /* Paragraphs */
 .dita-content p,
 .markdown-content p {
-    font-family: "Austera Text", Georgia, serif;
+    font-family: "Austera Text", Georgia, serif; /* Add font-family */
     margin-bottom: 1.25rem;
     line-height: 1.6;
 }
@@ -300,18 +300,19 @@ h6:hover .heading-anchor {
 }
 
 /* Table of contents */
+
 .toc-nav {
     position: sticky;
     top: 2rem;
     max-height: calc(100vh - 4rem);
     overflow-y: auto;
     padding: 1rem;
-    padding-left: 0;
+    padding-left: 0; /* Remove left padding */
     margin-left: -1rem;
 }
 
 .right-sidebar {
-    margin-left: 0rem;
+    margin-left: 0rem; /* Controls TOC left alignment */
 }
 
 .toc-header h2 {

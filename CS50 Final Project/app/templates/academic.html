@@ -32,7 +32,13 @@
             <!-- Top Navigation -->
             <nav class="main-navbar">
                 <div class="navbar-container">
-                    <a class="navbar-brand" href="/">Home</a>
+                    <a href="/" class="navbar-brand">
+                        <img
+                            src="{{ url_for('static', filename='img/logos/muon_brain.svg') }}"
+                            alt="Muon Brain Logo"
+                            class="d-inline-block align-text-top"
+                        />
+                    </a>
                     <button
                         class="navbar-toggler"
                         type="button"

@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from lxml import etree
 from markdown.extensions import fenced_code, meta, tables
 
+
 # Type aliases and generics
 HTMLString = str
 HTMLElements = List[str]
@@ -206,8 +207,8 @@ class DITAProcessor:
                 with open(input_path, 'r', encoding='utf-8') as f:
                     content = f.read()
                 metadata, html_content = self._parse_markdown(content)
-                return self._generate_markdown_html(metadata, html_content)
-            elif input_path.suffix == '.ditamap':  # Add this condition
+                return self._generate_markdown_html(metadata, html_content, input_path)
+            elif input_path.suffix == '.ditamap':
                 return self._transform_map_to_html(input_path)
             else:
                 self.logger.info(f"Transforming {input_path} to HTML")
@@ -217,8 +218,14 @@ class DITAProcessor:
             return self._create_error_html(e, input_path)
 
     def _transform_map_to_html(self, map_path: Path) -> HTMLString:
-        """Transform DITA map and its referenced topics to HTML with numbered headings"""
+        """Transform DITA map and its referenced topics to HTML"""
         try:
+            # Log map transformation start
+            self.logger.info(f"Transforming map: {map_path}")
+
+            # Get map ID without extension
+            map_id = map_path.stem
+
             with open(map_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
@@ -237,8 +244,6 @@ class DITAProcessor:
                 'h3': 0,
                 'current_h1': None
             }
-
-            # Initialize global reference counter and collection
             reference_counter = 1
             all_references = []
 
@@ -247,15 +252,17 @@ class DITAProcessor:
                 for topicref in topicgroup.findall(".//topicref"):
                     href = topicref.get('href')
                     if href:
+                        self.logger.info(f"Processing topicref with href: {href}")
                         topic_path = self._resolve_topic_path(map_path, href)
                         if topic_path and topic_path.exists():
                             html_content.append('<div class="content-section">')
 
-                            # Process topic and get its references
+                            # Pass map_id to _transform_topic_with_numbering
                             topic_content, topic_references = self._transform_topic_with_numbering(
                                 topic_path,
                                 section_numbers,
-                                reference_counter
+                                reference_counter,
+                                map_id  # Pass map ID here
                             )
 
                             # Update reference counter and collect references
@@ -266,28 +273,23 @@ class DITAProcessor:
 
                             html_content.append(topic_content)
                             html_content.append('</div>')
-
-
+                        else:
+                            self.logger.error(f"Could not resolve topic for href: {href}")
 
             html_content.append('</div>')
             return '\n'.join(html_content)
 
         except Exception as e:
             self.logger.error(f"Error transforming map to HTML: {str(e)}")
-            return f"""
-            <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-                <h3 class="font-bold">Error Processing Content</h3>
-                <p>{str(e)}</p>
-                <p class="text-sm mt-2">File: {map_path}</p>
-            </div>
-            """
+            return self._create_error_html(e, map_path)
 
 
     def _transform_topic_with_numbering(
         self,
         topic_path: Path,
         section_numbers: Dict[str, Any],
-        start_ref_number: int
+        start_ref_number: int,
+        current_map_id: Optional[str] = None  # Fixed type hint
     ) -> Tuple[HTMLString, List[Dict[str, str]]]:
         """Transform a topic to HTML with numbered headings"""
         try:
@@ -297,22 +299,44 @@ class DITAProcessor:
                     content = f.read()
 
                 metadata, html_content = self._parse_markdown(content)
-
-                # Create soup object for consistent handling
                 soup = BeautifulSoup(html_content, 'html.parser')
+
+                # Process images
+                for img in soup.find_all('img'):
+                    src = img.get('src', '')
+                    if src:
+                        self.logger.info(f"Processing image src: {src}")
+                        img_path = (topic_path.parent / src).resolve()
+                        try:
+                            relative_path = img_path.relative_to(self.topics_dir)
+                            new_src = f'/static/topics/{relative_path}'
+                            self.logger.info(f"Transformed image path: {new_src}")
+                            img['src'] = new_src
+                            img['class'] = 'max-w-full h-auto'
+                        except ValueError as e:
+                            self.logger.warning(f"Image path {img_path} is not within topics directory: {e}")
+
+                # Process internal links
+                for link in soup.find_all('a'):
+                    href = link.get('href', '')
+                    if href and '#' in href:
+                        file_part, heading_part = href.split('#', 1)
+                        if file_part:
+                            link['href'] = f'/entry/{current_map_id}#{heading_part}'
+                        else:
+                            link['href'] = f'#{heading_part}'
+                        self.logger.info(f"Transformed link: {href} -> {link['href']}")
 
                 # Initialize h3 counter in section_numbers if not present
                 if 'h3' not in section_numbers:
                     section_numbers['h3'] = 0
 
-                # Find all headings
+                # Process headings
                 headings = soup.find_all(['h1', 'h2', 'h3'])
-
-                # Process headings in order
                 for heading in headings:
                     original_text = heading.get_text(strip=True)
-                    heading_id = self._generate_id(original_text)  # Generate ID first
-                    new_text = original_text  # Default value
+                    heading_id = self._generate_id(original_text)
+                    new_text = original_text
 
                     if heading.name == 'h1':
                         section_numbers['h1'] += 1
@@ -320,21 +344,17 @@ class DITAProcessor:
                         section_numbers['h3'] = 0
                         section_numbers['current_h1'] = section_numbers['h1']
                         new_text = f"{section_numbers['h1']}. {original_text}"
-
                     elif heading.name == 'h2':
                         section_numbers['h2'] += 1
                         section_numbers['h3'] = 0
                         new_text = f"{section_numbers['current_h1']}.{section_numbers['h2']}. {original_text}"
-
                     elif heading.name == 'h3':
                         section_numbers['h3'] += 1
                         new_text = f"{section_numbers['current_h1']}.{section_numbers['h2']}.{section_numbers['h3']}. {original_text}"
 
-                    # Update heading
                     heading['id'] = heading_id
                     heading.string = new_text
 
-                    # Set appropriate classes based on heading level
                     if heading.name == 'h1':
                         heading['class'] = 'text-2xl font-bold mb-4'
                     elif heading.name == 'h2':
@@ -342,7 +362,6 @@ class DITAProcessor:
                     elif heading.name == 'h3':
                         heading['class'] = 'text-lg font-bold mt-4 mb-2'
 
-                    # Add anchor
                     anchor = soup.new_tag('a', attrs={
                         'href': f'#{heading_id}',
                         'class': 'heading-anchor',
@@ -351,7 +370,6 @@ class DITAProcessor:
                     anchor.string = '¶'
                     heading.append(anchor)
 
-                # Wrap in markdown-content div if not already wrapped
                 if not soup.find('div', class_='markdown-content'):
                     wrapper = soup.new_tag('div', attrs={'class': 'markdown-content'})
                     for tag in soup.contents[:]:
@@ -465,39 +483,66 @@ class DITAProcessor:
     def _resolve_topic_path(self, map_path: Path, href: str) -> Optional[Path]:
         """Resolve a topic reference path relative to the map file"""
         try:
-            # Remove any leading ../ from href
-            clean_href = href.replace('../', '')
+            self.logger.info(f"Resolving topic path for href: {href} relative to map: {map_path}")
 
-            # Try to find the topic in the topics directory
+            # Handle relative paths starting with ../
+            if href.startswith('../'):
+                # Start from the map directory and resolve the relative path
+                resolved_path = (map_path.parent / href).resolve()
+                self.logger.info(f"Resolved relative path to: {resolved_path}")
+
+                if resolved_path.exists():
+                    self.logger.info(f"Found topic file at: {resolved_path}")
+                    return resolved_path
+
+            # Also try direct path from topics directory
+            clean_href = href.replace('../topics/', '')
             topic_path = self.topics_dir / clean_href
+            self.logger.info(f"Trying direct topics path: {topic_path}")
 
             if topic_path.exists():
+                self.logger.info(f"Found topic file at: {topic_path}")
                 return topic_path
 
-            # If not found, try relative to map location
-            relative_path = map_path.parent / href
-            if relative_path.exists():
-                return relative_path
-
+            self.logger.error(f"Could not resolve topic path for href: {href}")
             return None
         except Exception as e:
             self.logger.error(f"Error resolving topic path: {str(e)}")
             return None
 
-    def _generate_markdown_html(self, metadata: Dict[str, Any], content: str) -> HTMLString:
+    def _generate_markdown_html(self, metadata: Dict[str, Any], content: str, current_path: Optional[Path] = None) -> HTMLString:
         """Generate HTML from markdown content with metadata"""
         html_content = ['<div class="markdown-content">']
 
         # Create a BeautifulSoup object for the markdown content
         soup = BeautifulSoup(content, 'html.parser')
 
-        # Find the first h1 or create one from metadata title
+        # Process images if current_path is provided
+        if current_path:
+                    self.logger.info(f"Processing markdown from path: {current_path}")
+                    for img in soup.find_all('img'):
+                        src = img.get('src', '')
+                        if src:
+                            self.logger.info(f"Found image with src: {src}")
+                            # Convert the image path to be relative to the topics directory
+                            img_path = (current_path.parent / src).resolve()
+                            self.logger.info(f"Resolved full image path: {img_path}")
+                            try:
+                                relative_path = img_path.relative_to(self.topics_dir)
+                                new_src = f'/static/topics/{relative_path}'
+                                self.logger.info(f"Setting new image src to: {new_src}")
+                                img['src'] = new_src
+                                img['class'] = 'max-w-full h-auto'
+                            except ValueError as e:
+                                self.logger.warning(f"Image path {img_path} is not within topics directory: {e}")
+
+        # Find the first h1 or create one from metadata
         h1 = soup.find('h1')
         if not h1 and 'title' in metadata:
             heading_id = self._generate_id(metadata['title'])
             html_content.append(
                 f'<h1 id="{heading_id}" class="text-2xl font-bold mb-4">'
-                f'<span class="heading-text">{metadata["title"]}</span>'  # Wrap the text in span
+                f'<span class="heading-text">{metadata["title"]}</span>'
                 f'<a href="#{heading_id}" class="heading-anchor" aria-label="Link to this heading">¶</a>'
                 f'</h1>'
             )
@@ -854,31 +899,47 @@ class DITAProcessor:
             if map_path.exists():
                 self.logger.info(f"Found map at: {map_path}")
                 return map_path
-            # Remove .ditamap extension and continue search
-            topic_id = topic_id.replace('.ditamap', '')
 
         # Remove any file extension from topic_id
         topic_base = topic_id.replace('.md', '').replace('.dita', '')
 
+        # Handle subdirectories in topic_id
+        topic_parts = topic_base.split('/')
+        topic_filename = topic_parts[-1]
+        subdirs = topic_parts[:-1]  # This will be empty if no subdirectories
+
+        self.logger.info(f"Searching for topic: {topic_filename} in subdirs: {subdirs}")
+
         # Check in maps directory first for .ditamap
-        map_path = self.maps_dir / f"{topic_base}.ditamap"
+        map_path = self.maps_dir / f"{topic_filename}.ditamap"
         if map_path.exists():
             self.logger.info(f"Found map at: {map_path}")
             return map_path
 
         # Then check in topic directories
         for subdir in ['acoustics', 'articles', 'audio', 'abstracts', 'journals', 'reference']:
-            subdir_path = self.topics_dir / subdir
+            # Start with the base topic directory
+            search_dir = self.topics_dir / subdir
+
+            # Add any subdirectories from the topic_id
+            if subdirs:
+                search_dir = search_dir.joinpath(*subdirs)
+
+            # Only proceed if this directory exists
+            if not search_dir.exists():
+                continue
+
+            self.logger.info(f"Searching in directory: {search_dir}")
 
             # Check for .dita file
-            dita_path = subdir_path / f"{topic_base}.dita"
+            dita_path = search_dir / f"{topic_filename}.dita"
             self.logger.info(f"Checking DITA path: {dita_path}")
             if dita_path.exists():
                 self.logger.info(f"Found topic at: {dita_path}")
                 return dita_path
 
             # Check for .md file
-            md_path = subdir_path / f"{topic_base}.md"
+            md_path = search_dir / f"{topic_filename}.md"
             self.logger.info(f"Checking MD path: {md_path}")
             if md_path.exists():
                 self.logger.info(f"Found topic at: {md_path}")

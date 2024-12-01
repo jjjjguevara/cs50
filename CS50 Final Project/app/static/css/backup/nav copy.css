@@ -1,0 +1,110 @@
+.navbar-brand svg {
+    color: var(--color-text); /* Match your text color */
+    width: 24px;
+    height: 24px;
+    transition: transform 0.2s ease;
+}
+
+.navbar-brand:hover svg {
+    transform: scale(1.1);
+}
+
+/* in app/static/css/nav.css */
+.article-nav {
+    padding: 1rem;
+    height: 100%;
+    overflow-y: auto;
+    background-color: white;
+    border-right: 1px solid #e2e8f0;
+}
+
+.nav-title-button {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.nav-title-button:hover {
+    color: #2563eb;
+}
+
+.articles-list {
+    margin-top: 0.5rem;
+}
+
+.nav-loading {
+    padding: 1rem;
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.nav-error {
+    padding: 1rem;
+    color: #ef4444;
+    font-size: 0.875rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 1rem;
+    color: #475569;
+    font-size: 0.875rem;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    background: none;
+    transition: all 0.2s;
+}
+
+.nav-item:hover {
+    background-color: #f1f5f9;
+    color: #2563eb;
+}
+
+/* In app/static/css/nav.css */
+.map-view-container {
+    margin-top: 0.5rem;
+    padding-left: 0.5rem;
+}
+
+.nav-title-button {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.nav-title-button:hover {
+    color: #2563eb;
+}
+
+.nav-title-button .flex {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}

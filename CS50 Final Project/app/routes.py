@@ -7,10 +7,11 @@ from flask import (
     send_from_directory,
     render_template,
     current_app,
+    url_for,
+    redirect,
 )
 from pathlib import Path
 from lxml import etree
-import logging
 from typing import Union, Tuple, Any
 import logging
 from .dita.processor import DITAProcessor
@@ -55,12 +56,69 @@ def serve_dist(filename: str) -> FlaskResponse:
 
 @bp.route('/')
 def index() -> FlaskResponse:
-    """Academic homepage"""
+    """Home route redirects to roadmap"""
     try:
-        return render_template('academic.html')
+        logger.info("Redirecting home to roadmap")
+        return redirect(url_for('main.view_entry', topic_id='roadmap'))
     except Exception as e:
-        logger.error(f"Error serving academic page: {str(e)}")
-        return jsonify({'error': 'Failed to load application'}), 500
+        logger.error(f"Error in home redirect: {str(e)}")
+        return jsonify({'error': 'Failed to load roadmap'}), 500
+
+
+@bp.route('/static/topics/<path:filename>')
+def serve_topic_files(filename: str) -> FlaskResponse:
+    """Serve files from the topics directory"""
+    try:
+        topics_dir = Path(current_app.root_path) / 'dita' / 'topics'
+        logger.info(f"Request for topics file: {filename}")
+        logger.info(f"Looking in topics dir: {topics_dir}")
+
+        # Clean the filename and construct full path
+        file_path = (topics_dir / filename).resolve()
+        logger.info(f"Full file path: {file_path}")
+
+        # Security check
+        if not str(file_path).startswith(str(topics_dir)):
+            logger.error(f"Attempted path traversal: {filename}")
+            return jsonify({'error': 'Invalid path'}), 403
+
+        if not file_path.exists():
+            logger.error(f"File not found: {file_path}")
+            return jsonify({'error': 'File not found'}), 404
+
+        logger.info(f"Serving file: {file_path}")
+        # Get directory and filename for send_from_directory
+        directory = str(file_path.parent)
+        basename = file_path.name
+
+        return send_from_directory(directory, basename)
+    except Exception as e:
+        logger.error(f"Error serving topic file {filename}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/media/<path:filename>')
+def serve_map_media(filename: str) -> FlaskResponse:
+    """Serve media files referenced in maps"""
+    try:
+        # Try multiple possible media locations
+        possible_paths = [
+            Path(current_app.root_path) / 'dita' / 'topics' / 'cs50' / 'media' / filename,
+            Path(current_app.root_path) / 'dita' / 'maps' / 'media' / filename,
+            Path(current_app.root_path) / 'dita' / 'media' / filename
+        ]
+
+        for file_path in possible_paths:
+            logger.info(f"Checking for media file at: {file_path}")
+            if file_path.exists():
+                logger.info(f"Found media file at: {file_path}")
+                return send_from_directory(str(file_path.parent), file_path.name)
+
+        logger.error(f"Media file not found: {filename}")
+        return jsonify({'error': 'Media file not found'}), 404
+    except Exception as e:
+        logger.error(f"Error serving media file {filename}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 
 @bp.route('/academic.html')
@@ -72,6 +130,28 @@ def academic_view():
     except Exception as e:
         logger.error(f"Error serving academic view: {str(e)}")
         return jsonify({'error': 'Failed to load academic view'}), 500
+
+@bp.route('/articles')
+def articles() -> FlaskResponse:
+    """Articles route that redirects to first ditamap"""
+    try:
+        logger.info("Processing articles redirect")
+        maps_dir = Path(current_app.root_path) / 'dita' / 'maps'
+
+        # Get first .ditamap file
+        ditamaps = list(maps_dir.glob('*.ditamap'))
+        if ditamaps:
+            first_map = ditamaps[0]
+            map_id = first_map.stem
+            logger.info(f"Redirecting to first ditamap: {map_id}")
+            return redirect(url_for('main.view_entry', topic_id=f"{map_id}.ditamap"))
+        else:
+            logger.error("No ditamaps found")
+            return render_template('academic.html', error="No articles found"), 404
+
+    except Exception as e:
+        logger.error(f"Error in articles redirect: {str(e)}")
+        return jsonify({'error': 'Failed to load articles'}), 500
 
 @bp.route('/test')
 def test_interface() -> FlaskResponse:
@@ -88,7 +168,10 @@ def test_interface() -> FlaskResponse:
 def view_entry(topic_id: str) -> FlaskResponse:
     """Academic article view"""
     try:
-        # Log the incoming request
+        # Add .ditamap extension if it's not a full path
+        if not topic_id.endswith(('.md', '.dita', '.ditamap')):
+            topic_id = f"{topic_id}.ditamap"
+
         logger.info(f"Attempting to view topic: {topic_id}")
 
         topic_path = dita_processor.get_topic_path(topic_id)
@@ -104,24 +187,23 @@ def view_entry(topic_id: str) -> FlaskResponse:
             toc = dita_processor.generate_toc(topic_path)
             metadata = dita_processor.get_topic_metadata(topic_path)
 
-            # Log successful processing
-            logger.info(f"Successfully processed topic: {topic_id}")
+            # Get clean topic ID (without extension) for links
+            clean_topic_id = Path(topic_id).stem
 
             return render_template('academic.html',
                                content=content,
                                toc=toc,
                                metadata=metadata,
-                               topic_id=topic_id,
+                               topic_id=clean_topic_id,  # Use clean ID
                                title=metadata.get('title', 'Academic View'))
         except Exception as e:
-            logger.error(f"Error processing topic {topic_id}: {str(e)}",
-                        exc_info=True)  # Include stack trace
+            logger.error(f"Error processing topic {topic_id}: {str(e)}")
             return render_template('academic.html',
                                 error=f"Error processing topic: {str(e)}",
                                 title="Error"), 500
 
     except Exception as e:
-        logger.error(f"Error viewing entry: {str(e)}", exc_info=True)
+        logger.error(f"Error viewing entry: {str(e)}")
         return render_template('academic.html',
                             error=str(e),
                             title="Error"), 500

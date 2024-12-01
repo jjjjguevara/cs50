@@ -30,121 +30,7 @@
     }
 }
 
-/* Navbar customization */
-.main-navbar {
-    width: var(--content-max-width);
-    margin: var(--content-margin);
-    margin-left: calc(var(--content-margin) + var(--offcanvas-space));
-    padding: 0.5rem 1rem;
-    background-color: #afafaf;
-    border-radius: 0.5rem;
-    border: 1px solid var(--color-border);
-}
-
-/* Navbar container */
-.navbar-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding: 0 1rem;
-}
-
-/* Navigation items */
-.navbar-nav {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    gap: 0.1rem;
-}
-
-/* All clickable navbar elements */
-.navbar-brand,
-.navbar-nav .nav-link,
-.navbar-nav .dropdown-item {
-    color: var(--color-text) !important;
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease-in-out;
-    font-size: 1rem;
-}
-
-/* Hover states for all clickable elements */
-.navbar-brand:hover,
-.navbar-nav .nav-link:hover,
-.navbar-nav .dropdown-item:hover {
-    background-color: var(--color-hover) !important;
-    color: var(--color-text) !important;
-}
-
-/* Specific brand styling */
-.navbar-brand {
-    font-size: 1.5rem;
-    font-weight: 400;
-    margin-right: 1rem;
-}
-
-/* Dropdown menus */
-.navbar-nav .dropdown-menu {
-    background-color: var(--color-background);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
-    padding: 0.5rem 0;
-    min-width: 10rem;
-}
-
-/* Mobile toggler */
-.navbar-toggler {
-    padding: 0.5rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background-color: transparent;
-}
-
-/* Responsive behavior */
-@media (max-width: 991.98px) {
-    .main-navbar {
-        margin-left: var(--content-margin);
-        width: calc(100% - (2 * var(--content-margin)));
-    }
-
-    .navbar-collapse {
-        display: none;
-        width: 100%;
-    }
-
-    .navbar-collapse.show {
-        display: block;
-    }
-
-    .navbar-nav {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .navbar-nav .dropdown-menu {
-        position: static;
-        float: none;
-        width: 100%;
-    }
-}
-
-@media (min-width: 992px) {
-    .navbar-collapse {
-        display: flex !important;
-        flex-basis: auto;
-    }
-
-    .navbar-toggler {
-        display: none;
-    }
-}
 /* Left Sidebar */
-
 /* Ensure the offcanvas doesn't overlap with navbar */
 .offcanvas-start {
     border-top: 1px solid rgba(0, 0, 0, 0.1);
@@ -185,6 +71,7 @@
 }
 
 /* Custom scrollbar */
+/* POTENTIAL ISSUE: Duplicate scrollbar styles with nav.css, kept here as it might be used in different context */
 .article-nav::-webkit-scrollbar {
     width: 6px;
 }

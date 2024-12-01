@@ -42,7 +42,6 @@
     --shadow-lg: 0 10px 15px rgba(243, 222, 249, 0.1);
 }
 
-/* POTENTIAL ISSUE: btn-dark styles appear in multiple files, keeping here as it might be used globally */
 /* Offcanvas Button Dark */
 .btn-dark {
     padding: 0.75rem !important; /* Increase padding */
