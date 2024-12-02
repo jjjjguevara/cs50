@@ -121,68 +121,8 @@ class DITAProcessor:
 ```
 
 
-```python
-# `processor.py` Current methods
 
-class DITAProcessor:
-    """DITA content processor for HTML transformation"""
-
-    # 1. INITIALIZATION
-    def __init__():
-        """Initialize processor with utilities and configurations"""
-        pass
-
-    # 2. PRIMARY ENTRY POINTS
-    def transform(self, input_path: Path) -> HTMLString:
-        """Main entry point for transforming any DITA content to HTML"""
-        # Renamed from transform_to_html
-        pass
-
-    def transform_map(self, map_path: Path) -> HTMLString:
-        """Transform DITA map and its referenced topics"""
-        # Renamed from _transform_map_to_html
-        pass
-
-    # 3. CORE PROCESSING
-    def process_topic(self, topic_path: Path, section_numbers: Dict) -> HTMLString:
-        """Process single topic with section numbering"""
-        # Renamed from _transform_topic_with_numbering
-        pass
-
-    def process_content(self, content_path: Path) -> HTMLString:
-        """Process raw content to HTML"""
-        # Renamed from _process_topic_content
-        pass
-
-    def inject_artifacts(self, html: str, artifacts: List[Dict]) -> HTMLString:
-        """Inject interactive artifacts into HTML content"""
-        # Renamed from _inject_artifacts
-        pass
-
-    # 4. PATH HANDLING
-    def resolve_path(self, map_path: Path, href: str) -> Optional[Path]:
-        """Resolve topic reference path relative to map"""
-        # Renamed from _resolve_topic_path
-        pass
-
-    def get_topic(self, topic_id: str) -> Optional[Path]:
-        """Get topic path from ID"""
-        # Renamed from get_topic_path
-        pass
-
-    # 5. PARSING AND ERROR HANDLING
-    def parse_dita(self, input_path: Path) -> etree.Element:
-        """Parse DITA file into XML tree"""
-        # Renamed from _parse_dita_file
-        pass
-
-    def handle_error(self, error: Exception, context: Path) -> HTMLString:
-        """Create HTML error message"""
-        # Renamed from _create_error_html
-        pass
-```
-
-This organization:
+> `processor.py` Current methods
 
 1. **Initialization**
    - Basic setup and configuration
@@ -202,4 +142,361 @@ This organization:
    - XML parsing and error management
 
 
+
+# 1. INITIALIZATION
+
+class DITAProcessor:
+    """DITA content processor for HTML transformation"""
+
+```python
+    def __init__():
+        """Initialize processor with utilities and configurations"""
+        pass
 ```
+
+1. **Clear Organization**:
+   - Paths initialization
+   - Utility initialization
+   - Parser configurations
+
+2. **Proper Integration**:
+   - All utilities are initialized and available
+   - Clear separation of concerns
+   - Each utility handles its specific domain
+
+3. **Robust Error Handling**:
+   - Directory creation verification
+   - Setup validation
+   - Detailed logging
+
+4. **Type Safety**:
+   - Type hints for clarity
+   - Clear type aliases
+   - Proper imports
+
+
+
+# 2. PRIMARY ENTRY POINTS
+
+```python
+    def transform(self, input_path: Path) -> HTMLString:
+        """Main entry point for transforming any DITA content to HTML"""
+        # Renamed from transform_to_html
+        pass
+```
+
+1. **Clear Processing Chain**:
+   - Input validation
+   - ID generation
+   - Metadata extraction
+   - Content processing
+   - Artifact injection
+   - Final formatting
+
+2. **Proper Utility Integration**:
+   - Uses ID Handler for content identification
+   - Uses Metadata Handler for feature detection
+   - Uses Heading Handler for heading management
+   - Uses Artifact handlers for interactive content
+
+3. **Robust Error Handling**:
+   - Input validation
+   - Try-except blocks
+   - Detailed logging
+   - Graceful fallbacks
+
+4. **Metadata Integration**:
+   - Extracts and processes metadata
+   - Adds metadata attributes to HTML
+   - Handles toggleable features
+
+5. **Clean HTML Structure**:
+   - Consistent wrapper elements
+   - Proper class hierarchy
+   - Data attributes for JavaScript hooks
+
+```python
+    def transform_map(self, map_path: Path) -> HTMLString:
+        """Transform DITA map and its referenced topics"""
+        # Renamed from _transform_map_to_html
+        pass
+```
+
+1. **Structured Processing**:
+   - Clear separation of map, topic, and metadata processing
+   - Maintains heading hierarchy
+   - Handles metadata features
+
+2. **Utility Integration**:
+   - Uses ID Handler for consistent IDs
+   - Uses Metadata Handler for feature detection
+   - Uses Heading Handler for section numbering
+
+3. **Feature Handling**:
+   - Journal table generation
+   - Abstract section handling
+   - Metadata-driven toggles
+
+4. **Clean HTML Structure**:
+   - Consistent class naming
+   - Data attributes for JavaScript hooks
+   - Proper nesting and hierarchy
+
+5. **Error Handling**:
+   - Per-topic error handling
+   - Detailed logging
+   - Graceful fallbacks
+
+
+
+# 3. CORE PROCESSING
+
+```python
+    def process_topic(self, topic_path: Path, section_numbers: Dict) -> HTMLString:
+        """Process single topic with section numbering"""
+        # Renamed from _transform_topic_with_numbering
+        pass
+```
+
+1. **File Type Handling**:
+   - Separate processors for Markdown and DITA
+   - Consistent heading processing across types
+   - Proper section numbering
+
+2. **Heading Processing**:
+   - Consistent ID generation
+   - Section numbering
+   - Anchor links
+   - Proper classes
+
+3. **Content Structure**:
+   - Clean HTML output
+   - Consistent formatting
+   - Proper nesting
+
+4. **DITA Element Processing**:
+   - Handles common DITA elements
+   - Consistent styling
+   - Bootstrap-compatible classes
+
+5. **Error Handling**:
+   - Per-element error handling
+   - Detailed logging
+   - Graceful fallbacks
+
+
+```python
+    def process_content(self, content_path: Path) -> HTMLString:
+        """Process raw content to HTML"""
+        # Renamed from _process_topic_content
+        pass
+```
+
+1. **File Type Handling**:
+   - Separate processors for Markdown and DITA
+   - Consistent heading processing across types
+   - Proper section numbering
+
+2. **Heading Processing**:
+   - Consistent ID generation
+   - Section numbering
+   - Anchor links
+   - Proper classes
+
+3. **Content Structure**:
+   - Clean HTML output
+   - Consistent formatting
+   - Proper nesting
+
+4. **DITA Element Processing**:
+   - Handles common DITA elements
+   - Consistent styling
+   - Bootstrap-compatible classes
+
+5. **Error Handling**:
+   - Per-element error handling
+   - Detailed logging
+   - Graceful fallbacks
+
+```python
+    def inject_artifacts(self, html: str, artifacts: List[Dict]) -> HTMLString:
+        """Inject interactive artifacts into HTML content"""
+        # Renamed from _inject_artifacts
+        pass
+```
+
+1. **Consistent Context Handling**:
+   - Created a base context dictionary in `render_artifact`
+   - Passed proper context to both rendering methods
+
+2. **Type Safety**:
+   - Properly typed context as `Dict[str, Any]`
+   - Consistent context structure across components
+
+3. **Target Heading**:
+   - Added target heading to both component types
+   - Maintained in context dictionary
+
+4. **Error Handling**:
+   - Proper error logging
+   - Type-safe context handling
+   - Consistent return types
+
+
+# 4. PATH HANDLING
+```python
+    def resolve_path(self, map_path: Path, href: str) -> Optional[Path]:
+        """Resolve topic reference path relative to map"""
+        # Renamed from _resolve_topic_path
+        pass
+```
+
+1. **Multiple Resolution Strategies**:
+   - Relative to map file
+   - From topics directory
+   - From maps directory
+   - In content subdirectories
+
+2. **Security Features**:
+   - Path traversal prevention
+   - Safe path validation
+   - Clear logging of attempts
+
+3. **Cross-reference Support**:
+   - Handles topic IDs in references
+   - Supports cross-map references
+   - Maintains reference context
+
+4. **Robust Error Handling**:
+   - Multiple fallback strategies
+   - Detailed logging
+   - Clear error messages
+
+5. **Path Normalization**:
+   - Consistent path formats
+   - Platform independence
+   - Clean references
+
+Usage example:
+```python
+# In transform_map method
+for topicref in tree.xpath(".//topicref"):
+    href = topicref.get('href')
+    if href:
+        topic_path = self.resolve_path(map_path, href)
+        if topic_path:
+            # Process topic
+            ...
+        else:
+            self.logger.warning(f"Could not resolve topic: {href}")
+```
+
+
+```python
+    def get_topic(self, topic_id: str) -> Optional[Path]:
+        """Get topic path from ID"""
+        # Renamed from get_topic_path
+        pass
+```
+
+This implementation:
+
+1. **Multiple Search Strategies**:
+   - Map directory search
+   - Direct path resolution
+   - Topic tree traversal
+   - Metadata-based search
+
+2. **Flexible ID Handling**:
+   - Handles various ID formats
+   - Supports subdirectories
+   - Multiple file extensions
+
+3. **Metadata Integration**:
+   - Searches by metadata fields
+   - Supports both DITA and Markdown
+   - Extensible for more fields
+
+4. **Robust Error Handling**:
+   - Strategy-specific error handling
+   - Detailed logging
+   - Graceful fallbacks
+
+5. **Performance Considerations**:
+   - Ordered search strategies
+   - Early returns
+   - Efficient path checking
+
+
+
+
+# 5. PARSING AND ERROR HANDLING
+
+```python
+    def parse_dita(self, input_path: Path) -> etree.Element:
+        """Parse DITA file into XML tree"""
+        # Renamed from _parse_dita_file
+        pass
+```
+
+1. **Robust Parsing**:
+   - Strict parsing first
+   - Fallback to recovery mode
+   - Detailed error logging
+
+2. **Structure Validation**:
+   - Document type detection
+   - Required element checking
+   - Reference validation
+
+3. **Error Handling**:
+   - Contextual error messages
+   - Line number information
+   - Visual error location
+
+4. **Reference Management**:
+   - Href validation
+   - Conref validation
+   - Path resolution
+
+5. **Security Features**:
+   - Entity resolution disabled
+   - DTD loading disabled
+   - Network access disabled
+
+
+```python
+    def handle_error(self, error: Exception, context: Path) -> HTMLString:
+        """Create HTML error message"""
+        # Renamed from _create_error_html
+        pass
+```
+
+1. **Error Type Handling**:
+   - XML syntax errors
+   - Missing file errors
+   - Validation errors
+   - General errors
+
+2. **User-Friendly Messages**:
+   - Clear error descriptions
+   - Visual error indicators
+   - Helpful suggestions
+   - Retry options
+
+3. **Developer Features**:
+   - Debug information
+   - Stack traces
+   - Error context
+   - Timestamp information
+
+4. **Visual Design**:
+   - Consistent styling
+   - Clear hierarchy
+   - Responsive layout
+   - Interactive elements
+
+5. **Security**:
+   - HTML escaping
+   - Safe context handling
+   - Development mode checks

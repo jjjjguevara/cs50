@@ -1,9 +1,11 @@
 # Standard library imports
 import os
+import json
 import logging
 import traceback
+from lxml import etree
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union, Tuple
 
 # Third-party imports
 from flask import (
@@ -23,6 +25,7 @@ from bs4.element import NavigableString
 
 # Local imports
 from .dita.processor import DITAProcessor
+from .dita.artifacts.parser import ArtifactParser
 
 # Type aliases
 FlaskResponse = Union[Response, tuple[Response, int], tuple[str, int], Any]
@@ -48,7 +51,7 @@ FlaskResponse = Union[Response, tuple[Response, int], tuple[str, int], Any]
 # Main routes
 # Main routes (modify the current index route and add new test route)
 @bp.route('/static/dist/<path:filename>')
-def serve_dist(filename: str) -> FlaskResponse:
+def serve_dist(filename: str) -> ResponseReturnValue:
     """Serve built Vite assets"""
     try:
         dist_dir = os.path.join(current_app.root_path, 'static', 'dist')
@@ -68,7 +71,7 @@ def serve_dist(filename: str) -> FlaskResponse:
 
 
 @bp.route('/')
-def index() -> FlaskResponse:
+def index() -> ResponseReturnValue:
     """Home route redirects to roadmap"""
     try:
         logger.info("Redirecting home to roadmap")
@@ -79,7 +82,7 @@ def index() -> FlaskResponse:
 
 
 @bp.route('/static/topics/<path:filename>')
-def serve_topic_files(filename: str) -> FlaskResponse:
+def serve_topic_files(filename: str) -> ResponseReturnValue:
     """Serve files from the topics directory"""
     try:
         topics_dir = Path(current_app.root_path) / 'dita' / 'topics'
@@ -111,7 +114,7 @@ def serve_topic_files(filename: str) -> FlaskResponse:
 
 
 @bp.route('/media/<path:filename>')
-def serve_map_media(filename: str) -> FlaskResponse:
+def serve_map_media(filename: str) -> ResponseReturnValue:
     """Serve media files referenced in maps"""
     try:
         # Try multiple possible media locations
@@ -145,7 +148,7 @@ def academic_view():
         return jsonify({'error': 'Failed to load academic view'}), 500
 
 @bp.route('/articles')
-def articles() -> FlaskResponse:
+def articles() -> ResponseReturnValue:
     """Articles route that redirects to first ditamap"""
     try:
         logger.info("Processing articles redirect")
@@ -169,7 +172,7 @@ def articles() -> FlaskResponse:
 
 ## Artifact-specific routes
 @bp.route('/api/artifacts/<path:artifact_id>')
-def get_artifact(artifact_id: str) -> FlaskResponse:
+def get_artifact(artifact_id: str) -> ResponseReturnValue:
     """Get rendered artifact content"""
     try:
         artifact_path = dita_processor.dita_root / 'artifacts' / artifact_id
@@ -194,7 +197,7 @@ def get_artifact(artifact_id: str) -> FlaskResponse:
 
 ## Artifact debug routes
 @bp.route('/api/debug/ditamap/<map_id>')
-def debug_ditamap(map_id: str) -> FlaskResponse:
+def debug_ditamap(map_id: str) -> ResponseReturnValue:
     """Debug endpoint to examine DITAMAP processing"""
     try:
         map_path = Path(current_app.root_path) / 'dita' / 'maps' / f"{map_id}.ditamap"
@@ -221,7 +224,7 @@ def debug_ditamap(map_id: str) -> FlaskResponse:
 ## Topic content debug route
 
 @bp.route('/api/debug/content/<topic_id>')
-def debug_content(topic_id: str) -> FlaskResponse:
+def debug_content(topic_id: str) -> ResponseReturnValue:
     """Debug endpoint to examine processed content and transformations"""
     try:
         topic_path = dita_processor.get_topic(topic_id)
@@ -320,7 +323,7 @@ def debug_content(topic_id: str) -> FlaskResponse:
 
 ## Topic test environment
 @bp.route('/test')
-def test_interface() -> FlaskResponse:
+def test_interface() -> ResponseReturnValue:
     """Test interface"""
     try:
         logger.info("Serving development index.html")
@@ -331,7 +334,7 @@ def test_interface() -> FlaskResponse:
 
 
 @bp.route('/entry/<topic_id>')
-def view_entry(topic_id: str) -> FlaskResponse:
+def view_entry(topic_id: str) -> ResponseReturnValue:
     """Academic article view"""
     try:
         # Add .ditamap extension if it's not a full path
@@ -340,7 +343,8 @@ def view_entry(topic_id: str) -> FlaskResponse:
 
         logger.info(f"Attempting to view topic: {topic_id}")
 
-        topic_path = dita_processor.get_topic_path(topic_id)
+        # Use get_topic instead of get_topic_path
+        topic_path = dita_processor.get_topic(topic_id)
         if not topic_path:
             logger.error(f"Topic not found: {topic_id}")
             return render_template('academic.html',
@@ -348,8 +352,8 @@ def view_entry(topic_id: str) -> FlaskResponse:
                                 title="Not Found"), 404
 
         try:
-            # Process the topic content and metadata
-            content = dita_processor.transform_to_html(topic_path)
+            # Process the topic content
+            content = dita_processor.transform(topic_path)
 
             # Check for transformation errors
             if isinstance(content, str) and "error-container" in content:
@@ -358,11 +362,7 @@ def view_entry(topic_id: str) -> FlaskResponse:
                                     content=content,
                                     title="Error"), 500
 
-            # Process additional content
-            toc = dita_processor.generate_toc(topic_path)
-            metadata = dita_processor.get_topic_metadata(topic_path)
-
-            # Get clean topic ID (without extension) for links
+            # Get clean topic ID (without extension)
             clean_topic_id = Path(topic_id).stem
 
             # Add artifact scripts to template context
@@ -371,24 +371,39 @@ def view_entry(topic_id: str) -> FlaskResponse:
                 url_for('static', filename='js/utils/componentRegistry.js')
             ]
 
-            # Log successful content processing
+            # Extract metadata from processed content using BeautifulSoup
+            soup = BeautifulSoup(content, 'html.parser')
+            content_div = soup.find('div', class_='content-wrapper')
+            metadata = {}
+            if isinstance(content_div, Tag):
+                metadata = {
+                    k.replace('data-', ''): v
+                    for k, v in content_div.attrs.items()
+                    if k.startswith('data-')
+                }
+
+            # Generate table of contents from content
+            toc = []
+            for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                if isinstance(h, Tag):
+                    toc.append({
+                        'id': h.get('id', ''),
+                        'text': h.get_text(strip=True),
+                        'level': int(h.name[1])
+                    })
+
             logger.info(f"Successfully processed topic {topic_id}")
-            if metadata:
-                logger.debug(f"Metadata found: {metadata}")
-            if toc:
-                logger.debug(f"TOC entries: {len(toc)}")
 
             return render_template('academic.html',
                                content=content,
                                toc=toc,
                                metadata=metadata,
-                               topic_id=clean_topic_id,  # Use clean ID
+                               topic_id=clean_topic_id,
                                title=metadata.get('title', 'Academic View'),
-                               artifact_scripts=artifact_scripts)  # Pass to template
+                               artifact_scripts=artifact_scripts)
 
         except Exception as e:
             logger.error(f"Error processing topic {topic_id}: {str(e)}", exc_info=True)
-            # Add more context to the error message
             error_context = {
                 'topic_id': topic_id,
                 'topic_path': str(topic_path),
@@ -406,7 +421,7 @@ def view_entry(topic_id: str) -> FlaskResponse:
                             title="Error"), 500
 
 @bp.route('/static/<path:filename>')
-def serve_static(filename: str) -> FlaskResponse:
+def serve_static(filename: str) -> ResponseReturnValue:
     """Serve static files"""
     try:
         return send_from_directory('static', filename)
@@ -467,11 +482,11 @@ def get_ditamaps():
 
 # API routes
 @bp.route('/api/view/<topic_id>', methods=['GET'])
-def view_topic(topic_id: str) -> FlaskResponse:
+def view_topic(topic_id: str) -> ResponseReturnValue:
     """View a topic as HTML"""
     try:
         logger.info(f"Attempting to view topic: {topic_id}")
-        topic_path = dita_processor.get_topic_path(topic_id)
+        topic_path = dita_processor.get_topic(topic_id)  # Updated method name
         if not topic_path:
             logger.error(f"Topic not found: {topic_id}")
             return Response("""
@@ -481,7 +496,7 @@ def view_topic(topic_id: str) -> FlaskResponse:
                 </div>
             """, mimetype='text/html')
 
-        html_content = dita_processor.transform_to_html(topic_path)
+        html_content = dita_processor.transform(topic_path)  # Updated to use transform
         if html_content:
             return Response(html_content, mimetype='text/html')
         else:
@@ -502,28 +517,108 @@ def view_topic(topic_id: str) -> FlaskResponse:
         """, mimetype='text/html')
 
 @bp.route('/api/search', methods=['GET'])
-def search() -> FlaskResponse:
-    """Search functionality"""
-    query = request.args.get('q', '')
+def search() -> ResponseReturnValue:
+    """Search through content"""
     try:
-        results = dita_processor.search_topics(query)
+        query = request.args.get('q', '')
+        if not query:
+            return jsonify([])
+
+        # Get all topics
+        topics = dita_processor.list_topics()
+        results = []
+
+        for topic in topics:
+            topic_path = dita_processor.get_topic(topic['id'])
+            if not topic_path:
+                continue
+
+            try:
+                # Read content
+                with open(topic_path, 'r', encoding='utf-8') as f:
+                    content = f.read().lower()
+
+                # Simple text search
+                if query.lower() in content:
+                    # Get content preview
+                    index = content.lower().find(query.lower())
+                    start = max(0, index - 100)
+                    end = min(len(content), index + 100)
+                    preview = content[start:end]
+
+                    results.append({
+                        'id': topic['id'],
+                        'title': topic.get('title', topic['id']),
+                        'preview': f"...{preview}..." if start > 0 else preview,
+                        'type': topic.get('type', 'topic')
+                    })
+
+            except Exception as e:
+                logger.error(f"Error searching topic {topic['id']}: {str(e)}")
+                continue
+
         return jsonify(results)
+
     except Exception as e:
         logger.error(f"Search error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/debug/topics')
-def debug_topics() -> FlaskResponse:
-    """Debug endpoint for topic listing"""
+def debug_topics() -> ResponseReturnValue:
+    """Debug endpoint for topic listing and processing"""
     try:
         topics = dita_processor.list_topics()
         debug_info = {
             'topics_found': len(topics),
-            'topics': topics,
+            'topics': [],
             'app_root': str(current_app.root_path),
             'dita_root': str(dita_processor.dita_root)
         }
+
+        # Get detailed information for each topic
+        for topic in topics:
+            topic_path = dita_processor.get_topic(topic['id'])
+            if not topic_path:
+                continue
+
+            try:
+                with open(topic_path, 'r', encoding='utf-8') as f:
+                    raw_content = f.read()
+
+                # Get processed content
+                processed_content = dita_processor.process_content(topic_path)
+
+                # Parse processed content for structure info
+                soup = BeautifulSoup(processed_content, 'html.parser')
+                headings = []
+                for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                    if isinstance(h, Tag):
+                        headings.append({
+                            'id': h.get('id', ''),
+                            'text': h.get_text(strip=True),
+                            'level': int(h.name[1])
+                        })
+
+                topic_info = {
+                    **topic,
+                    'exists': True,
+                    'size': len(raw_content),
+                    'headings': headings,
+                    'has_content': bool(processed_content.strip())
+                }
+                debug_info['topics'].append(topic_info)
+
+            except Exception as e:
+                logger.error(f"Error processing topic {topic['id']}: {str(e)}")
+                topic_info = {
+                    **topic,
+                    'exists': False,
+                    'error': str(e)
+                }
+                debug_info['topics'].append(topic_info)
+
         return jsonify(debug_info)
+
     except Exception as e:
         logger.error(f"Error in debug endpoint: {str(e)}")
         return jsonify({
@@ -697,7 +792,7 @@ def get_topics():
         }), 500
 
 @bp.route('/api/maps')
-def get_maps():
+def get_maps() -> ResponseReturnValue:
     """Get all available DITA maps"""
     try:
         logger.info("Fetching maps")
@@ -714,13 +809,16 @@ def get_maps():
             'error': str(e)
         }), 500
 
-# Error handlers
+
+# Error handling
 @bp.errorhandler(404)
 def not_found_error(error) -> Tuple[Response, int]:
+    """Handle 404 errors"""
     logger.warning(f"404 error: {error}")
     return jsonify({'error': 'Resource not found'}), 404
 
 @bp.errorhandler(500)
 def internal_error(error) -> Tuple[Response, int]:
+    """Handle 500 errors"""
     logger.error(f"500 error: {error}")
     return jsonify({'error': 'Internal server error'}), 500

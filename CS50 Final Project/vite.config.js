@@ -13,7 +13,6 @@ const verifyPath = (pathToVerify, alias) => {
 };
 
 export default defineConfig(({ command, mode }) => {
-  // Verify paths
   const paths = {
     "@": path.resolve(__dirname, "app/static/js"),
     "@components": path.resolve(__dirname, "app/static/js/components"),
@@ -26,12 +25,6 @@ export default defineConfig(({ command, mode }) => {
   Object.entries(paths).forEach(([alias, fullPath]) => {
     verifyPath(fullPath, alias);
   });
-
-  const brownianPath = path.resolve(
-    __dirname,
-    "app/dita/artifacts/components/brownian.jsx",
-  );
-  verifyPath(brownianPath, "brownian.jsx");
 
   return {
     plugins: [react()],
@@ -47,7 +40,13 @@ export default defineConfig(({ command, mode }) => {
           academic: path.resolve(__dirname, "app/static/js/src/academic.jsx"),
           app: path.resolve(__dirname, "app/static/js/src/app.jsx"),
         },
-        external: ["react", "react-dom", "recharts"],
+        external: [
+          "react",
+          "react-dom",
+          "react/jsx-runtime",
+          "recharts",
+          "lucide-react",
+        ],
         output: {
           manualChunks: (id) => {
             if (id.includes("/artifacts/components/")) {
@@ -66,6 +65,7 @@ export default defineConfig(({ command, mode }) => {
           globals: {
             react: "React",
             "react-dom": "ReactDOM",
+            "react/jsx-runtime": "React",
             recharts: "Recharts",
             "lucide-react": "LucideIcons",
           },
@@ -97,7 +97,6 @@ export default defineConfig(({ command, mode }) => {
           replacement: paths["@artifacts"],
         },
       ],
-      extensions: [".js", ".jsx", ".ts", ".tsx"],
     },
 
     optimizeDeps: {

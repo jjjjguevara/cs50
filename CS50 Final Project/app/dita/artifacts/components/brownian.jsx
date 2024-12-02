@@ -1,6 +1,6 @@
-import React from "/static/dist/react";
-import { Pause, Play, RefreshCcw } from "/static/js/utils/icons";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Pause, Play, RefreshCcw } from "@utils/icons";
 
 const Knob = ({
   value,

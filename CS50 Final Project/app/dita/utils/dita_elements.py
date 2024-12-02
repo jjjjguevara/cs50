@@ -381,7 +381,8 @@ class DITAContentProcessor:
                 href = link.get('href', '')
                 if href:
                     title = link.find('linktext')
-                    link_text = title.text if title is not None else href
+                    # Handle potential None value for link text
+                    link_text = title.text if title is not None and title.text else href
                     links.append(
                         f'<li><a href="{html.escape(href)}" '
                         f'class="text-blue-600 hover:text-blue-800">'
@@ -396,6 +397,7 @@ class DITAContentProcessor:
                     f'</div>'
                 )
             return ''
+
         except Exception as e:
             self.logger.error(f"Error processing related links: {str(e)}")
             return ''

@@ -1,4 +1,4 @@
-import BrownianMotion3D from "../../dita/artifacts/components/brownian.jsx";
+import BrownianMotion3D from "@artifacts/components/brownian";
 
 const components = {
   brownian: BrownianMotion3D,
@@ -10,6 +10,7 @@ export function registerComponents() {
     window.ReactComponents = window.ReactComponents || {};
     Object.entries(components).forEach(([name, component]) => {
       console.log(`Registering component: ${name}`);
+      console.log("Loading component registry");
       window.ReactComponents[name] = component;
     });
   }

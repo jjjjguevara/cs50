@@ -1,5 +1,5 @@
-import React from "/static/dist/react";
-import ReactDOM from "/static/dist/react-dom";
+import React from "react";
+import ReactDOM from "react-dom";
 import componentRegistry from "./componentRegistry";
 
 class ReactWebComponentWrapper extends HTMLElement {

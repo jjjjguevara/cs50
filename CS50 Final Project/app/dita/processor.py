@@ -149,6 +149,121 @@ class DITAProcessor:
             return False
 
 
+
+    def list_topics(self) -> List[Dict[str, Any]]:
+            """List all available topics"""
+            try:
+                topics = []
+                # Search in known topic directories
+                for subdir in ['articles', 'acoustics', 'audio', 'abstracts', 'journals']:
+                    topic_dir = self.topics_dir / subdir
+                    if not topic_dir.exists():
+                        continue
+
+                    # Look for both .dita and .md files
+                    for ext in ['.dita', '.md']:
+                        for topic_file in topic_dir.glob(f'*{ext}'):
+                            try:
+                                topic_info = {
+                                    'id': topic_file.stem,
+                                    'path': str(topic_file.relative_to(self.dita_root)),
+                                    'type': subdir,
+                                    'format': ext.lstrip('.'),
+                                    'title': self._get_topic_title(topic_file)
+                                }
+                                topics.append(topic_info)
+                            except Exception as e:
+                                self.logger.error(f"Error processing topic {topic_file}: {str(e)}")
+
+                return topics
+
+            except Exception as e:
+                self.logger.error(f"Error listing topics: {str(e)}")
+                return []
+
+    def _get_topic_title(self, topic_path: Path) -> str:
+            """
+            Extract title from topic file.
+            Returns the filename stem if no title is found.
+            """
+            try:
+                if topic_path.suffix == '.md':
+                    with open(topic_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        post = frontmatter.loads(content)
+                        # Use get() with default value
+                        return post.metadata.get('title') or topic_path.stem
+
+                else:  # .dita file
+                    tree = etree.parse(str(topic_path), self.parser)
+                    title_elem = tree.find('.//title')
+                    # Use conditional expression to handle None
+                    return title_elem.text if title_elem is not None and title_elem.text else topic_path.stem
+
+            except Exception as e:
+                self.logger.error(f"Error getting topic title: {str(e)}")
+                return topic_path.stem
+
+    def list_maps(self) -> List[Dict[str, Any]]:
+        """List all available DITA maps"""
+        try:
+            maps = []
+            if self.maps_dir.exists():
+                for map_file in self.maps_dir.glob('*.ditamap'):
+                    try:
+                        self.logger.info(f"Processing map file: {map_file}")
+
+                        with open(map_file, 'r', encoding='utf-8') as f:
+                            content = f.read()
+
+                        tree = etree.fromstring(content.encode('utf-8'), self.parser)
+
+                        # Get the map title
+                        title_elem = tree.find(".//title")
+                        title = title_elem.text if title_elem is not None and title_elem.text else map_file.stem
+
+                        # Process topic groups
+                        groups = []
+                        for topicgroup in tree.findall(".//topicgroup"):
+                            navtitle = topicgroup.find(".//navtitle")
+                            group_title = navtitle.text if navtitle is not None and navtitle.text else "Untitled Group"
+
+                            topics = []
+                            for topicref in topicgroup.findall(".//topicref"):
+                                href = topicref.get('href')
+                                if href:
+                                    topic_id = Path(href).stem
+                                    topics.append({
+                                        'id': topic_id,
+                                        'href': href
+                                    })
+
+                            groups.append({
+                                'navtitle': group_title,
+                                'topics': topics
+                            })
+
+                        maps.append({
+                            'id': map_file.stem,
+                            'title': title,
+                            'groups': groups
+                        })
+
+                    except Exception as e:
+                        self.logger.error(f"Error processing map {map_file}: {e}")
+                        maps.append({
+                            'id': map_file.stem,
+                            'title': map_file.stem,
+                            'error': str(e)
+                        })
+
+            return maps
+
+        except Exception as e:
+            self.logger.error(f"Error listing maps: {str(e)}")
+            return []
+
+
     ##### 2. PRIMARY ENTRY POINTS #####
 
     def transform(self, input_path: Path) -> HTMLString:

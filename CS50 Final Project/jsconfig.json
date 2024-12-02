@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "jsx": "react",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["app/static/js/*"],
+      "@components/*": ["app/static/js/components/*"],
+      "@utils/*": ["app/static/js/utils/*"],
+      "@src/*": ["app/static/js/src/*"],
+      "@artifacts/*": ["app/dita/artifacts/*"]
+    }
+  },
+  "include": ["app/static/js/**/*", "app/dita/artifacts/components/**/*"]
+}
