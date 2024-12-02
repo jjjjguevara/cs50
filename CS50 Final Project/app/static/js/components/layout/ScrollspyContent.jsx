@@ -1,5 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
+import { Pause, Play, RefreshCcw } from "@utils/icons";
 
 const ScrollspyContent = ({
   sections,

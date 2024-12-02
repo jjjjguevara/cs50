@@ -1,18 +1,27 @@
+import React from "/static/dist/react";
+import ReactDOM from "/static/dist/react-dom";
+import componentRegistry from "./componentRegistry";
+
 class ReactWebComponentWrapper extends HTMLElement {
   connectedCallback() {
+    console.log("Web component connected");
     const componentName = this.getAttribute("component");
-    const contextData = JSON.parse(this.getAttribute("context") || "{}");
-
-    // Get the React component from a registry
     const Component = window.ReactComponents[componentName];
+
     if (Component) {
-      ReactDOM.render(React.createElement(Component, contextData), this);
+      const root = createRoot(this);
+      root.render(React.createElement(Component, {}));
+      this._root = root;
+    } else {
+      console.error(`Component ${componentName} not found in registry`);
     }
   }
 
   disconnectedCallback() {
-    ReactDOM.unmountComponentAtNode(this);
+    if (this._root) {
+      this._root.unmount();
+    }
   }
 }
 
-customElements.define("web-component-wrapper", ReactWebComponentWrapper);
+export default ReactWebComponentWrapper;

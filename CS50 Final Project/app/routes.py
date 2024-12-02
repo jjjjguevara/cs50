@@ -1,3 +1,11 @@
+# Standard library imports
+import os
+import logging
+import traceback
+from pathlib import Path
+from typing import Dict, List, Any, Optional, Union
+
+# Third-party imports
 from flask import (
     Blueprint,
     jsonify,
@@ -6,27 +14,23 @@ from flask import (
     current_app,
     send_from_directory,
     render_template,
-    current_app,
     url_for,
     redirect,
 )
-from pathlib import Path
-from lxml import etree
-from typing import Union, Tuple, Any
-import logging
+from flask.typing import ResponseReturnValue
+from bs4 import BeautifulSoup, Tag
+from bs4.element import NavigableString
+
+# Local imports
 from .dita.processor import DITAProcessor
-import traceback
-import os
-import json
 
-# Configure logging
+# Type aliases
+FlaskResponse = Union[Response, tuple[Response, int], tuple[str, int], Any]
+
+# Initialize logger
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 
-# Initialize blueprint and processor
+# Initialize blueprint
 bp = Blueprint(
     'main',
     __name__,
@@ -34,10 +38,12 @@ bp = Blueprint(
     static_folder='static',
     template_folder='templates'
 )
+
+# Initialize DITA processor
 dita_processor = DITAProcessor()
 
-# Type alias for Flask responses
-FlaskResponse = Union[Response, Tuple[Response, int], Tuple[str, int], Any]
+# Type aliases
+FlaskResponse = Union[Response, tuple[Response, int], tuple[str, int], Any]
 
 # Main routes
 # Main routes (modify the current index route and add new test route)
@@ -46,13 +52,19 @@ def serve_dist(filename: str) -> FlaskResponse:
     """Serve built Vite assets"""
     try:
         dist_dir = os.path.join(current_app.root_path, 'static', 'dist')
-        if not os.path.exists(os.path.join(dist_dir, filename)):
+        # Handle both root files and subdirectories
+        file_path = os.path.join(dist_dir, filename)
+        directory = os.path.dirname(file_path)
+        base_name = os.path.basename(file_path)
+
+        if not os.path.exists(file_path):
             logger.error(f"Dist file not found: {filename}")
             return jsonify({'error': 'File not found'}), 404
-        return send_from_directory(dist_dir, filename)
+
+        return send_from_directory(directory, base_name)
     except Exception as e:
         logger.error(f"Error serving dist file {filename}: {str(e)}")
-        return jsonify({'error': 'File not found'}), 404
+        return jsonify({'error': str(e)}), 500
 
 
 @bp.route('/')
@@ -180,6 +192,131 @@ def get_artifact(artifact_id: str) -> FlaskResponse:
         logger.error(f"Error serving artifact: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+## Artifact debug routes
+@bp.route('/api/debug/ditamap/<map_id>')
+def debug_ditamap(map_id: str) -> FlaskResponse:
+    """Debug endpoint to examine DITAMAP processing"""
+    try:
+        map_path = Path(current_app.root_path) / 'dita' / 'maps' / f"{map_id}.ditamap"
+        if not map_path.exists():
+            return jsonify({'error': 'Map not found'}), 404
+
+        # Parse the map
+        parser = ArtifactParser(Path(current_app.root_path) / 'dita')
+        artifacts = parser.parse_artifact_references(map_path)
+
+        # Read raw content
+        with open(map_path, 'r') as f:
+            content = f.read()
+
+        return jsonify({
+            'map_id': map_id,
+            'artifacts': artifacts,
+            'raw_content': content
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+## Topic content debug route
+
+@bp.route('/api/debug/content/<topic_id>')
+def debug_content(topic_id: str) -> FlaskResponse:
+    """Debug endpoint to examine processed content and transformations"""
+    try:
+        topic_path = dita_processor.get_topic(topic_id)
+        if not topic_path:
+            return jsonify({'error': 'Topic not found'}), 404
+
+        with open(topic_path, 'r', encoding='utf-8') as f:
+            raw_content = f.read()
+
+        processed_content = dita_processor.process_content(topic_path)
+
+        debug_info = {
+            'topic_id': topic_id,
+            'topic_path': str(topic_path),
+            'content_type': topic_path.suffix.lstrip('.'),
+            'raw_content': raw_content,
+            'processed_content': processed_content,
+            'transformations': {
+                'headings': [],
+                'artifacts': [],
+                'metadata': {}
+            }
+        }
+
+        soup = BeautifulSoup(processed_content, 'html.parser')
+
+        # Get heading information
+        headings = []
+        for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+            if not isinstance(element, Tag):
+                continue
+
+            heading_info = {
+                'id': element.get('id', 'no-id'),
+                'text': element.get_text(strip=True),
+                'level': int(element.name[1]),
+                'classes': element.get('class', []),
+                'data_attributes': {
+                    k: v for k, v in element.attrs.items()
+                    if isinstance(k, str) and k.startswith('data-')
+                }
+            }
+            headings.append(heading_info)
+        debug_info['transformations']['headings'] = headings
+
+        # Get artifact information
+        artifacts = []
+        for element in soup.find_all(class_='artifact-wrapper'):
+            if not isinstance(element, Tag):
+                continue
+
+            component_wrapper = element.find('web-component-wrapper')
+            if not isinstance(component_wrapper, Tag):
+                continue
+
+            artifact_info = {
+                'type': element.get('data-artifact-type'),
+                'id': element.get('data-artifact-id'),
+                'target': element.get('data-target'),
+                'status': element.get('data-status'),
+                'component': component_wrapper.get('component')
+            }
+            artifacts.append(artifact_info)
+        debug_info['transformations']['artifacts'] = artifacts
+
+        # Get metadata information
+        content_wrapper = soup.find(class_='content-wrapper')
+        if isinstance(content_wrapper, Tag):
+            metadata = {
+                k: v for k, v in content_wrapper.attrs.items()
+                if isinstance(k, str) and k.startswith('data-')
+            }
+            debug_info['transformations']['metadata'] = metadata
+
+        # Add processor state information
+        debug_info['processor_state'] = {
+            'registered_ids': list(dita_processor.heading_handler.registered_ids),
+            'used_heading_ids': dita_processor.heading_handler.used_heading_ids,
+            'heading_map': dita_processor.heading_handler.heading_map
+        }
+
+        return jsonify(debug_info)
+
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}", exc_info=True)
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc(),
+            'context': {
+                'topic_id': topic_id,
+                'stage': 'content_processing'
+            }
+        }), 500
+
+
 
 ## Topic test environment
 @bp.route('/test')
@@ -213,6 +350,15 @@ def view_entry(topic_id: str) -> FlaskResponse:
         try:
             # Process the topic content and metadata
             content = dita_processor.transform_to_html(topic_path)
+
+            # Check for transformation errors
+            if isinstance(content, str) and "error-container" in content:
+                logger.error(f"Error transforming content for {topic_id}")
+                return render_template('academic.html',
+                                    content=content,
+                                    title="Error"), 500
+
+            # Process additional content
             toc = dita_processor.generate_toc(topic_path)
             metadata = dita_processor.get_topic_metadata(topic_path)
 
@@ -225,6 +371,13 @@ def view_entry(topic_id: str) -> FlaskResponse:
                 url_for('static', filename='js/utils/componentRegistry.js')
             ]
 
+            # Log successful content processing
+            logger.info(f"Successfully processed topic {topic_id}")
+            if metadata:
+                logger.debug(f"Metadata found: {metadata}")
+            if toc:
+                logger.debug(f"TOC entries: {len(toc)}")
+
             return render_template('academic.html',
                                content=content,
                                toc=toc,
@@ -232,14 +385,22 @@ def view_entry(topic_id: str) -> FlaskResponse:
                                topic_id=clean_topic_id,  # Use clean ID
                                title=metadata.get('title', 'Academic View'),
                                artifact_scripts=artifact_scripts)  # Pass to template
+
         except Exception as e:
-            logger.error(f"Error processing topic {topic_id}: {str(e)}")
+            logger.error(f"Error processing topic {topic_id}: {str(e)}", exc_info=True)
+            # Add more context to the error message
+            error_context = {
+                'topic_id': topic_id,
+                'topic_path': str(topic_path),
+                'error': str(e)
+            }
             return render_template('academic.html',
                                 error=f"Error processing topic: {str(e)}",
+                                error_context=error_context,
                                 title="Error"), 500
 
     except Exception as e:
-        logger.error(f"Error viewing entry: {str(e)}")
+        logger.error(f"Error viewing entry: {str(e)}", exc_info=True)
         return render_template('academic.html',
                             error=str(e),
                             title="Error"), 500
@@ -370,6 +531,30 @@ def debug_topics() -> FlaskResponse:
             'traceback': traceback.format_exc()
         }), 500
 
+
+## Debug component registration
+@bp.route('/api/debug/components')
+def debug_components():
+    """Debug endpoint to check component registration"""
+    try:
+        # List all .jsx files in artifacts directory
+        artifacts_dir = Path(current_app.root_path) / 'dita' / 'artifacts' / 'components'
+        components = []
+
+        for jsx_file in artifacts_dir.glob('*.jsx'):
+            components.append({
+                'name': jsx_file.stem,
+                'path': str(jsx_file.relative_to(current_app.root_path)),
+                'exists': jsx_file.exists()
+            })
+
+        return jsonify({
+            'components': components,
+            'artifacts_dir': str(artifacts_dir)
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @bp.route('/api/debug/files')
 def debug_files():

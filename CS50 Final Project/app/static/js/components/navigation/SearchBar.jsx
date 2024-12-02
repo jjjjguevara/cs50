@@ -1,6 +1,7 @@
 import React from "react";
 import { Search, Loader } from "lucide-react";
 import { useSearch } from "@/search";
+import { Pause, Play, RefreshCcw } from "@utils/icons";
 
 const SearchBar = () => {
   const { searchQuery, setSearchQuery, searchResults, isLoading, error } =

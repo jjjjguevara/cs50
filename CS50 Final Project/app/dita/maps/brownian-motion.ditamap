@@ -1,34 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
-<map id="musical-expertise-study">
+<map id="brownian-motion">
     <title>Theory of Brownian Movement</title>
 
-    <!-- Article text -->
-    <topicgroup>
+    <topicref
+        href="../topics/articles/brownian-motion.md"
+        format="markdown"
+        type="concept"
+    >
         <topicmeta>
-            <navtitle>Article Body</navtitle>
+            <data name="artifacts">
+                <data
+                    name="simulation"
+                    href="../artifacts/components/brownian.jsx"
+                    target-heading="investigations-on-the-theory-of-the-brownian-movement"
+                />
+            </data>
         </topicmeta>
-        <topicref
-            href="../topics/articles/brownian-motion.md"
-            format="markdown"
-            type="concept"
-        >
-            <topicmeta>
-                <data name="artifacts">
-                    <!-- Simulation component -->
-                    <data
-                        name="simulation"
-                        href="../artifacts/components/brownian.jsx"
-                        target-heading="investigations-on-the-theory-of-the-brownian-movement"
-                    />
-                    <!-- Theory content using ScrollspyContent -->
-                    <data
-                        name="theory"
-                        href="../artifacts/brownian-art.dita"
-                        target-heading="investigations-on-the-theory-of-the-brownian-movement"
-                    />
-                </data>
-            </topicmeta>
-        </topicref>
-    </topicgroup>
+    </topicref>
 </map>

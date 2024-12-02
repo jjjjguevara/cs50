@@ -3,28 +3,66 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Journal</title>
+        <title>Academic View</title>
 
-        <!-- React -->
-        <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-        <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+        <!-- Load React -->
+        <script
+            crossorigin
+            src="https://unpkg.com/react@18/umd/react.development.js"
+        ></script>
+        <script
+            crossorigin
+            src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+        ></script>
 
-        <!-- Recharts -->
-        <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+        <!-- Load PropTypes -->
+        <script src="https://unpkg.com/prop-types@15.7.2/prop-types.min.js"></script>
 
-        <!-- Lucide Icons -->
-        <script src="https://unpkg.com/lucide-react@latest"></script>
+        <!-- Load Recharts and its dependencies -->
+        <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+        <script src="https://unpkg.com/d3-array@3.2.0/dist/d3-array.min.js"></script>
+        <script src="https://unpkg.com/d3-scale@4.0.2/dist/d3-scale.min.js"></script>
+        <script src="https://unpkg.com/d3-shape@3.1.0/dist/d3-shape.min.js"></script>
 
-        <!-- Bootstrap CSS -->
+        <!-- Initialize globals with debug logging -->
+        <script>
+            console.log("Initializing globals...");
+
+            // Initialize React
+            window.React = React;
+            window.ReactDOM = ReactDOM;
+            console.log("React available:", !!window.React);
+            console.log("ReactDOM available:", !!window.ReactDOM);
+
+            // Initialize Recharts
+            window.Recharts = window.Recharts || Recharts;
+            console.log("Recharts available:", !!window.Recharts);
+            console.log(
+                "Recharts components:",
+                Object.keys(window.Recharts || {}),
+            );
+
+            // Initialize component registry
+            window.ReactComponents = window.ReactComponents || {};
+            console.log("Component registry initialized");
+        </script>
+
+        <!-- Load app scripts -->
+        {% if artifact_scripts %} {% for script in artifact_scripts %}
+        <script type="module" src="{{ script }}"></script>
+        {% endfor %} {% endif %}
+
+        <!-- Bootstrap and other CSS -->
         <link
-            rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+            rel="stylesheet"
         />
         <link
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
         />
-        <!-- CSS stylesheets -->
+
+        <!-- Your CSS -->
         <link
             rel="stylesheet"
             href="{{ url_for('static', filename='css/global.css') }}"
@@ -44,7 +82,8 @@
     </head>
     <body>
         <div class="academic-layout">
-            <!-- Top Navigation -->
+            <!-- Navbar -->
+            {% block navbar %}
             <nav class="main-navbar">
                 <div class="navbar-container">
                     <a href="/" class="navbar-brand">
@@ -62,7 +101,6 @@
                     >
                         <span class="navbar-toggler-icon"></span>
                     </button>
-
                     <div class="collapse navbar-collapse" id="navbarContent">
                         <ul class="navbar-nav">
                             <li class="nav-item">
@@ -106,26 +144,25 @@
                     </div>
                 </div>
             </nav>
+            {% endblock %}
 
-            <!-- Main Content Area -->
+            <!-- Main Content -->
+            {% block content %}
             <div class="d-flex flex-column flex-lg-row">
                 <!-- Left Sidebar -->
                 <div class="sidebar left-sidebar" id="left-sidebar">
                     <div id="root"></div>
                 </div>
-
-                <!-- Main Content -->
+                <!-- Main Content Area -->
                 <div class="main-content">
                     <div class="container-fluid">
                         <div class="row">
-                            <!-- Article Content -->
                             <div class="col-lg-9">
                                 <div class="article-wrapper">
                                     <div id="article-wrapper">
                                         {% if content %} {{ content | safe }} {%
                                         endif %}
                                     </div>
-                                    <!-- Add Bibliography mounting point here -->
                                     <div
                                         id="bibliography-root"
                                         class="bibliography-section"
@@ -133,14 +170,12 @@
                                     ></div>
                                 </div>
                             </div>
-
-                            <!-- Right Sidebar (TOC) -->
+                            <!-- Right Sidebar -->
                             <div class="col-md-3">
                                 <div
                                     class="right-sidebar position-sticky"
                                     style="top: 80px"
                                 >
-                                    <!-- Add these -->
                                     <div id="toc-root"></div>
                                 </div>
                             </div>
@@ -148,43 +183,49 @@
                     </div>
                 </div>
             </div>
+            {% endblock %}
 
             <!-- Footer -->
+            {% block footer %}
             <footer class="footer mt-auto py-3 bg-light">
-                <div class="container">
-                    <div class="d-flex justify-content-center gap-4">
-                        <a href="#" class="text-decoration-none text-muted"
-                            >Home</a
-                        >
-                        <a href="#" class="text-decoration-none text-muted"
-                            >FAQs</a
-                        >
-                        <a href="#" class="text-decoration-none text-muted"
-                            >Journal</a
-                        >
-                        <a href="#" class="text-decoration-none text-muted"
-                            >Contribute</a
-                        >
-                        <a href="#" class="text-decoration-none text-muted"
-                            >About</a
-                        >
-                    </div>
-                    <hr class="my-4" />
-                    <p class="text-center text-muted">© 2024 Company, Inc</p>
+                <div class="container text-center">
+                    <p class="text-muted">© 2024 jjjjguevara, Inc</p>
                 </div>
             </footer>
+            {% endblock %}
         </div>
 
-        <!-- Pass the initial content to JavaScript -->
+        <!-- Load Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+        <!-- Initialize content -->
         <script>
             window.initialContent = `{{ content | safe if content else '' }}`;
         </script>
 
-        <!-- Bootstrap JS -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Load your app -->
         <script
             type="module"
             src="{{ url_for('static', filename='dist/academic.js') }}"
         ></script>
+
+        <!-- Debug script -->
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                console.log("DOM loaded");
+                console.log(
+                    "React components available:",
+                    window.ReactComponents,
+                );
+                console.log(
+                    "Artifact wrappers:",
+                    document.querySelectorAll(".artifact-wrapper").length,
+                );
+                console.log(
+                    "Web components:",
+                    document.querySelectorAll("web-component-wrapper").length,
+                );
+            });
+        </script>
     </body>
 </html>

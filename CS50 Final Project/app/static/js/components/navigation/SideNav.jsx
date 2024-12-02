@@ -10,6 +10,7 @@ import {
   LibraryBig,
 } from "lucide-react";
 import { api } from "@/utils/api";
+import { Pause, Play, RefreshCcw } from "@utils/icons";
 
 const SideNav = () => {
   const [ditaMaps, setDitaMaps] = useState([]);

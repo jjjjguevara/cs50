@@ -1,8 +1,21 @@
-// app/static/js/utils/componentRegistry.js
-import BrownianMotion3D from "../../../dita/artifacts/components/brownian.jsx";
+import BrownianMotion3D from "../../dita/artifacts/components/brownian.jsx";
 
-// Register all React components that might be used as artifacts
-window.ReactComponents = {
-  BrownianMotion3D: BrownianMotion3D,
-  // Add other components here
+const components = {
+  brownian: BrownianMotion3D,
 };
+
+// Register components
+export function registerComponents() {
+  if (typeof window !== "undefined") {
+    window.ReactComponents = window.ReactComponents || {};
+    Object.entries(components).forEach(([name, component]) => {
+      console.log(`Registering component: ${name}`);
+      window.ReactComponents[name] = component;
+    });
+  }
+}
+
+// Call registration
+registerComponents();
+
+export default components;
