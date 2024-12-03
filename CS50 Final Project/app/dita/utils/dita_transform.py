@@ -325,25 +325,15 @@ class DITATransformer:
             if tree is None:
                 raise ValueError(f"Failed to parse DITA topic: {topic_path}")
 
-            self.logger.debug(f"Processing DITA topic: {topic_path}")
-
-            # Reset sub-heading counters while preserving H1 count
-            self.heading_handler.reset_sub_headings()
-
-            self.logger.debug(f"Current heading state: {self.heading_handler.counters}")
-
-            # Get the root element type (concept, task, etc)
-            root_tag = etree.QName(tree).localname
-            self.logger.debug(f"Root element type: {root_tag}")
-
+            self.logger.debug(f"Starting DITA topic transformation: {topic_path}")
             html_parts = []
 
-            # Process title first to maintain proper hierarchy
+            # Process title (H1)
             title_elem = tree.find('.//title')
             if title_elem is not None and title_elem.text:
                 heading_id, formatted_text = self.heading_handler.process_heading(
                     title_elem.text,
-                    1  # Topic titles are always H1
+                    1  # Topic titles are H1
                 )
                 html_parts.append(
                     f'<h1 id="{heading_id}" class="topic-title">'
@@ -351,11 +341,14 @@ class DITATransformer:
                     f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
                     f'</h1>'
                 )
-
-                # After processing H1, explicitly reset sub-headings
+                # Reset subheading counters AFTER processing H1
                 self.heading_handler.reset_sub_headings()
 
-            # Process body based on root element type
+            # Get current H1 for correct subheading prefixes
+            current_h1 = self.heading_handler._current_h1
+
+            # Process root element content (concept/task body)
+            root_tag = etree.QName(tree).localname
             body_tag = {
                 'concept': './/conbody',
                 'task': './/taskbody',
@@ -365,9 +358,31 @@ class DITATransformer:
 
             body_elem = tree.find(body_tag)
             if body_elem is not None:
-                # Process each element in the body
                 for elem in body_elem:
-                    if elem.tag != 'title':  # Skip titles as they're handled separately
+                    if elem.tag == 'section':
+                        # Process section title
+                        section_title = elem.find('title')
+                        if section_title is not None and section_title.text:
+                            # Force the use of current H1
+                            self.heading_handler._current_h1 = current_h1
+                            heading_id, formatted_text = self.heading_handler.process_heading(
+                                section_title.text,
+                                2  # Section titles are H2
+                            )
+                            html_parts.append(
+                                f'<h2 id="{heading_id}" class="section-title">'
+                                f'{formatted_text}'
+                                f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
+                                f'</h2>'
+                            )
+
+                        # Process section content
+                        for child in elem:
+                            if child.tag != 'title':  # Skip the title as we've already processed it
+                                content = self.dita_processor.process_element(child, topic_path)
+                                html_parts.append(content)
+                    else:
+                        # Process non-section elements
                         content = self.dita_processor.process_element(elem, topic_path)
                         html_parts.append(content)
 

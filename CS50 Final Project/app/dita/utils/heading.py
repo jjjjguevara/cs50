@@ -79,14 +79,14 @@ class HeadingHandler:
             return self._sanitize_id(heading_text), heading_text
 
     def _get_section_number(self, level: int) -> str:
-        """Generate hierarchical section number (1.1.2.3 format)"""
+        """Generate hierarchical section number (1. 1.1. 1.1.1. format)"""
         try:
             if level < 1 or level > 6:
                 raise ValueError(f"Invalid heading level: {level}")
 
             # For H1s (main sections)
             if level == 1:
-                return str(self._current_h1)
+                return f"{self._current_h1}."
 
             # For subheadings (H2-H6)
             if self._current_h1 == 0:
@@ -114,11 +114,11 @@ class HeadingHandler:
                 for i in range(3, level + 1):
                     numbers.append(str(self.counters[f'h{i}']))
 
-            return '.'.join(numbers)
+            return f"{'.'.join(numbers)}."  # Add final dot
 
         except Exception as e:
             self.logger.error(f"Error in _get_section_number: {str(e)}")
-            return str(level)
+            return f"{level}."
 
     def _generate_heading_id(self, text: str) -> str:
         """Generate unique ID for heading"""
