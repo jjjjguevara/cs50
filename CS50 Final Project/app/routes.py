@@ -158,9 +158,9 @@ def articles() -> ResponseReturnValue:
         ditamaps = list(maps_dir.glob('*.ditamap'))
         if ditamaps:
             first_map = ditamaps[0]
-            map_id = first_map.stem
+            map_id = first_map.stem  # Just get the stem without .ditamap
             logger.info(f"Redirecting to first ditamap: {map_id}")
-            return redirect(url_for('main.view_entry', topic_id=f"{map_id}.ditamap"))
+            return redirect(url_for('main.view_entry', topic_id=map_id))  # Don't add .ditamap
         else:
             logger.error("No ditamaps found")
             return render_template('academic.html', error="No articles found"), 404
@@ -234,90 +234,30 @@ def debug_content(topic_id: str) -> ResponseReturnValue:
         with open(topic_path, 'r', encoding='utf-8') as f:
             raw_content = f.read()
 
-        processed_content = dita_processor.process_content(topic_path)
+        # Use transformer instead of process_content
+        processed_content = dita_processor.transform(topic_path)
 
-        debug_info = {
+        # Parse processed content for structure info
+        soup = BeautifulSoup(processed_content, 'html.parser')
+        headings = []
+        for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+            if isinstance(h, Tag):
+                headings.append({
+                    'id': h.get('id', ''),
+                    'text': h.get_text(strip=True),
+                    'level': int(h.name[1])
+                })
+
+        return jsonify({
             'topic_id': topic_id,
-            'topic_path': str(topic_path),
-            'content_type': topic_path.suffix.lstrip('.'),
             'raw_content': raw_content,
             'processed_content': processed_content,
-            'transformations': {
-                'headings': [],
-                'artifacts': [],
-                'metadata': {}
-            }
-        }
-
-        soup = BeautifulSoup(processed_content, 'html.parser')
-
-        # Get heading information
-        headings = []
-        for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-            if not isinstance(element, Tag):
-                continue
-
-            heading_info = {
-                'id': element.get('id', 'no-id'),
-                'text': element.get_text(strip=True),
-                'level': int(element.name[1]),
-                'classes': element.get('class', []),
-                'data_attributes': {
-                    k: v for k, v in element.attrs.items()
-                    if isinstance(k, str) and k.startswith('data-')
-                }
-            }
-            headings.append(heading_info)
-        debug_info['transformations']['headings'] = headings
-
-        # Get artifact information
-        artifacts = []
-        for element in soup.find_all(class_='artifact-wrapper'):
-            if not isinstance(element, Tag):
-                continue
-
-            component_wrapper = element.find('web-component-wrapper')
-            if not isinstance(component_wrapper, Tag):
-                continue
-
-            artifact_info = {
-                'type': element.get('data-artifact-type'),
-                'id': element.get('data-artifact-id'),
-                'target': element.get('data-target'),
-                'status': element.get('data-status'),
-                'component': component_wrapper.get('component')
-            }
-            artifacts.append(artifact_info)
-        debug_info['transformations']['artifacts'] = artifacts
-
-        # Get metadata information
-        content_wrapper = soup.find(class_='content-wrapper')
-        if isinstance(content_wrapper, Tag):
-            metadata = {
-                k: v for k, v in content_wrapper.attrs.items()
-                if isinstance(k, str) and k.startswith('data-')
-            }
-            debug_info['transformations']['metadata'] = metadata
-
-        # Add processor state information
-        debug_info['processor_state'] = {
-            'registered_ids': list(dita_processor.heading_handler.registered_ids),
-            'used_heading_ids': dita_processor.heading_handler.used_heading_ids,
-            'heading_map': dita_processor.heading_handler.heading_map
-        }
-
-        return jsonify(debug_info)
+            'headings': headings
+        })
 
     except Exception as e:
         logger.error(f"Error in debug endpoint: {e}", exc_info=True)
-        return jsonify({
-            'error': str(e),
-            'traceback': traceback.format_exc(),
-            'context': {
-                'topic_id': topic_id,
-                'stage': 'content_processing'
-            }
-        }), 500
+        return jsonify({'error': str(e)}), 500
 
 
 
@@ -332,7 +272,6 @@ def test_interface() -> ResponseReturnValue:
         logger.error(f"Error serving index page: {str(e)}")
         return jsonify({'error': 'Failed to load application'}), 500
 
-
 @bp.route('/entry/<topic_id>')
 def view_entry(topic_id: str) -> ResponseReturnValue:
     """Academic article view"""
@@ -340,68 +279,30 @@ def view_entry(topic_id: str) -> ResponseReturnValue:
         # Add .ditamap extension if it's not a full path
         if not topic_id.endswith(('.md', '.dita', '.ditamap')):
             topic_id = f"{topic_id}.ditamap"
-
         logger.info(f"Attempting to view topic: {topic_id}")
-
-        # Use get_topic instead of get_topic_path
+        # Reset processor state before processing new topic
+        dita_processor.reset_processor_state()
         topic_path = dita_processor.get_topic(topic_id)
         if not topic_path:
             logger.error(f"Topic not found: {topic_id}")
             return render_template('academic.html',
                                 error="Entry not found",
                                 title="Not Found"), 404
-
         try:
-            # Process the topic content
+            # Transform content
             content = dita_processor.transform(topic_path)
-
-            # Check for transformation errors
+            # Add debug logging
+            logger.debug(f"Content transformation complete for {topic_id}")
+            logger.debug(f"HeadingHandler state after transformation: {dita_processor.transformer.heading_handler.counters}")
             if isinstance(content, str) and "error-container" in content:
                 logger.error(f"Error transforming content for {topic_id}")
                 return render_template('academic.html',
                                     content=content,
                                     title="Error"), 500
-
-            # Get clean topic ID (without extension)
-            clean_topic_id = Path(topic_id).stem
-
-            # Add artifact scripts to template context
-            artifact_scripts = [
-                url_for('static', filename='js/utils/ReactWebComponentWrapper.js'),
-                url_for('static', filename='js/utils/componentRegistry.js')
-            ]
-
-            # Extract metadata from processed content using BeautifulSoup
-            soup = BeautifulSoup(content, 'html.parser')
-            content_div = soup.find('div', class_='content-wrapper')
-            metadata = {}
-            if isinstance(content_div, Tag):
-                metadata = {
-                    k.replace('data-', ''): v
-                    for k, v in content_div.attrs.items()
-                    if k.startswith('data-')
-                }
-
-            # Generate table of contents from content
-            toc = []
-            for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-                if isinstance(h, Tag):
-                    toc.append({
-                        'id': h.get('id', ''),
-                        'text': h.get_text(strip=True),
-                        'level': int(h.name[1])
-                    })
-
-            logger.info(f"Successfully processed topic {topic_id}")
-
             return render_template('academic.html',
                                content=content,
-                               toc=toc,
-                               metadata=metadata,
-                               topic_id=clean_topic_id,
-                               title=metadata.get('title', 'Academic View'),
-                               artifact_scripts=artifact_scripts)
-
+                               topic_id=topic_id.replace('.ditamap', ''),
+                               title=topic_id)
         except Exception as e:
             logger.error(f"Error processing topic {topic_id}: {str(e)}", exc_info=True)
             error_context = {
@@ -413,12 +314,64 @@ def view_entry(topic_id: str) -> ResponseReturnValue:
                                 error=f"Error processing topic: {str(e)}",
                                 error_context=error_context,
                                 title="Error"), 500
-
     except Exception as e:
         logger.error(f"Error viewing entry: {str(e)}", exc_info=True)
         return render_template('academic.html',
                             error=str(e),
                             title="Error"), 500
+
+@bp.route('/api/debug/heading-state/<topic_id>')
+def debug_heading_state(topic_id: str) -> ResponseReturnValue:
+    """Debug endpoint to check heading counter state"""
+    try:
+        if not topic_id.endswith(('.md', '.dita', '.ditamap')):
+            topic_id = f"{topic_id}.ditamap"
+
+        topic_path = dita_processor.get_topic(topic_id)
+        if not topic_path:
+            return jsonify({
+                'error': 'Topic not found',
+                'topic_id': topic_id
+            }), 404
+
+        # Create new processor to test clean state
+        test_processor = DITAProcessor()
+
+        # Capture state at different points
+        states = {
+            'initial': dict(test_processor.transformer.heading_handler.counters),
+        }
+
+        # Process content
+        content = test_processor.transform(topic_path)
+
+        # Capture final state
+        states['final'] = dict(test_processor.transformer.heading_handler.counters)
+
+        # Get all headings from processed content
+        soup = BeautifulSoup(content, 'html.parser')
+        headings = []
+        for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+            if isinstance(h, Tag):
+                headings.append({
+                    'level': h.name,
+                    'text': h.get_text(strip=True),
+                    'id': h.get('id', '')
+                })
+
+        return jsonify({
+            'topic_id': topic_id,
+            'heading_states': states,
+            'headings_found': headings,
+            'path': str(topic_path)
+        })
+
+    except Exception as e:
+        logger.error(f"Debug error: {str(e)}", exc_info=True)
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
 
 @bp.route('/static/<path:filename>')
 def serve_static(filename: str) -> ResponseReturnValue:
@@ -585,8 +538,8 @@ def debug_topics() -> ResponseReturnValue:
                 with open(topic_path, 'r', encoding='utf-8') as f:
                     raw_content = f.read()
 
-                # Get processed content
-                processed_content = dita_processor.process_content(topic_path)
+                # Use transformer instead of process_content
+                processed_content = dita_processor.transform(topic_path)
 
                 # Parse processed content for structure info
                 soup = BeautifulSoup(processed_content, 'html.parser')

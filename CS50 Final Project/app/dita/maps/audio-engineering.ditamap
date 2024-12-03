@@ -12,7 +12,7 @@
             href="../topics/acoustics/room-acoustics.dita"
             type="concept"
         />
-        <topicref href="../topics/audio/sound-basics.dita" type="concept" />
+        <topicref href="../topics/audio/sound-basics.md" type="concept" />
         <topicref
             href="../topics/audio/waveform-properties.dita"
             type="concept"

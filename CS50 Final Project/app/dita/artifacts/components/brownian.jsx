@@ -17,8 +17,6 @@ const Knob = ({
   const startPosRef = useRef({ y: 0, value: 0 });
   const sensitivityFactor = 200;
 
-  // ... rest of Knob logic stays the same ...
-
   return (
     <div className="d-flex flex-column align-items-center gap-2">
       <span className="text-muted small">{label}</span>

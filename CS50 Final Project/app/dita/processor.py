@@ -25,6 +25,8 @@ from .utils.id_handler import DITAIDHandler
 from .artifacts.parser import ArtifactParser
 from .artifacts.renderer import ArtifactRenderer
 from .utils.dita_elements import DITAContentProcessor
+from .utils.dita_transform import DITATransformer
+from .utils.dita_parser import DITAParser
 
 # Type aliases
 HTMLString = str
@@ -33,7 +35,7 @@ XMLElement = Any  # or more specifically: etree._Element
 
 class DITAProcessor:
     """
-    DITA content processor for HTML transformation.
+    DITA content processor and orchestrator
     Handles DITA, Markdown, and interactive artifact processing.
     """
     ##### 1. INITIALIZATION #####
@@ -57,8 +59,10 @@ class DITAProcessor:
         self._init_directories()
 
         # Initialize utilities
+        self.transformer = DITATransformer(self.dita_root)
         self.dita_elements = DITAContentProcessor()
         self.id_handler = DITAIDHandler()
+        self.dita_parser = DITAParser()
         self.heading_handler = HeadingHandler()
         self.metadata_handler = MetadataHandler()
         self.html = HTMLHelper()
@@ -148,7 +152,15 @@ class DITAProcessor:
             self.logger.error(f"Validation failed: {e}")
             return False
 
+    def reset_state(self) -> None:
+        """Reset all stateful handlers between requests"""
+        self.heading_handler.reset()
 
+    def reset_processor_state(self) -> None:
+        """Reset all stateful components for new processing"""
+        self.transformer.heading_handler.reset()
+        self.id_handler = DITAIDHandler()
+        self.logger.debug("Reset processor state")
 
     def list_topics(self) -> List[Dict[str, Any]]:
             """List all available topics"""
@@ -267,105 +279,23 @@ class DITAProcessor:
     ##### 2. PRIMARY ENTRY POINTS #####
 
     def transform(self, input_path: Path) -> HTMLString:
-            """
-            Main entry point for transforming any DITA content to HTML.
+        """
+        Main entry point for transforming any DITA content to HTML.
+        """
+        try:
+            # Create completely new instances
+            self.heading_handler = HeadingHandler()
+            self.transformer = DITATransformer(self.dita_root)
+            self.id_handler = DITAIDHandler()
 
-            Args:
-                input_path: Path to the input file (.dita, .md, or .ditamap)
+            if input_path.suffix == '.ditamap':
+                return self.transformer.transform_map(input_path)
+            else:
+                return self.transformer.transform_topic(input_path)
 
-            Returns:
-                HTMLString: Transformed HTML content
-
-            The transformation process:
-            1. Validates input and determines content type
-            2. Extracts metadata and generates IDs
-            3. Processes content based on type
-            4. Injects artifacts if present
-            5. Applies final formatting
-            """
-            try:
-                    self.logger.info(f"Starting transformation of: {input_path}")
-
-                    # Validate input path
-                    if not input_path.exists():
-                        error_msg = f"File not found: {input_path}"
-                        self.logger.error(error_msg)
-                        return self.handle_error(FileNotFoundError(error_msg), input_path)
-
-                    # Generate content ID
-                    content_id = self.id_handler.generate_content_id(input_path)
-                    self.logger.debug(f"Generated content ID: {content_id}")
-
-                    # Extract metadata
-                    metadata = self.metadata_handler.extract_metadata(
-                        input_path,
-                        content_id=content_id
-                    )
-                    self.logger.debug(f"Extracted metadata: {metadata}")
-
-                    # Reset heading handler for new document
-                    self.heading_handler.reset()
-
-                    # Initialize html_content
-                    html_content: HTMLString = ""
-
-                    # Process based on file type
-                    if input_path.suffix == '.ditamap':
-                        # Parse artifacts first
-                        artifacts = self.artifact_parser.parse_artifact_references(input_path)
-                        self.logger.info(f"Found artifacts: {artifacts}")
-
-                        # Pre-register artifact target headings
-                        for artifact in artifacts:
-                            if target := artifact.get('target'):
-                                self.heading_handler.register_existing_id(target, target)
-                                self.logger.debug(f"Registered target heading: {target}")
-
-                        # Transform map content
-                        html_content = self.transform_map(input_path)
-
-                        # Inject artifacts if any
-                        if artifacts:
-                            html_content = self.inject_artifacts(html_content, artifacts)
-                            self.logger.info("Artifacts injected into content")
-                    else:  # .dita or .md files
-                        # Initialize section counters
-                        section_counters = {
-                            'h1': 0, 'h2': 0, 'h3': 0,
-                            'h4': 0, 'h5': 0, 'h6': 0
-                        }
-
-                        # Process single topic
-                        html_content = self.process_topic(
-                            topic_path=input_path,
-                            section_counters=section_counters
-                        )
-
-                    # Ensure we have content
-                    if not html_content:
-                        return self.handle_error(
-                            ValueError("No content generated"),
-                            input_path
-                        )
-
-                    # Apply final formatting
-                    soup = BeautifulSoup(html_content, 'html.parser')
-                    content_div = self.html.ensure_wrapper(soup)
-
-                    # Add metadata attributes
-                    content_div['data-content-id'] = content_id
-                    content_div['data-content-type'] = input_path.suffix.lstrip('.')
-
-                    # Add metadata features
-                    features = self.metadata_handler.get_toggleable_features(metadata)
-                    for feature, value in features.items():
-                        content_div[f'data-{feature}'] = str(value).lower()
-
-                    return str(soup)
-
-            except Exception as e:
-                self.logger.error(f"Error transforming {input_path}: {str(e)}")
-                return self.handle_error(e, input_path)
+        except Exception as e:
+            self.logger.error(f"Error in transformation: {str(e)}")
+            return self.transformer._create_error_html(e, input_path)
 
     def _format_final_html(self, content: HTMLString, metadata: Dict[str, Any]) -> HTMLString:
         """
@@ -406,500 +336,7 @@ class DITAProcessor:
             return content
 
 
-    def transform_map(self, map_path: Path) -> HTMLString:
-            """
-            Transform DITA map and its referenced topics to HTML.
 
-            Args:
-                map_path: Path to the .ditamap file
-
-            Returns:
-                HTMLString: Combined HTML content with proper structure
-
-            Processing steps:
-            1. Parse map structure
-            2. Initialize section counters
-            3. Process each topic reference
-            4. Combine content with proper hierarchy
-            """
-            try:
-                self.logger.info(f"Transforming map: {map_path}")
-                map_id = self.id_handler.generate_map_id(map_path)
-
-                # Reset counters for new map
-                self.heading_handler.reset()
-                section_counters = {'h1': 0, 'h2': 0, 'h3': 0, 'h4': 0, 'h5': 0, 'h6': 0}
-
-                # Parse map XML
-                tree = self.parse_dita(map_path)
-                html_content = ['<div class="map-content">']
-
-                # Process map title
-                title_elem = tree.find(".//title")
-                if title_elem is not None and title_elem.text:
-                    title_id = self.heading_handler.generate_heading_id(title_elem.text)
-                    html_content.append(
-                        f'<h1 id="{title_id}" class="map-title">'
-                        f'{title_elem.text}'
-                        f'<a href="#{title_id}" class="heading-anchor" '
-                        f'aria-label="Link to this heading">¶</a>'
-                        f'</h1>'
-                    )
-
-                # Process each topicref
-                for topicref in tree.xpath(".//topicref"):
-                    href = topicref.get('href')
-                    if href:
-                        self.logger.info(f"Processing topicref: {href}")
-                        topic_path = self.resolve_path(map_path, href)
-
-                        if topic_path and topic_path.exists():
-                            # Generate topic ID
-                            topic_id = self.id_handler.generate_topic_id(topic_path, map_path)
-
-                            # Extract topic metadata
-                            metadata = self.metadata_handler.extract_metadata(
-                                topic_path,
-                                content_id=topic_id
-                            )
-
-                            # Start topic section
-                            html_content.append(
-                                f'<div class="topic-section" '
-                                f'data-topic-id="{topic_id}">'
-                            )
-
-                            # Process topic content
-                            topic_content = self.process_topic(
-                                topic_path,
-                                section_counters
-                            )
-
-                            # Add metadata-based features
-                            features = self.metadata_handler.get_toggleable_features(metadata)
-                            if features.get('show_journal_table'):
-                                html_content.append(self._generate_journal_table(metadata))
-                            if features.get('show_abstract'):
-                                html_content.append(self._generate_abstract(metadata))
-
-                            # Add main content
-                            html_content.append(topic_content)
-                            html_content.append('</div>')  # Close topic section
-                        else:
-                            self.logger.error(f"Could not resolve topic for href: {href}")
-                            html_content.append(
-                                f'<div class="error-message">'
-                                f'Topic not found: {href}'
-                                f'</div>'
-                            )
-
-                html_content.append('</div>')  # Close map-content
-
-                # Combine and format final HTML
-                combined_html = '\n'.join(html_content)
-
-                # Final processing
-                soup = BeautifulSoup(combined_html, 'html.parser')
-
-                # Add map metadata
-                soup = BeautifulSoup(combined_html, 'html.parser')
-
-                # Get map metadata
-                map_metadata = self.metadata_handler.extract_metadata(
-                    map_path,
-                    content_id=map_id
-                )
-
-                # Use HTMLHelper to safely set attributes
-                content_div = self.html.ensure_wrapper(soup, wrapper_class='map-content')
-
-                # Prepare attributes
-                map_attributes = {
-                    'map-id': map_id,
-                    'map-type': map_metadata.get('type', 'standard'),
-                    'processed-at': datetime.now().isoformat()
-                }
-
-                # Add other metadata attributes
-                for key, value in map_metadata.items():
-                    if isinstance(value, (str, int, bool)):
-                        map_attributes[key] = value
-
-                # Set all attributes safely
-                self.html.set_data_attributes(content_div, map_attributes)
-
-                return str(soup)
-
-            except Exception as e:
-                self.logger.error(f"Error transforming map {map_path}: {str(e)}")
-                return self.handle_error(e, map_path)
-
-
-
-
-    def _generate_journal_table(self, metadata: Dict[str, Any]) -> HTMLString:
-        """Generate HTML table for journal metadata"""
-        try:
-            table_html = ['<div class="journal-metadata">']
-            table_html.append('<table class="metadata-table">')
-
-            # Define fields to display in order
-            fields = [
-                ('journal', 'Journal'),
-                ('doi', 'DOI'),
-                ('publication-date', 'Published'),
-                ('authors', 'Authors'),
-                ('institution', 'Institution'),
-                ('citation', 'Citation')
-            ]
-
-            for key, label in fields:
-                if value := metadata.get(key):
-                    if isinstance(value, list):
-                        value = ', '.join(value)
-                    table_html.append(
-                        f'<tr>'
-                        f'<th class="metadata-label">{html.escape(label)}</th>'
-                        f'<td class="metadata-value">{html.escape(str(value))}</td>'
-                        f'</tr>'
-                    )
-
-            table_html.append('</table></div>')
-            return '\n'.join(table_html)
-
-        except Exception as e:
-            self.logger.error(f"Error generating journal table: {str(e)}")
-            return ''
-
-    def _generate_abstract(self, metadata: Dict[str, Any]) -> HTMLString:
-        """Generate HTML for abstract section"""
-        try:
-            if abstract := metadata.get('abstract'):
-                return (
-                    f'<div class="abstract-section">'
-                    f'<h2 class="abstract-title">Abstract</h2>'
-                    f'<div class="abstract-content">'
-                    f'{html.escape(abstract)}'
-                    f'</div>'
-                    f'</div>'
-                )
-
-            if shortdesc := metadata.get('shortdesc'):
-                return (
-                    f'<div class="abstract-section">'
-                    f'<div class="abstract-content short-description">'
-                    f'{html.escape(shortdesc)}'
-                    f'</div>'
-                    f'</div>'
-                )
-
-            return ''
-
-        except Exception as e:
-            self.logger.error(f"Error generating abstract: {str(e)}")
-            return ''
-
-
-
-    ##### 3. CORE PROCESSING #####
-
-    def process_topic(
-        self,
-        topic_path: Path,
-        section_counters: Dict[str, int]
-    ) -> HTMLString:
-        """
-        Process single topic with section numbering and formatting.
-
-        Args:
-            topic_path: Path to topic file (.dita or .md)
-            section_counters: Dictionary tracking section numbers for h1-h6
-
-        Returns:
-            HTMLString: Processed HTML content with proper heading structure
-        """
-        try:
-            self.logger.info(f"Processing topic: {topic_path}")
-
-            # Handle different file types
-            if topic_path.suffix == '.md':
-                return self._process_markdown_topic(topic_path, section_counters)
-            elif topic_path.suffix == '.dita':
-                return self._process_dita_topic(topic_path, section_counters)
-            else:
-                raise ValueError(f"Unsupported file type: {topic_path.suffix}")
-
-        except Exception as e:
-            self.logger.error(f"Error processing topic {topic_path}: {str(e)}")
-            return self.handle_error(e, topic_path)
-
-    def _process_markdown_topic(self, topic_path: Path,
-                              section_counters: Dict[str, int]) -> HTMLString:
-        """Process Markdown topic file"""
-        try:
-            with open(topic_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-
-            # Parse frontmatter and content
-            post = frontmatter.loads(content)
-            html_content = self.md.convert(post.content)
-
-            # Process HTML with BeautifulSoup
-            soup = BeautifulSoup(html_content, 'html.parser')
-
-            # Process all headings
-            for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-                level = int(heading.name[1])  # Get heading level number
-                original_text = heading.get_text(strip=True)
-
-                # Generate heading ID and formatted text
-                heading_id, formatted_text = self.heading_handler.process_heading(
-                    original_text,
-                    level,
-                    section_counters
-                )
-
-                # Update heading
-                heading['id'] = heading_id
-                heading.string = formatted_text
-
-                # Add anchor link
-                anchor = soup.new_tag(
-                    'a',
-                    href=f'#{heading_id}',
-                    class_='heading-anchor',
-                    **{'aria-label': 'Link to this heading'}
-                )
-                anchor.string = '¶'
-                heading.append(anchor)
-
-                # Add appropriate heading classes
-                heading['class'] = self._get_heading_classes(level)
-
-            return str(soup)
-
-        except Exception as e:
-            self.logger.error(f"Error processing markdown topic: {str(e)}")
-            raise
-
-    def _process_dita_topic(self, topic_path: Path,
-                           section_counters: Dict[str, int]) -> HTMLString:
-        """Process DITA topic file"""
-        try:
-            # Parse DITA XML
-            tree = self.parse_dita(topic_path)
-            html_content = ['<div class="dita-content">']
-
-            # Process title
-            title_elem = tree.find(".//title")
-            if title_elem is not None and title_elem.text:
-                heading_id, formatted_text = self.heading_handler.process_heading(
-                    title_elem.text,
-                    1,  # Main title is always h1
-                    section_counters
-                )
-                html_content.append(
-                    f'<h1 id="{heading_id}" class="{self._get_heading_classes(1)}">'
-                    f'{formatted_text}'
-                    f'<a href="#{heading_id}" class="heading-anchor" '
-                    f'aria-label="Link to this heading">¶</a>'
-                    f'</h1>'
-                )
-
-            # Process sections
-            for section in tree.xpath(".//section"):
-                # Process section title
-                section_title = section.find("title")
-                if section_title is not None and section_title.text:
-                    heading_id, formatted_text = self.heading_handler.process_heading(
-                        section_title.text,
-                        2,  # Section titles are h2
-                        section_counters
-                    )
-                    html_content.append(
-                        f'<h2 id="{heading_id}" class="{self._get_heading_classes(2)}">'
-                        f'{formatted_text}'
-                        f'<a href="#{heading_id}" class="heading-anchor" '
-                        f'aria-label="Link to this heading">¶</a>'
-                        f'</h2>'
-                    )
-
-                # Process section content
-                for elem in section:
-                    if elem.tag != 'title':  # Skip title as it's already processed
-                        html_content.append(self._process_dita_element(elem))
-
-            html_content.append('</div>')
-            return '\n'.join(html_content)
-
-        except Exception as e:
-            self.logger.error(f"Error processing DITA topic: {str(e)}")
-            raise
-
-    def _process_dita_element(self, elem: etree._Element) -> HTMLString:
-        """Process individual DITA elements to HTML"""
-        tag = etree.QName(elem).localname
-
-        if tag == 'p' and elem.text:
-            return f'<p class="mb-4">{elem.text}</p>'
-
-        elif tag == 'ul':
-            items = [
-                f'<li class="mb-2">{item.text}</li>'
-                for item in elem.findall('li')
-                if item.text
-            ]
-            return f'<ul class="list-disc ml-6 mb-4">{"".join(items)}</ul>'
-
-        elif tag == 'ol':
-            items = [
-                f'<li class="mb-2">{item.text}</li>'
-                for item in elem.findall('li')
-                if item.text
-            ]
-            return f'<ol class="list-decimal ml-6 mb-4">{"".join(items)}</ol>'
-
-        elif tag == 'codeblock':
-            return (
-                f'<pre class="bg-gray-100 p-4 rounded-lg mb-4">'
-                f'<code>{elem.text if elem.text else ""}</code>'
-                f'</pre>'
-            )
-
-        return ''  # Return empty string for unhandled elements
-
-    def _get_heading_classes(self, level: int) -> str:
-        """Get appropriate classes for heading level"""
-        classes = {
-            1: "text-2xl font-bold mb-4",
-            2: "text-xl font-bold mt-6 mb-3",
-            3: "text-lg font-bold mt-4 mb-2",
-            4: "text-base font-bold mt-3 mb-2",
-            5: "text-sm font-bold mt-2 mb-1",
-            6: "text-xs font-bold mt-2 mb-1"
-        }
-        return classes.get(level, "")
-
-
-
-    def process_content(self, content_path: Path) -> HTMLString:
-        """
-        Process raw content to HTML with proper structure and formatting.
-
-        Args:
-            content_path: Path to content file (.dita, .md, or content string)
-
-        Returns:
-            HTMLString: Processed HTML with consistent structure
-
-        This method handles the core content processing:
-        1. Content parsing and cleaning
-        2. Image and link processing
-        3. Code block formatting
-        4. Cross-reference resolution
-        """
-        try:
-                self.logger.info(f"Processing content from: {content_path}")
-
-                if not content_path.exists():
-                    raise FileNotFoundError(f"Content file not found: {content_path}")
-
-                # Read content
-                with open(content_path, 'r', encoding='utf-8') as f:
-                    raw_content = f.read()
-
-                # Process based on content type
-                if content_path.suffix == '.md':
-                    return self._process_markdown_content(raw_content, content_path)
-                elif content_path.suffix == '.dita':
-                    tree = etree.fromstring(raw_content.encode('utf-8'), self.parser)
-                    # Use DITAContentProcessor directly
-                    return self.dita_elements.process_element(tree, content_path)
-                else:
-                    raise ValueError(f"Unsupported content type: {content_path.suffix}")
-
-        except Exception as e:
-            self.logger.error(f"Error processing content: {str(e)}")
-            return self.handle_error(e, content_path)
-
-    def _process_markdown_content(self, content: str, source_path: Path) -> HTMLString:
-        """Process Markdown content to HTML"""
-        try:
-            # Parse frontmatter and content
-            post = frontmatter.loads(content)
-
-            # Convert markdown to HTML
-            html_content = self.md.convert(post.content)
-
-            return html_content
-
-        except Exception as e:
-            self.logger.error(f"Error processing markdown content: {str(e)}")
-            raise
-
-
-    def inject_artifacts(self, html_content: str, artifacts: List[Dict[str, Any]]) -> HTMLString:
-        """Inject interactive artifacts into HTML content."""
-        try:
-            self.logger.info("Starting artifact injection")
-            soup = BeautifulSoup(html_content, 'html.parser')
-            successfully_injected = []
-            failed_artifacts = []
-
-            for artifact in artifacts:
-                target_elem = None  # Initialize before try block
-                try:
-                    # Extract artifact info
-                    artifact_path = self.dita_root / artifact['href'].lstrip('../')
-                    component_name = artifact['name']
-                    target_id = artifact['target']
-
-                    self.logger.info(f"Processing artifact: {component_name} at {artifact_path}")
-
-                    # Validate artifact
-                    if not artifact_path.exists():
-                        raise ValueError(f"Artifact file not found: {artifact_path}")
-
-                    # Find target element using HTMLHelper
-                    target_elem = self.html.find_target_element(soup, target_id)
-                    if not target_elem:
-                        raise ValueError(f"Target element not found: {target_id}")
-
-                    # Create isolated artifact container
-                    artifact_html = self.artifact_renderer.render_artifact(
-                        artifact_path,
-                        target_id
-                    )
-
-                    if not artifact_html:
-                        raise ValueError(f"Failed to render artifact: {artifact_path}")
-
-                    # Insert artifact
-                    artifact_soup = BeautifulSoup(artifact_html, 'html.parser')
-                    target_elem.insert_after(artifact_soup)
-
-                    successfully_injected.append(component_name)
-                    self.logger.info(f"Successfully injected artifact: {component_name}")
-
-                except Exception as e:
-                    self.logger.error(f"Failed to inject artifact {artifact.get('name')}: {str(e)}")
-                    failed_artifacts.append({
-                        'name': artifact.get('name'),
-                        'error': str(e)
-                    })
-                    if target_elem:  # Now safely checked
-                        error_html = self.html.create_artifact_error_message(artifact, str(e))
-                        error_soup = BeautifulSoup(error_html, 'html.parser')
-                        target_elem.insert_after(error_soup)
-
-            # Add injection status
-            self.html.add_injection_status(soup, successfully_injected, failed_artifacts)
-
-            return str(soup)
-
-        except Exception as e:
-            self.logger.error(f"Critical error in artifact injection: {str(e)}")
-            return self.html.add_critical_error_message(html_content, str(e))
 
 
 
@@ -937,97 +374,6 @@ class DITAProcessor:
 
     ##### 4. PATH HANDLING #####
 
-    def resolve_path(self, map_path: Path, href: str) -> Optional[Path]:
-        """
-        Resolve topic reference path relative to map file.
-
-        Args:
-            map_path: Path to the source DITA map
-            href: Reference path from topicref or artifact
-                Can be:
-                - Relative to map (../topics/example.md)
-                - Direct path (topics/example.dita)
-                - Cross-map reference (othermap.ditamap#topic-id)
-
-        Returns:
-            Optional[Path]: Resolved absolute path to the referenced file
-        """
-        try:
-            self.logger.info(f"Resolving path: {href} relative to: {map_path}")
-
-            # Handle cross-map references
-            if '#' in href:
-                href, topic_id = href.split('#', 1)
-                self.logger.debug(f"Split cross-map reference - File: {href}, Topic ID: {topic_id}")
-
-            # Clean the href
-            cleaned_href = href.strip().replace('\\', '/')
-
-            # Try different resolution strategies
-            resolved_path = None
-
-            # Strategy 1: Resolve relative to map
-            if cleaned_href.startswith('..'):
-                try:
-                    resolved_path = (map_path.parent / cleaned_href).resolve()
-                    self.logger.debug(f"Resolved relative to map: {resolved_path}")
-                except Exception as e:
-                    self.logger.debug(f"Failed to resolve relative to map: {e}")
-
-            # Strategy 2: Resolve from topics directory
-            if not resolved_path or not resolved_path.exists():
-                try:
-                    # Remove any '../topics/' prefix
-                    topic_path = cleaned_href.replace('../topics/', '').replace('topics/', '')
-                    resolved_path = (self.topics_dir / topic_path).resolve()
-                    self.logger.debug(f"Resolved from topics directory: {resolved_path}")
-                except Exception as e:
-                    self.logger.debug(f"Failed to resolve from topics directory: {e}")
-
-            # Strategy 3: Check maps directory for .ditamap files
-            if not resolved_path or not resolved_path.exists():
-                if cleaned_href.endswith('.ditamap'):
-                    try:
-                        resolved_path = (self.maps_dir / cleaned_href).resolve()
-                        self.logger.debug(f"Resolved from maps directory: {resolved_path}")
-                    except Exception as e:
-                        self.logger.debug(f"Failed to resolve from maps directory: {e}")
-
-            # Strategy 4: Search in subdirectories
-            if not resolved_path or not resolved_path.exists():
-                try:
-                    # Search in known content directories
-                    for content_dir in [
-                        self.topics_dir / 'articles',
-                        self.topics_dir / 'acoustics',
-                        self.topics_dir / 'audio',
-                        self.topics_dir / 'abstracts',
-                        self.topics_dir / 'journals'
-                    ]:
-                        candidate = (content_dir / cleaned_href).resolve()
-                        if candidate.exists():
-                            resolved_path = candidate
-                            self.logger.debug(f"Found in subdirectory: {resolved_path}")
-                            break
-                except Exception as e:
-                    self.logger.debug(f"Failed to search subdirectories: {e}")
-
-            # Validate resolved path
-            if resolved_path and resolved_path.exists():
-                # Security check: ensure path is within project directory
-                if self._is_safe_path(resolved_path):
-                    self.logger.info(f"Successfully resolved path to: {resolved_path}")
-                    return resolved_path
-                else:
-                    self.logger.error(f"Path resolution attempted directory traversal: {resolved_path}")
-                    return None
-            else:
-                self.logger.error(f"Could not resolve path for href: {href}")
-                return None
-
-        except Exception as e:
-            self.logger.error(f"Error resolving path {href}: {str(e)}")
-            return None
 
     def _is_safe_path(self, path: Path) -> bool:
         """
@@ -1250,69 +596,6 @@ class DITAProcessor:
     ##### 5. PARSING AND ERROR HANDLING #####
 
 
-    def parse_dita(self, input_path: Path) -> etree._Element:
-        """
-        Parse DITA file into XML tree with validation and error handling.
-
-        Args:
-            input_path: Path to DITA file (.dita or .ditamap)
-
-        Returns:
-            etree._Element: Parsed XML tree
-
-        Raises:
-            ValueError: If file doesn't exist or has invalid content
-            etree.XMLSyntaxError: If XML parsing fails
-        """
-        try:
-            self.logger.info(f"Parsing DITA file: {input_path}")
-
-            if not input_path.exists():
-                raise ValueError(f"File not found: {input_path}")
-
-            # Read content
-            with open(input_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-
-            if not content.strip():
-                raise ValueError(f"Empty file: {input_path}")
-
-            # First try strict parsing to catch validation errors
-            try:
-                strict_parser = etree.XMLParser(
-                    remove_blank_text=True,
-                    resolve_entities=False,
-                    dtd_validation=False,
-                    load_dtd=False,
-                    no_network=True,
-                    recover=False  # Strict mode
-                )
-                tree = etree.fromstring(content.encode('utf-8'), strict_parser)
-                self.logger.debug("Strict parsing successful")
-
-            except etree.XMLSyntaxError as e:
-                # Log the validation error details
-                self._log_xml_error(e, content, input_path)
-
-                # Fallback to recovery mode
-                self.logger.info("Attempting parsing with recovery mode")
-                tree = etree.fromstring(content.encode('utf-8'), self.parser)
-
-                if tree is None:
-                    raise ValueError("Failed to parse XML even in recovery mode")
-
-            # Validate DITA structure
-            doctype = self._get_doctype(tree)
-            if not self._validate_dita_structure(tree, doctype):
-                self.logger.warning(f"Invalid DITA structure in {input_path}")
-                # Continue processing but log the issue
-
-            self.logger.info(f"Successfully parsed: {input_path}")
-            return tree
-
-        except Exception as e:
-            self.logger.error(f"Error parsing DITA file {input_path}: {str(e)}")
-            raise
 
     def _log_xml_error(self, error: etree.XMLSyntaxError,
                        content: str, file_path: Path) -> None:
@@ -1437,12 +720,14 @@ class DITAProcessor:
                 path, fragment = ref.split('#', 1)
                 if path:
                     # Check if target file exists
-                    return self.resolve_path(self.dita_root, path) is not None
+                    topic_path = self.get_topic(path)
+                    return topic_path is not None
                 return True  # Same-file reference
 
             else:
                 # Simple file reference
-                return self.resolve_path(self.dita_root, ref) is not None
+                topic_path = self.get_topic(ref)
+                return topic_path is not None
 
         except Exception as e:
             self.logger.debug(f"Reference validation error: {str(e)}")

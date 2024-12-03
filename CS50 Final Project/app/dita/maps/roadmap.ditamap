@@ -16,7 +16,7 @@
             href="../topics/cs50/development-timeline.md"
             type="concept"
         />
-        <topicref href="../topics/cs50/project-diagram.md" type="concept" >/>
+        <topicref href="../topics/cs50/project-diagram.md" type="concept" />
     </topicgroup>
 
     <!-- Main Features -->
@@ -47,6 +47,6 @@
         <topicmeta>
             <navtitle>Status report</navtitle>
         </topicmeta>
-        <topicref href="../topics/cs50/cs50-final-summary.md" type="concept" />
+        <topicref href="../topics/cs50/final-summary.md" type="concept" />
     </topicgroup>
 </map>
