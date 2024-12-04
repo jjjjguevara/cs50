@@ -240,6 +240,78 @@
             src="{{ url_for('static', filename='dist/academic.js') }}"
         ></script>
 
+        <!-- Add LaTeX Debug Section -->
+        {% if debug_info %}
+        <script>
+            console.log("Page debug info:", {{ debug_info | tojson | safe }});
+        </script>
+        {% endif %}
+
+        <div id="latex-debug" style="display: none">
+            <h3>LaTeX Debug Info</h3>
+            <pre class="raw-content"></pre>
+            <h4>Processed Equations:</h4>
+            <div class="equations-list"></div>
+        </div>
+
+        <script>
+            // Debug helper
+            function showLatexDebug() {
+                const debug = document.getElementById("latex-debug");
+                debug.style.display = "block";
+
+                const content = document.querySelector(".article-wrapper");
+                if (content) {
+                    // Log raw content
+                    console.log(
+                        "Raw article content:",
+                        content.innerHTML.substring(0, 500),
+                    );
+
+                    // Show in debug div
+                    debug.querySelector(".raw-content").textContent =
+                        content.innerHTML;
+
+                    // Find and log equations
+                    const equations = content.querySelectorAll(
+                        ".math-tex, .math-block, [data-latex-source]",
+                    );
+                    console.log("Found equations:", equations.length);
+
+                    const list = debug.querySelector(".equations-list");
+                    list.innerHTML = Array.from(equations)
+                        .map(
+                            (eq, index) => `
+                                    <div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc;">
+                                        <strong>Equation ${index + 1}:</strong><br>
+                                        Raw HTML: <pre>${eq.outerHTML}</pre><br>
+                                        Content: <pre>${eq.textContent}</pre><br>
+                                        Classes: <pre>${eq.className}</pre><br>
+                                        Data attributes: <pre>${JSON.stringify(eq.dataset, null, 2)}</pre>
+                                    </div>
+                                `,
+                        )
+                        .join("\n");
+
+                    // Search for potential unprocessed equations
+                    const text = content.textContent;
+                    const dollarMatches = text.match(/\$\$(.*?)\$\$/g);
+                    if (dollarMatches) {
+                        console.log(
+                            "Found unprocessed equations:",
+                            dollarMatches,
+                        );
+                    }
+                }
+            }
+
+            // Auto-run debug on load
+            document.addEventListener("DOMContentLoaded", () => {
+                console.log("Running LaTeX debug...");
+                setTimeout(showLatexDebug, 1000); // Delay to ensure content is loaded
+            });
+        </script>
+
         <!-- Debug script -->
         <script>
             document.addEventListener("DOMContentLoaded", () => {
