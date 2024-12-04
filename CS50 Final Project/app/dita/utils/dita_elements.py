@@ -6,7 +6,9 @@ import html
 import logging
 from bs4 import BeautifulSoup, Tag
 
+from .id_handler import DITAIDHandler
 from .heading import HeadingHandler
+from ..utils.latex.latex_processor import DitaLaTeXProcessor
 
 class DITAContentProcessor:
     """Processes DITA elements into HTML with consistent styling"""
@@ -14,6 +16,8 @@ class DITAContentProcessor:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.heading_handler = HeadingHandler()
+        self.latex_processor = DitaLaTeXProcessor()
+        self.id_handler = DITAIDHandler()
 
     def process_element(self, elem: etree._Element, source_path: Optional[Path] = None) -> str:
         """
@@ -22,6 +26,13 @@ class DITAContentProcessor:
         """
         try:
             tag = etree.QName(elem).localname
+
+            # Add LaTeX processing for text content
+            if elem.text:
+                processed_text = elem.text
+                if self.latex_processor:
+                    processed_text = self.latex_processor.process_content(processed_text)
+                elem.text = processed_text
 
             # Map tags to their processing methods
             processors = {
@@ -76,36 +87,42 @@ class DITAContentProcessor:
     # Structural Elements
     # ===========================
     def _process_concept(self, elem: etree._Element, source_path: Optional[Path] = None) -> str:
-            """Process concept element"""
-            try:
-                html_parts = ['<div class="concept">']
+        """Process concept element"""
+        try:
+            self.logger.debug("Starting concept processing")
+            html_parts = ['<div class="concept">']
 
-                # Process title
-                title = elem.find('.//title')
-                if title is not None and title.text:
-                    heading_id, formatted_text = self.heading_handler.process_heading(
-                        title.text,
-                        1  # Concept titles are h1
-                    )
-                    html_parts.append(
-                        f'<h1 id="{heading_id}" class="concept-title">'
-                        f'{formatted_text}'
-                        f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
-                        f'</h1>'
-                    )
+            # Process title
+            title = elem.find('.//title')
+            if title is not None and title.text:
+                # Get the current H1 number (which was already incremented by start_new_section)
+                current_h1 = self.heading_handler.counters['h1']
+                self.logger.debug(f"Using H1 counter: {current_h1}")
 
-                # Process conbody
-                conbody = elem.find('.//conbody')
-                if conbody is not None:
-                    for child in conbody:
-                        html_parts.append(self.process_element(child, source_path))
+                heading_id = self.id_handler.generate_content_id(Path(title.text))
+                formatted_text = f"{current_h1}. {title.text}"
 
-                html_parts.append('</div>')
-                return '\n'.join(html_parts)
+                self.logger.debug(f"Processing concept title: {formatted_text}")
 
-            except Exception as e:
-                self.logger.error(f"Error processing concept: {str(e)}")
-                return ''
+                html_parts.append(
+                    f'<h1 id="{heading_id}" class="concept-title">'
+                    f'{formatted_text}'
+                    f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
+                    f'</h1>'
+                )
+
+            # Process conbody
+            conbody = elem.find('.//conbody')
+            if conbody is not None:
+                for child in conbody:
+                    html_parts.append(self.process_element(child, source_path))
+
+            html_parts.append('</div>')
+            return '\n'.join(html_parts)
+
+        except Exception as e:
+            self.logger.error(f"Error processing concept: {str(e)}")
+            return ''
 
     def _process_task(self, elem: etree._Element, source_path: Optional[Path] = None) -> str:
         """Process task element"""

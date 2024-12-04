@@ -53,23 +53,32 @@ class HeadingHandler:
             self.logger.error(f"Error processing map title: {str(e)}")
             return self._sanitize_id(title_text), title_text
 
-    def process_heading(self, heading_text: str, level: int) -> Tuple[str, str]:
+    def process_heading(self, heading_text: str, level: int, is_map_title: bool = False) -> Tuple[str, str]:
         """Process a heading and return both its ID and formatted text"""
         try:
-            # Generate section number
-            section_number = self._get_section_number(level)
+            self.logger.debug(
+                f"Processing heading: text='{heading_text}', "
+                f"level={level}, is_map_title={is_map_title}, "
+                f"current_state={self.counters}"
+            )
 
             # Generate ID
             heading_id = self._generate_heading_id(heading_text)
 
-            # Format text with section number
-            formatted_text = f"{section_number} {heading_text}"
+            # Skip section numbering only for map titles
+            if is_map_title:
+                formatted_text = heading_text
+                self.logger.debug("Processed as map title")
+            else:
+                # Get section number
+                section_number = self._get_section_number(level)
+                formatted_text = f"{section_number} {heading_text}"
+                self.logger.debug(f"Generated section number: {section_number}")
 
             self.logger.debug(
-                f"Processed heading: Level {level}, "
-                f"Number: {section_number}, "
-                f"ID: {heading_id}, "
-                f"Text: {formatted_text}"
+                f"Final result: id='{heading_id}', "
+                f"text='{formatted_text}', "
+                f"new_state={self.counters}"
             )
 
             return heading_id, formatted_text
@@ -78,47 +87,44 @@ class HeadingHandler:
             self.logger.error(f"Error processing heading: {str(e)}")
             return self._sanitize_id(heading_text), heading_text
 
+    ### Critical for Heading numbering logic!!!
     def _get_section_number(self, level: int) -> str:
-        """Generate hierarchical section number (1. 1.1. 1.1.1. format)"""
-        try:
-            if level < 1 or level > 6:
-                raise ValueError(f"Invalid heading level: {level}")
+            """Generate hierarchical section number (1. 1.1. 1.1.1. format)"""
+            try:
+                if level < 1 or level > 6:
+                    raise ValueError(f"Invalid heading level: {level}")
 
-            # For H1s (main sections)
-            if level == 1:
-                return f"{self._current_h1}."
+                # For H1s
+                if level == 1:
+                    self._current_h1 += 1  # Increment the current H1 number
+                    self.counters['h1'] = self._current_h1  # Sync with counters
+                    return f"{self._current_h1}."
 
-            # For subheadings (H2-H6)
-            if self._current_h1 == 0:
-                self.start_new_section()
+                # For lower levels (H2-H6)
+                if self._current_h1 == 0:
+                    self._current_h1 = 1
+                    self.counters['h1'] = 1
 
-            # Reset counters for levels deeper than current level
-            for i in range(level + 1, 7):
-                self.counters[f'h{i}'] = 0
-
-            # Build hierarchical number
-            numbers = [str(self._current_h1)]  # Start with current H1
-
-            # Only increment the current level
-            if level == 2:
-                self.counters['h2'] += 1
-                numbers.append(str(self.counters['h2']))
-            else:
-                # For H3+, include parent H2's counter
-                if self.counters['h2'] == 0:
-                    self.counters['h2'] = 1
-                numbers.append(str(self.counters['h2']))
-
-                # Then increment current level and add its counter
+                # For this specific level, increment its counter
                 self.counters[f'h{level}'] += 1
-                for i in range(3, level + 1):
+
+                # Build number using current H1 and this level's counter
+                numbers = [str(self._current_h1)]
+                for i in range(2, level + 1):
                     numbers.append(str(self.counters[f'h{i}']))
 
-            return f"{'.'.join(numbers)}."  # Add final dot
+                self.logger.debug(
+                    f"Numbering for level {level}:"
+                    f" current_h1={self._current_h1},"
+                    f" counters={self.counters},"
+                    f" result={'.'.join(numbers)}"
+                )
 
-        except Exception as e:
-            self.logger.error(f"Error in _get_section_number: {str(e)}")
-            return f"{level}."
+                return f"{'.'.join(numbers)}."
+
+            except Exception as e:
+                self.logger.error(f"Error in _get_section_number: {str(e)}")
+                return f"{level}."
 
     def _generate_heading_id(self, text: str) -> str:
         """Generate unique ID for heading"""
@@ -166,13 +172,12 @@ class HeadingHandler:
         self.reset_sub_headings()
         self.logger.debug(f"Set H1 to {number} and reset sub-headings")
 
-    def start_new_section(self) -> None:
-        """Called when starting a new topic section"""
-        self._current_h1 += 1
-        # Reset ALL subheading counters when starting new section
-        for i in range(2, 7):
-            self.counters[f'h{i}'] = 0
-        self.logger.debug(f"Started new section {self._current_h1}, reset all subheading counters")
+    def start_new_section(self):
+            """Start a new section, resetting appropriate counters."""
+            self.counters['h1'] += 1
+            for i in range(2, 7):
+                self.counters[f'h{i}'] = 0
+            self.logger.debug(f"Started new section. Counters: {self.counters}")
 
     def register_existing_id(self, heading_text: str, id_value: str) -> None:
         """Register an existing ID to prevent duplicates"""

@@ -27,6 +27,7 @@ from .artifacts.renderer import ArtifactRenderer
 from .utils.dita_elements import DITAContentProcessor
 from .utils.dita_transform import DITATransformer
 from .utils.dita_parser import DITAParser
+from .utils.latex.latex_processor import DitaLaTeXProcessor
 
 # Type aliases
 HTMLString = str
@@ -59,6 +60,7 @@ class DITAProcessor:
         self._init_directories()
 
         # Initialize utilities
+        self.latex_processor: Optional[DitaLaTeXProcessor] = None
         self.transformer = DITATransformer(self.dita_root)
         self.dita_elements = DITAContentProcessor()
         self.id_handler = DITAIDHandler()
@@ -278,24 +280,68 @@ class DITAProcessor:
 
     ##### 2. PRIMARY ENTRY POINTS #####
 
-    def transform(self, input_path: Path) -> HTMLString:
-        """
-        Main entry point for transforming any DITA content to HTML.
-        """
-        try:
-            # Create completely new instances
-            self.heading_handler = HeadingHandler()
-            self.transformer = DITATransformer(self.dita_root)
-            self.id_handler = DITAIDHandler()
+    def process_ditamap(self, map_path: Path) -> str:
+            """Process DITA map file."""
+            try:
+                self.logger.info(f"Processing DITA map: {map_path}")
 
-            if input_path.suffix == '.ditamap':
-                return self.transformer.transform_map(input_path)
-            else:
-                return self.transformer.transform_topic(input_path)
+                # Use the transformer to process the map
+                content = self.transformer.transform_map(map_path)
 
-        except Exception as e:
-            self.logger.error(f"Error in transformation: {str(e)}")
-            return self.transformer._create_error_html(e, input_path)
+                if not content:
+                    raise ValueError("No content generated from map")
+
+                return content
+
+            except Exception as e:
+                self.logger.error(f"Error processing DITA map {map_path}: {str(e)}")
+                return self._create_error_html(str(e), map_path)
+
+    def _create_error_html(self, error: str, context: Path) -> str:
+        return f"""
+            <div class="error-container bg-red-50 border-l-4 border-red-500 p-4 rounded-lg my-4">
+                <h3 class="text-lg font-medium text-red-800">Processing Error</h3>
+                <p class="text-red-700">{error}</p>
+                <div class="mt-2 text-sm text-red-600">
+                    <p>Error occurred processing: {context}</p>
+                </div>
+            </div>
+        """
+
+    def transform(self, path: Union[str, Path]) -> str:
+            try:
+                path = Path(path) if isinstance(path, str) else path
+
+                # Handle different file types
+                if str(path).endswith('.md'):
+                    with open(path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+
+                    # Process LaTeX equations first
+                    latex_processor = DitaLaTeXProcessor()
+                    content = latex_processor.process_content(content)
+
+                    # Then process markdown
+                    # Add your markdown processing here
+
+                    return content
+                elif str(path).endswith('.ditamap'):
+                    # Handle DITA map processing
+                    return self.process_ditamap(path)
+                else:
+                    raise ValueError(f"Unsupported file type: {path}")
+
+            except Exception as e:
+                self.logger.error(f"Transformation error: {str(e)}")
+                return f"""
+                    <div class="error-container bg-red-50 border-l-4 border-red-500 p-4 rounded-lg my-4">
+                        <h3 class="text-lg font-medium text-red-800">Processing Error</h3>
+                        <p class="text-red-700">{str(e)}</p>
+                        <div class="mt-2 text-sm text-red-600">
+                            <p>Error occurred processing: {path}</p>
+                        </div>
+                    </div>
+                """
 
     def _format_final_html(self, content: HTMLString, metadata: Dict[str, Any]) -> HTMLString:
         """

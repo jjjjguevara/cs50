@@ -5,28 +5,28 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Academic View</title>
 
-        <!-- Load React and other dependencies first -->
-        <script
-            crossorigin
-            src="https://unpkg.com/react@18/umd/react.production.min.js"
-        ></script>
-        <script
-            crossorigin
-            src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
-        ></script>
-        <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+        <!-- Update script loading order and add necessary modules -->
+        <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+        <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+        <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
 
-        <!-- Initialize globals -->
+        <!-- Add JSX Runtime -->
+        <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+        <!-- Initialize globals before any other scripts -->
         <script>
             console.log("Initializing globals...");
             window.React = React;
             window.ReactDOM = ReactDOM;
-            window.Recharts = window.Recharts || Recharts;
-            window.ReactComponents = window.ReactComponents || {};
+            window.Recharts = window.Recharts || {}; // Ensure Recharts is defined
+            window.ReactComponents = {};
 
-            console.log("React available:", !!window.React);
-            console.log("ReactDOM available:", !!window.ReactDOM);
-            console.log("Recharts available:", !!window.Recharts);
+            // Debug log
+            console.log("Libraries loaded:", {
+                React: !!window.React,
+                ReactDOM: !!window.ReactDOM,
+                Recharts: !!window.Recharts,
+            });
         </script>
         <!-- Bootstrap and other CSS -->
         <link
@@ -38,7 +38,62 @@
             href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
         />
 
-        <!-- Your CSS -->
+        <!-- KaTeX -->
+
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+        />
+        <script
+            defer
+            src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
+        ></script>
+        <script defer src="/static/js/utils/latex-init.js"></script>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                // Check DOM structure
+                const articleWrapper =
+                    document.getElementById("article-wrapper");
+                if (!articleWrapper) {
+                    console.error("Article wrapper not found!");
+                    return;
+                }
+
+                // Walk through math elements
+                const mathWalker = document.createTreeWalker(
+                    articleWrapper,
+                    NodeFilter.SHOW_ELEMENT,
+                    {
+                        acceptNode: function (node) {
+                            return node.classList.contains("math-tex") ||
+                                node.classList.contains("math-block")
+                                ? NodeFilter.FILTER_ACCEPT
+                                : NodeFilter.FILTER_SKIP;
+                        },
+                    },
+                );
+
+                let currentNode;
+                let index = 0;
+                while ((currentNode = mathWalker.nextNode())) {
+                    console.log(`Math element ${index} structure:`, {
+                        element: currentNode.outerHTML,
+                        attributes: Array.from(currentNode.attributes).map(
+                            (attr) => ({
+                                name: attr.name,
+                                value: attr.value,
+                            }),
+                        ),
+                        parentNode: currentNode.parentNode.tagName,
+                        computedStyle: window.getComputedStyle(currentNode),
+                    });
+                    index++;
+                }
+            });
+        </script>
+
+        <!-- CSS stylesheets -->
         <link
             rel="stylesheet"
             href="{{ url_for('static', filename='css/global.css') }}"
@@ -184,6 +239,78 @@
             type="module"
             src="{{ url_for('static', filename='dist/academic.js') }}"
         ></script>
+
+        <!-- Add LaTeX Debug Section -->
+        {% if debug_info %}
+        <script>
+            console.log("Page debug info:", {{ debug_info | tojson | safe }});
+        </script>
+        {% endif %}
+
+        <div id="latex-debug" style="display: none">
+            <h3>LaTeX Debug Info</h3>
+            <pre class="raw-content"></pre>
+            <h4>Processed Equations:</h4>
+            <div class="equations-list"></div>
+        </div>
+
+        <script>
+            // Debug helper
+            function showLatexDebug() {
+                const debug = document.getElementById("latex-debug");
+                debug.style.display = "block";
+
+                const content = document.querySelector(".article-wrapper");
+                if (content) {
+                    // Log raw content
+                    console.log(
+                        "Raw article content:",
+                        content.innerHTML.substring(0, 500),
+                    );
+
+                    // Show in debug div
+                    debug.querySelector(".raw-content").textContent =
+                        content.innerHTML;
+
+                    // Find and log equations
+                    const equations = content.querySelectorAll(
+                        ".math-tex, .math-block, [data-latex-source]",
+                    );
+                    console.log("Found equations:", equations.length);
+
+                    const list = debug.querySelector(".equations-list");
+                    list.innerHTML = Array.from(equations)
+                        .map(
+                            (eq, index) => `
+                                    <div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc;">
+                                        <strong>Equation ${index + 1}:</strong><br>
+                                        Raw HTML: <pre>${eq.outerHTML}</pre><br>
+                                        Content: <pre>${eq.textContent}</pre><br>
+                                        Classes: <pre>${eq.className}</pre><br>
+                                        Data attributes: <pre>${JSON.stringify(eq.dataset, null, 2)}</pre>
+                                    </div>
+                                `,
+                        )
+                        .join("\n");
+
+                    // Search for potential unprocessed equations
+                    const text = content.textContent;
+                    const dollarMatches = text.match(/\$\$(.*?)\$\$/g);
+                    if (dollarMatches) {
+                        console.log(
+                            "Found unprocessed equations:",
+                            dollarMatches,
+                        );
+                    }
+                }
+            }
+
+            // Auto-run debug on load
+            document.addEventListener("DOMContentLoaded", () => {
+                console.log("Running LaTeX debug...");
+                setTimeout(showLatexDebug, 1000); // Delay to ensure content is loaded
+            });
+        </script>
 
         <!-- Debug script -->
         <script>

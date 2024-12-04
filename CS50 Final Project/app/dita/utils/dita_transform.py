@@ -2,10 +2,13 @@
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import logging
+import re
+import html
 from bs4 import BeautifulSoup, Tag
 import markdown
 from lxml import etree
 
+# Local imports
 from .html_helpers import HTMLHelper
 from .heading import HeadingHandler
 from .metadata import MetadataHandler
@@ -14,6 +17,8 @@ from .dita_parser import DITAParser
 from .dita_elements import DITAContentProcessor
 from ..artifacts.parser import ArtifactParser
 from ..artifacts.renderer import ArtifactRenderer
+from ..utils.latex.latex_processor import DitaLaTeXProcessor
+from ..utils.markdown.latex_extension import LaTeXExtension
 
 class DITATransformer:
     """Handles DITA content transformation to HTML."""
@@ -35,6 +40,7 @@ class DITATransformer:
         self.id_handler = DITAIDHandler()
         self.dita_parser = DITAParser()
         self.dita_processor = DITAContentProcessor()
+        self.latex_processor: Optional[DitaLaTeXProcessor] = None
 
         # Initialize artifact handlers
         self.artifact_parser = ArtifactParser(self.dita_root)
@@ -49,12 +55,90 @@ class DITATransformer:
         ])
 
     def _transform_topic(self, topic_path: Path) -> str:
-        """Transform any topic file to HTML with consistent heading handling"""
+        """Transform any topic file to HTML with consistent heading handling and LaTeX support."""
         try:
-            if topic_path.suffix == '.md':
-                return self._transform_markdown_topic(topic_path)
+            if topic_path.suffix.lower() == '.md':
+                with open(topic_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                # Step 1: Extract and replace LaTeX equations with placeholders
+                equations = []
+                def latex_replacer(match):
+                    latex = match.group(1) or match.group(2)  # group(1) for $$, group(2) for $
+                    is_block = match.group(0).startswith('$$')
+                    eq_id = f"eq-{len(equations)}"
+                    equations.append({
+                        'id': eq_id,
+                        'latex': latex,
+                        'is_block': is_block
+                    })
+                    self.logger.debug(f"Found equation {eq_id}: {latex[:50]}...")
+                    return f"LATEX_PLACEHOLDER_{eq_id}"
+
+                # Process block and inline equations
+                if '$$' in content or '$' in content:
+                    processed_content = re.sub(
+                        r'\$\$(.*?)\$\$|\$((?!\$).*?)\$',
+                        latex_replacer,
+                        content,
+                        flags=re.DOTALL
+                    )
+                    self.logger.debug(f"Found {len(equations)} LaTeX equations in {topic_path}")
+                else:
+                    processed_content = content
+
+                # Step 2: Convert markdown to HTML
+                html_content = self.md.convert(processed_content)
+
+                # Step 3: Process with BeautifulSoup
+                soup = BeautifulSoup(html_content, 'html.parser')
+
+                # Process headings (without adding section numbers to h1)
+                for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                    if not isinstance(heading, Tag):
+                        continue
+
+                    level = int(heading.name[1])
+                    original_text = heading.get_text(strip=True)
+
+                    # Process all headings with numbering
+                    heading_id, formatted_text = self.heading_handler.process_heading(
+                        original_text,
+                        level,
+                        is_map_title=False  # All content headings should be numbered
+                    )
+
+                    heading.clear()
+                    heading['id'] = heading_id
+                    heading.append(BeautifulSoup(formatted_text, 'html.parser'))
+
+                    # Add anchor
+                    anchor = soup.new_tag('a')
+                    anchor['href'] = f'#{heading_id}'
+                    anchor['class'] = 'heading-anchor'
+                    anchor.string = '¶'
+                    heading.append(anchor)
+
+                # Step 4: Replace LaTeX placeholders with HTML elements
+                html_content = str(soup)
+                if equations:
+                    for eq in equations:
+                        placeholder = f"LATEX_PLACEHOLDER_{eq['id']}"
+                        element_type = 'div' if eq['is_block'] else 'span'
+                        class_name = 'math-block' if eq['is_block'] else 'math-tex'
+
+                        latex_html = (
+                            f'<{element_type} class="{class_name}" '
+                            f'data-latex-source="{html.escape(eq["latex"])}">'
+                            f'{html.escape(eq["latex"])}'
+                            f'</{element_type}>'
+                        )
+                        html_content = html_content.replace(placeholder, latex_html)
+
+                return html_content
             else:
                 return self._transform_dita_topic(topic_path)
+
         except Exception as e:
             self.logger.error(f"Error transforming topic {topic_path}: {str(e)}")
             raise
@@ -65,15 +149,14 @@ class DITATransformer:
             self.logger.debug(f"\n{'='*50}")
             self.logger.debug(f"Starting map transformation for {map_path}")
 
-            # Reset state
+            # Reset state at start of map
             self.heading_handler.reset()
-            self.logger.debug(f"Initial heading state after reset: {self.heading_handler.counters}")
+            self.logger.debug(f"Initial heading state: {self.heading_handler.counters}")
 
             map_id = self.id_handler.generate_map_id(map_path)
 
             # Parse artifacts
             artifacts = self._process_map_artifacts(map_path)
-            self.logger.debug(f"Artifacts found: {len(artifacts) if artifacts else 0}")
 
             tree = self.dita_parser.parse_file(map_path)
             if tree is None:
@@ -81,17 +164,15 @@ class DITATransformer:
 
             html_content = [f'<div class="map-content" data-map-id="{map_id}">']
 
-            # Handle map title
+            # Handle map title (should not affect section numbering)
             title_elem = tree.find(".//title")
             if title_elem is not None and title_elem.text:
-                self.logger.debug(f"Processing map title: {title_elem.text}")
                 title_id = self.id_handler.generate_content_id(Path(title_elem.text))
                 html_content.append(
                     f'<div id="{title_id}" class="map-title">'
                     f'<div class="title display-4 mb-4">{title_elem.text}</div>'
                     f'</div>'
                 )
-                self.logger.debug(f"Heading state after map title: {self.heading_handler.counters}")
 
             # Process topics
             topic_refs = tree.xpath(".//topicref")
@@ -100,42 +181,30 @@ class DITATransformer:
             for topicref in topic_refs:
                 href = topicref.get('href')
                 if not href:
-                    self.logger.debug("Skipping topicref with no href")
                     continue
 
                 topic_path = Path(map_path).parent / href
                 if not topic_path.exists():
-                    self.logger.error(f"Topic not found: {topic_path}")
                     continue
 
-                # Start new section for each topic
+                # Debug logging and section handling in one place
+                self.logger.debug(f"Before processing topic {href}:")
+                self.logger.debug(f"H1 counter: {self.heading_handler.counters['h1']}")
                 self.heading_handler.start_new_section()
-                self.logger.debug(f"Started new section for topic: {href}")
+                self.logger.debug(f"After start_new_section. Counters: {self.heading_handler.counters}")
 
                 topic_id = self.id_handler.generate_topic_id(topic_path, map_path)
-                self.logger.debug(f"Processing topic: {href}")
-                self.logger.debug(f"Heading state before topic: {self.heading_handler.counters}")
-
-                # Process content
                 html_content.append(f'<div class="topic-section" data-topic-id="{topic_id}">')
                 content = self._transform_topic(topic_path)
                 html_content.append(content)
                 html_content.append('</div>')
 
-                # Reset subheading counters after each topic
-                self.heading_handler.reset_sub_headings()
-                self.logger.debug(f"Heading state after topic: {self.heading_handler.counters}")
-
             html_content.append('</div>')
             combined_content = '\n'.join(html_content)
 
-            # Inject artifacts
+            # Inject artifacts if any
             if artifacts:
-                self.logger.debug("Injecting artifacts into content")
                 combined_content = self._inject_map_artifacts(combined_content, artifacts)
-
-            self.logger.debug(f"Final heading state: {self.heading_handler.counters}")
-            self.logger.debug(f"{'='*50}\n")
 
             return combined_content
 
@@ -319,7 +388,7 @@ class DITATransformer:
         return ''
 
     def _transform_dita_topic(self, topic_path: Path) -> str:
-        """Transform DITA topic to HTML with consistent heading numbering."""
+        """Transform DITA topic to HTML with consistent heading handling."""
         try:
             tree = self.dita_parser.parse_file(topic_path)
             if tree is None:
@@ -331,60 +400,13 @@ class DITATransformer:
             # Process title (H1)
             title_elem = tree.find('.//title')
             if title_elem is not None and title_elem.text:
-                heading_id, formatted_text = self.heading_handler.process_heading(
-                    title_elem.text,
-                    1  # Topic titles are H1
-                )
-                html_parts.append(
-                    f'<h1 id="{heading_id}" class="topic-title">'
-                    f'{formatted_text}'
-                    f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
-                    f'</h1>'
-                )
-                # Reset subheading counters AFTER processing H1
-                self.heading_handler.reset_sub_headings()
+                # Pass our heading handler to the DITA processor
+                self.dita_processor.heading_handler = self.heading_handler
 
-            # Get current H1 for correct subheading prefixes
-            current_h1 = self.heading_handler._current_h1
-
-            # Process root element content (concept/task body)
-            root_tag = etree.QName(tree).localname
-            body_tag = {
-                'concept': './/conbody',
-                'task': './/taskbody',
-                'reference': './/refbody',
-                'topic': './/body'
-            }.get(root_tag, './/body')
-
-            body_elem = tree.find(body_tag)
-            if body_elem is not None:
-                for elem in body_elem:
-                    if elem.tag == 'section':
-                        # Process section title
-                        section_title = elem.find('title')
-                        if section_title is not None and section_title.text:
-                            # Force the use of current H1
-                            self.heading_handler._current_h1 = current_h1
-                            heading_id, formatted_text = self.heading_handler.process_heading(
-                                section_title.text,
-                                2  # Section titles are H2
-                            )
-                            html_parts.append(
-                                f'<h2 id="{heading_id}" class="section-title">'
-                                f'{formatted_text}'
-                                f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
-                                f'</h2>'
-                            )
-
-                        # Process section content
-                        for child in elem:
-                            if child.tag != 'title':  # Skip the title as we've already processed it
-                                content = self.dita_processor.process_element(child, topic_path)
-                                html_parts.append(content)
-                    else:
-                        # Process non-section elements
-                        content = self.dita_processor.process_element(elem, topic_path)
-                        html_parts.append(content)
+                self.logger.debug(f"Before processing DITA title. Heading state: {self.heading_handler.counters}")
+                content = self.dita_processor.process_element(tree, topic_path)
+                self.logger.debug(f"After processing DITA title. Heading state: {self.heading_handler.counters}")
+                html_parts.append(content)
 
             return '\n'.join(html_parts)
 
@@ -392,45 +414,169 @@ class DITATransformer:
             self.logger.error(f"Error transforming DITA topic {topic_path}: {str(e)}")
             raise
 
+    def _process_main_title(self, tree: etree._Element, html_parts: List[str]) -> None:
+        """Process the main title of a DITA topic."""
+        title_elem = tree.find('.//title')
+        if title_elem is not None and title_elem.text:
+                title_id = self.id_handler.generate_content_id(Path(title_elem.text))
+                title_text = self._process_latex_text(title_elem.text)
+
+                # Process title
+                heading_id, formatted_text = self.heading_handler.process_heading(
+                    title_text,
+                    1,  # Level 1
+                    is_map_title=True  # Only map titles should be unnumbered
+                )
+
+                html_parts.append(
+                    f'<h1 id="{title_id}" class="topic-title">'
+                    f'{formatted_text}'
+                    f'<a href="#{title_id}" class="heading-anchor">¶</a>'
+                    f'</h1>'
+                )
+
+    def _process_body_content(self, tree: etree._Element, html_parts: List[str], current_h1: int) -> None:
+        """Process the body content of a DITA topic."""
+        body_elem = self._get_body_element(tree)
+        if body_elem is not None:
+            for elem in body_elem:
+                if elem.tag == 'section':
+                    self._process_section(elem, html_parts, current_h1)
+                else:
+                    self._process_non_section_element(elem, html_parts)
+
+    def _get_body_element(self, tree: etree._Element) -> Optional[etree._Element]:
+        """Get the appropriate body element based on topic type."""
+        root_tag = etree.QName(tree).localname
+        body_tag = {
+            'concept': './/conbody',
+            'task': './/taskbody',
+            'reference': './/refbody',
+            'topic': './/body'
+        }.get(root_tag, './/body')
+
+        return tree.find(body_tag)
+
+    def _process_section(self, section_elem: etree._Element, html_parts: List[str], current_h1: int) -> None:
+        """Process a section element."""
+        self._process_section_title(section_elem, html_parts, current_h1)
+        self._process_section_content(section_elem, html_parts)
+
+    def _process_section_title(self, section_elem: etree._Element, html_parts: List[str], current_h1: int) -> None:
+        """Process a section title."""
+        section_title = section_elem.find('title')
+        if section_title is not None and section_title.text:
+            title_text = self._process_latex_text(section_title.text)
+
+            self.heading_handler._current_h1 = current_h1
+            heading_id, formatted_text = self.heading_handler.process_heading(
+                title_text,
+                2  # Section titles are H2
+            )
+
+            html_parts.append(
+                f'<h2 id="{heading_id}" class="section-title">'
+                f'{formatted_text}'
+                f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
+                f'</h2>'
+            )
+
+    def _process_section_content(self, section_elem: etree._Element, html_parts: List[str]) -> None:
+        """Process the content within a section."""
+        for child in section_elem:
+            if child.tag != 'title':  # Skip title as we've already processed it
+                child.text = self._process_latex_text(child.text) if child.text else child.text
+                content = self.dita_processor.process_element(child)
+                html_parts.append(content)
+
+    def _process_non_section_element(self, elem: etree._Element, html_parts: List[str]) -> None:
+        """Process a non-section element."""
+        elem.text = self._process_latex_text(elem.text) if elem.text else elem.text
+        content = self.dita_processor.process_element(elem)
+        html_parts.append(content)
+
+    def _process_latex_text(self, text: str) -> str:
+        """Process text that might contain LaTeX equations."""
+        if text and self.latex_processor and ('$$' in text or '$' in text):
+            return self.latex_processor.process_content(text)
+        return text
+
     def _transform_markdown_topic(self, topic_path: Path) -> str:
-        """Transform markdown topic to HTML with proper heading processing."""
+        """Transform markdown with LaTeX preservation."""
         try:
             with open(topic_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Convert markdown to HTML
-            html_content = self.md.convert(content)
+            # Step 1: Extract and replace LaTeX equations with placeholders
+            equations = []
+            def latex_replacer(match):
+                latex = match.group(1) or match.group(2)  # group(1) for $$, group(2) for $
+                is_block = match.group(0).startswith('$$')
+                eq_id = f"eq-{len(equations)}"
+                equations.append({
+                    'id': eq_id,
+                    'latex': latex,
+                    'is_block': is_block
+                })
+                return f"LATEX_PLACEHOLDER_{eq_id}"
 
-            # Process the HTML to handle headings consistently
+            # Process block and inline equations
+            processed_content = re.sub(
+                r'\$\$(.*?)\$\$|\$((?!\$).*?)\$',
+                latex_replacer,
+                content,
+                flags=re.DOTALL
+            )
+
+            self.logger.debug(f"Found {len(equations)} LaTeX equations in {topic_path}")
+
+            # Step 2: Convert markdown to HTML
+            html_content = self.md.convert(processed_content)
+
+            # Step 3: Process with BeautifulSoup for heading handling
             soup = BeautifulSoup(html_content, 'html.parser')
 
-            # Process all headings
+            # Process headings
             for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-                if not isinstance(heading, Tag):
-                    continue
+                    if not isinstance(heading, Tag):
+                        continue
 
-                level = int(heading.name[1])
-                original_text = heading.get_text(strip=True)
+                    level = int(heading.name[1])
+                    original_text = heading.get_text(strip=True)
 
-                # Use the same heading processor as DITA content
-                heading_id, formatted_text = self.heading_handler.process_heading(
-                    original_text,
-                    level
+                    heading_id, formatted_text = self.heading_handler.process_heading(
+                        original_text,
+                        level,
+                        is_map_title=False  # Regular headings should be numbered
+                    )
+
+                    heading.clear()
+                    heading['id'] = heading_id
+                    heading.append(BeautifulSoup(formatted_text, 'html.parser'))
+
+                    # Add anchor
+                    anchor = soup.new_tag('a')
+                    anchor['href'] = f'#{heading_id}'
+                    anchor['class'] = 'heading-anchor'
+                    anchor.string = '¶'
+                    heading.append(anchor)
+
+            # Step 4: Replace LaTeX placeholders with HTML elements
+            html_content = str(soup)
+            for eq in equations:
+                placeholder = f"LATEX_PLACEHOLDER_{eq['id']}"
+                element_type = 'div' if eq['is_block'] else 'span'
+                class_name = 'math-block' if eq['is_block'] else 'math-tex'
+
+                latex_html = (
+                    f'<{element_type} class="{class_name}" '
+                    f'data-latex-source="{html.escape(eq["latex"])}">'
+                    f'{html.escape(eq["latex"])}'
+                    f'</{element_type}>'
                 )
+                html_content = html_content.replace(placeholder, latex_html)
 
-                # Clear and update heading
-                heading.clear()
-                heading['id'] = heading_id
-                heading.append(formatted_text)
-
-                # Add anchor
-                anchor = soup.new_tag('a')
-                anchor['href'] = f'#{heading_id}'
-                anchor['class'] = 'heading-anchor'
-                anchor.string = '¶'
-                heading.append(anchor)
-
-            return str(soup)
+            return html_content
 
         except Exception as e:
             self.logger.error(f"Error transforming markdown topic: {str(e)}")

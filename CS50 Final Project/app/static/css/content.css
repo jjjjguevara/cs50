@@ -385,3 +385,27 @@ h6:hover .heading-anchor {
 .artifact-wrapper[data-artifact-type="react"] {
     min-height: 200px;
 }
+
+/* LaTeX Equations */
+.math-tex {
+    font-family: "KaTeX_Main", serif;
+    line-height: 1.5;
+    margin: 0 0.2em;
+}
+
+.math-block {
+    display: block;
+    overflow-x: auto;
+    padding: 1rem;
+    margin: 1rem 0;
+    text-align: center;
+    font-size: 1.1em;
+}
+
+.latex-error {
+    color: #dc3545;
+    padding: 0.25rem;
+    border: 1px solid #dc3545;
+    border-radius: 0.25rem;
+    background-color: #f8d7da;
+}
