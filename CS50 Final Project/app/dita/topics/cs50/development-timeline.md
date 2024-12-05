@@ -38,6 +38,7 @@ gantt
 ## TODO
 - [x] Add LaTeX support
 - [ ] Develop image-loading features per specification
+- [ ] Re-implement Table of Contents and Sidebar
 - [ ] Develop interactive content functionality
 - [ ] Develop XML metadata usage structure to toggle UI elements
 - [ ] Develop logic to store pages in the Output folder and replace them only if a change to the dita topics or dita map is detected

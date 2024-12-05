@@ -5,10 +5,26 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Academic View</title>
 
-        <!-- Update script loading order and add necessary modules -->
+        <!-- Load React and dependencies first -->
         <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
         <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
         <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+
+        <!-- KaTeX before our LaTeX init -->
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+        />
+        <script
+            defer
+            src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
+        ></script>
+
+        <!-- Our LaTeX initialization after KaTeX -->
+        <script
+            defer
+            src="{{ url_for('static', filename='js/utils/latex-init.js') }}"
+        ></script>
 
         <!-- Add JSX Runtime -->
         <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
@@ -37,18 +53,6 @@
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
         />
-
-        <!-- KaTeX -->
-
-        <link
-            rel="stylesheet"
-            href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
-        />
-        <script
-            defer
-            src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
-        ></script>
-        <script defer src="/static/js/utils/latex-init.js"></script>
 
         <script>
             document.addEventListener("DOMContentLoaded", function () {
@@ -189,6 +193,31 @@
                     <div class="container-fluid">
                         <div class="row">
                             <div class="col-lg-9">
+                                <script>
+                                    console.log("Content length:", {{ content|length if content else 0 }});
+                                    console.log("Content sample:", {{ content[:200]|tojson if content else '""' }});
+
+                                    document.addEventListener('DOMContentLoaded', () => {
+                                        const wrapper = document.getElementById('article-wrapper');
+                                        console.log('Article wrapper content length:', wrapper.innerHTML.length);
+                                        console.log('Article wrapper first 200 chars:', wrapper.innerHTML.substring(0, 200));
+                                    });
+                                </script>
+
+                                <div id="article-wrapper">
+                                    {% if content %}
+                                    <div class="content-debug">
+                                        <!-- Add content length info -->
+                                        <p class="text-sm text-gray-500">
+                                            Content length: {{ content|length }}
+                                        </p>
+                                    </div>
+                                    {{ content | safe }} {% else %}
+                                    <p class="text-red-500">
+                                        No content available
+                                    </p>
+                                    {% endif %}
+                                </div>
                                 <div class="article-wrapper">
                                     <div id="article-wrapper">
                                         {% if content %} {{ content | safe }} {%
@@ -224,6 +253,18 @@
                 </div>
             </footer>
             {% endblock %}
+        </div>
+
+        <!-- academic.html - Add error handling -->
+        <div id="article-wrapper">
+            {% if error %}
+            <div
+                class="error-container bg-red-50 border-l-4 border-red-500 p-4 rounded-lg my-4"
+            >
+                <h3 class="text-lg font-medium text-red-800">Error</h3>
+                <p class="text-red-700">{{ error }}</p>
+            </div>
+            {% endif %} {% if content %} {{ content | safe }} {% endif %}
         </div>
 
         <!-- Load Bootstrap JS -->
@@ -328,6 +369,54 @@
                     "Web components:",
                     document.querySelectorAll("web-component-wrapper").length,
                 );
+            });
+        </script>
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                // Find and log debug comments
+                const debugComments = Array.from(document.childNodes)
+                    .filter((node) => node.nodeType === 8) // Comment nodes
+                    .map((comment) => comment.textContent)
+                    .filter((text) => text.includes("LaTeX"));
+
+                console.log("LaTeX Debug Comments:", debugComments);
+
+                // Log all equations with their debug data
+                const equations = document.querySelectorAll(
+                    "[data-latex-source]",
+                );
+                equations.forEach((eq, idx) => {
+                    console.log(`Equation ${idx} debug data:`, {
+                        index: eq.getAttribute("data-equation-index"),
+                        originalId: eq.getAttribute("data-original-id"),
+                        latex: eq.getAttribute("data-latex-source"),
+                        html: eq.outerHTML,
+                    });
+                });
+            });
+        </script>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                console.log("DOM loaded");
+
+                // Check for content
+                const wrapper = document.getElementById("article-wrapper");
+                console.log("Article wrapper:", wrapper);
+                console.log("Article wrapper content:", wrapper.innerHTML);
+
+                // Check for specific elements
+                const contentElements = wrapper.querySelectorAll("h1, h2, p");
+                console.log("Content elements found:", contentElements.length);
+
+                // Log any errors in the page
+                const errorElements =
+                    document.querySelectorAll(".error-container");
+                if (errorElements.length > 0) {
+                    console.log(
+                        "Errors found:",
+                        Array.from(errorElements).map((el) => el.textContent),
+                    );
+                }
             });
         </script>
     </body>

@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup, Tag
 
 from .id_handler import DITAIDHandler
 from .heading import HeadingHandler
-from ..utils.latex.latex_processor import DitaLaTeXProcessor
 
 class DITAContentProcessor:
     """Processes DITA elements into HTML with consistent styling"""
@@ -16,7 +15,6 @@ class DITAContentProcessor:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.heading_handler = HeadingHandler()
-        self.latex_processor = DitaLaTeXProcessor()
         self.id_handler = DITAIDHandler()
 
     def process_element(self, elem: etree._Element, source_path: Optional[Path] = None) -> str:
@@ -27,12 +25,6 @@ class DITAContentProcessor:
         try:
             tag = etree.QName(elem).localname
 
-            # Add LaTeX processing for text content
-            if elem.text:
-                processed_text = elem.text
-                if self.latex_processor:
-                    processed_text = self.latex_processor.process_content(processed_text)
-                elem.text = processed_text
 
             # Map tags to their processing methods
             processors = {
@@ -83,9 +75,9 @@ class DITAContentProcessor:
 
 
 
-    # ===========================
-    # Structural Elements
-    # ===========================
+    # =================== #
+    # Structural Elements #
+    # =================== #
     def _process_concept(self, elem: etree._Element, source_path: Optional[Path] = None) -> str:
         """Process concept element"""
         try:

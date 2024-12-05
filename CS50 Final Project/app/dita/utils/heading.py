@@ -1,7 +1,15 @@
 # app/dita/utils/heading.py
 from typing import Dict, Set, Optional, Tuple
+from dataclasses import dataclass
 import re
 import logging
+from .types import (
+    ElementType,
+    ProcessingState,
+    ParsedElement,
+    TrackedElement,
+    ProcessedContent,
+)
 
 class HeadingHandler:
     def __init__(self):
@@ -136,6 +144,25 @@ class HeadingHandler:
 
         self.used_heading_ids[base_id] = 1
         return base_id
+
+    def process_content_headings(self, content: ProcessedContent) -> None:
+            """
+            Process headings in content.
+
+            Args:
+                content: Processed content with heading information
+            """
+            try:
+                if content.heading_level is not None:
+                    level = f'h{content.heading_level}'
+                    if level in self.counters:
+                        self.counters[level] += 1
+                        self.logger.debug(
+                            f"Processed heading level {content.heading_level}. "
+                            f"New counter: {self.counters[level]}"
+                        )
+            except Exception as e:
+                self.logger.error(f"Error processing content headings: {str(e)}")
 
     def _sanitize_id(self, text: str) -> str:
         """Create URL-friendly ID from text"""

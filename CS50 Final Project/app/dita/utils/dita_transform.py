@@ -5,7 +5,6 @@ import logging
 import re
 import html
 from bs4 import BeautifulSoup, Tag
-import markdown
 from lxml import etree
 
 # Local imports
@@ -17,8 +16,6 @@ from .dita_parser import DITAParser
 from .dita_elements import DITAContentProcessor
 from ..artifacts.parser import ArtifactParser
 from ..artifacts.renderer import ArtifactRenderer
-from ..utils.latex.latex_processor import DitaLaTeXProcessor
-from ..utils.markdown.latex_extension import LaTeXExtension
 
 class DITATransformer:
     """Handles DITA content transformation to HTML."""
@@ -40,108 +37,10 @@ class DITATransformer:
         self.id_handler = DITAIDHandler()
         self.dita_parser = DITAParser()
         self.dita_processor = DITAContentProcessor()
-        self.latex_processor: Optional[DitaLaTeXProcessor] = None
 
         # Initialize artifact handlers
         self.artifact_parser = ArtifactParser(self.dita_root)
         self.artifact_renderer = ArtifactRenderer(self.artifacts_dir)
-
-        # Initialize markdown processor
-        self.md = markdown.Markdown(extensions=[
-            'fenced_code',
-            'tables',
-            'meta',
-            'attr_list'
-        ])
-
-    def _transform_topic(self, topic_path: Path) -> str:
-        """Transform any topic file to HTML with consistent heading handling and LaTeX support."""
-        try:
-            if topic_path.suffix.lower() == '.md':
-                with open(topic_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-
-                # Step 1: Extract and replace LaTeX equations with placeholders
-                equations = []
-                def latex_replacer(match):
-                    latex = match.group(1) or match.group(2)  # group(1) for $$, group(2) for $
-                    is_block = match.group(0).startswith('$$')
-                    eq_id = f"eq-{len(equations)}"
-                    equations.append({
-                        'id': eq_id,
-                        'latex': latex,
-                        'is_block': is_block
-                    })
-                    self.logger.debug(f"Found equation {eq_id}: {latex[:50]}...")
-                    return f"LATEX_PLACEHOLDER_{eq_id}"
-
-                # Process block and inline equations
-                if '$$' in content or '$' in content:
-                    processed_content = re.sub(
-                        r'\$\$(.*?)\$\$|\$((?!\$).*?)\$',
-                        latex_replacer,
-                        content,
-                        flags=re.DOTALL
-                    )
-                    self.logger.debug(f"Found {len(equations)} LaTeX equations in {topic_path}")
-                else:
-                    processed_content = content
-
-                # Step 2: Convert markdown to HTML
-                html_content = self.md.convert(processed_content)
-
-                # Step 3: Process with BeautifulSoup
-                soup = BeautifulSoup(html_content, 'html.parser')
-
-                # Process headings (without adding section numbers to h1)
-                for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-                    if not isinstance(heading, Tag):
-                        continue
-
-                    level = int(heading.name[1])
-                    original_text = heading.get_text(strip=True)
-
-                    # Process all headings with numbering
-                    heading_id, formatted_text = self.heading_handler.process_heading(
-                        original_text,
-                        level,
-                        is_map_title=False  # All content headings should be numbered
-                    )
-
-                    heading.clear()
-                    heading['id'] = heading_id
-                    heading.append(BeautifulSoup(formatted_text, 'html.parser'))
-
-                    # Add anchor
-                    anchor = soup.new_tag('a')
-                    anchor['href'] = f'#{heading_id}'
-                    anchor['class'] = 'heading-anchor'
-                    anchor.string = '¶'
-                    heading.append(anchor)
-
-                # Step 4: Replace LaTeX placeholders with HTML elements
-                html_content = str(soup)
-                if equations:
-                    for eq in equations:
-                        placeholder = f"LATEX_PLACEHOLDER_{eq['id']}"
-                        element_type = 'div' if eq['is_block'] else 'span'
-                        class_name = 'math-block' if eq['is_block'] else 'math-tex'
-
-                        latex_html = (
-                            f'<{element_type} class="{class_name}" '
-                            f'data-latex-source="{html.escape(eq["latex"])}">'
-                            f'{html.escape(eq["latex"])}'
-                            f'</{element_type}>'
-                        )
-                        html_content = html_content.replace(placeholder, latex_html)
-
-                return html_content
-            else:
-                return self._transform_dita_topic(topic_path)
-
-        except Exception as e:
-            self.logger.error(f"Error transforming topic {topic_path}: {str(e)}")
-            raise
 
 
     def transform_map(self, map_path: Path) -> str:
@@ -164,7 +63,7 @@ class DITATransformer:
 
             html_content = [f'<div class="map-content" data-map-id="{map_id}">']
 
-            # Handle map title (should not affect section numbering)
+            # Handle map title
             title_elem = tree.find(".//title")
             if title_elem is not None and title_elem.text:
                 title_id = self.id_handler.generate_content_id(Path(title_elem.text))
@@ -184,10 +83,9 @@ class DITATransformer:
                     continue
 
                 topic_path = Path(map_path).parent / href
-                if not topic_path.exists():
+                if not topic_path.exists() or not topic_path.suffix == '.dita':
                     continue
 
-                # Debug logging and section handling in one place
                 self.logger.debug(f"Before processing topic {href}:")
                 self.logger.debug(f"H1 counter: {self.heading_handler.counters['h1']}")
                 self.heading_handler.start_new_section()
@@ -195,7 +93,7 @@ class DITATransformer:
 
                 topic_id = self.id_handler.generate_topic_id(topic_path, map_path)
                 html_content.append(f'<div class="topic-section" data-topic-id="{topic_id}">')
-                content = self._transform_topic(topic_path)
+                content = self._transform_dita_topic(topic_path)
                 html_content.append(content)
                 html_content.append('</div>')
 
@@ -217,11 +115,7 @@ class DITATransformer:
         try:
             self.logger.info(f"Transforming topic: {topic_path}")
             self.heading_handler.reset()
-
-            if topic_path.suffix == '.md':
-                return self._transform_markdown_topic(topic_path)
-            else:
-                return self._transform_dita_topic(topic_path)
+            return self._transform_dita_topic(topic_path)
 
         except Exception as e:
             self.logger.error(f"Error transforming topic {topic_path}: {str(e)}")
@@ -418,22 +312,21 @@ class DITATransformer:
         """Process the main title of a DITA topic."""
         title_elem = tree.find('.//title')
         if title_elem is not None and title_elem.text:
-                title_id = self.id_handler.generate_content_id(Path(title_elem.text))
-                title_text = self._process_latex_text(title_elem.text)
+            title_id = self.id_handler.generate_content_id(Path(title_elem.text))
 
-                # Process title
-                heading_id, formatted_text = self.heading_handler.process_heading(
-                    title_text,
-                    1,  # Level 1
-                    is_map_title=True  # Only map titles should be unnumbered
-                )
+            # Process title - removed LaTeX processing
+            heading_id, formatted_text = self.heading_handler.process_heading(
+                title_elem.text,  # Direct text use
+                1,  # Level 1
+                is_map_title=True  # Only map titles should be unnumbered
+            )
 
-                html_parts.append(
-                    f'<h1 id="{title_id}" class="topic-title">'
-                    f'{formatted_text}'
-                    f'<a href="#{title_id}" class="heading-anchor">¶</a>'
-                    f'</h1>'
-                )
+            html_parts.append(
+                f'<h1 id="{title_id}" class="topic-title">'
+                f'{formatted_text}'
+                f'<a href="#{title_id}" class="heading-anchor">¶</a>'
+                f'</h1>'
+            )
 
     def _process_body_content(self, tree: etree._Element, html_parts: List[str], current_h1: int) -> None:
         """Process the body content of a DITA topic."""
@@ -466,11 +359,10 @@ class DITATransformer:
         """Process a section title."""
         section_title = section_elem.find('title')
         if section_title is not None and section_title.text:
-            title_text = self._process_latex_text(section_title.text)
-
+            # Removed LaTeX processing, use text directly
             self.heading_handler._current_h1 = current_h1
             heading_id, formatted_text = self.heading_handler.process_heading(
-                title_text,
+                section_title.text,  # Direct text use
                 2  # Section titles are H2
             )
 
@@ -485,103 +377,14 @@ class DITATransformer:
         """Process the content within a section."""
         for child in section_elem:
             if child.tag != 'title':  # Skip title as we've already processed it
-                child.text = self._process_latex_text(child.text) if child.text else child.text
                 content = self.dita_processor.process_element(child)
                 html_parts.append(content)
 
     def _process_non_section_element(self, elem: etree._Element, html_parts: List[str]) -> None:
         """Process a non-section element."""
-        elem.text = self._process_latex_text(elem.text) if elem.text else elem.text
+        # Remove LaTeX processing, pass element directly to DITA processor
         content = self.dita_processor.process_element(elem)
         html_parts.append(content)
-
-    def _process_latex_text(self, text: str) -> str:
-        """Process text that might contain LaTeX equations."""
-        if text and self.latex_processor and ('$$' in text or '$' in text):
-            return self.latex_processor.process_content(text)
-        return text
-
-    def _transform_markdown_topic(self, topic_path: Path) -> str:
-        """Transform markdown with LaTeX preservation."""
-        try:
-            with open(topic_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-
-            # Step 1: Extract and replace LaTeX equations with placeholders
-            equations = []
-            def latex_replacer(match):
-                latex = match.group(1) or match.group(2)  # group(1) for $$, group(2) for $
-                is_block = match.group(0).startswith('$$')
-                eq_id = f"eq-{len(equations)}"
-                equations.append({
-                    'id': eq_id,
-                    'latex': latex,
-                    'is_block': is_block
-                })
-                return f"LATEX_PLACEHOLDER_{eq_id}"
-
-            # Process block and inline equations
-            processed_content = re.sub(
-                r'\$\$(.*?)\$\$|\$((?!\$).*?)\$',
-                latex_replacer,
-                content,
-                flags=re.DOTALL
-            )
-
-            self.logger.debug(f"Found {len(equations)} LaTeX equations in {topic_path}")
-
-            # Step 2: Convert markdown to HTML
-            html_content = self.md.convert(processed_content)
-
-            # Step 3: Process with BeautifulSoup for heading handling
-            soup = BeautifulSoup(html_content, 'html.parser')
-
-            # Process headings
-            for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-                    if not isinstance(heading, Tag):
-                        continue
-
-                    level = int(heading.name[1])
-                    original_text = heading.get_text(strip=True)
-
-                    heading_id, formatted_text = self.heading_handler.process_heading(
-                        original_text,
-                        level,
-                        is_map_title=False  # Regular headings should be numbered
-                    )
-
-                    heading.clear()
-                    heading['id'] = heading_id
-                    heading.append(BeautifulSoup(formatted_text, 'html.parser'))
-
-                    # Add anchor
-                    anchor = soup.new_tag('a')
-                    anchor['href'] = f'#{heading_id}'
-                    anchor['class'] = 'heading-anchor'
-                    anchor.string = '¶'
-                    heading.append(anchor)
-
-            # Step 4: Replace LaTeX placeholders with HTML elements
-            html_content = str(soup)
-            for eq in equations:
-                placeholder = f"LATEX_PLACEHOLDER_{eq['id']}"
-                element_type = 'div' if eq['is_block'] else 'span'
-                class_name = 'math-block' if eq['is_block'] else 'math-tex'
-
-                latex_html = (
-                    f'<{element_type} class="{class_name}" '
-                    f'data-latex-source="{html.escape(eq["latex"])}">'
-                    f'{html.escape(eq["latex"])}'
-                    f'</{element_type}>'
-                )
-                html_content = html_content.replace(placeholder, latex_html)
-
-            return html_content
-
-        except Exception as e:
-            self.logger.error(f"Error transforming markdown topic: {str(e)}")
-            raise
-
 
     def resolve_path(self, base_path: Path, href: str) -> Optional[Path]:
         """Resolve relative path from base path."""

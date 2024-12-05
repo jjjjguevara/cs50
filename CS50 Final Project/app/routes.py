@@ -26,6 +26,7 @@ from bs4 import BeautifulSoup, Tag
 from bs4.element import NavigableString
 
 # Local imports
+from .dita.utils.markdown.md_transform import MarkdownTransformer
 from .dita.processor import DITAProcessor
 from .dita.artifacts.parser import ArtifactParser
 from app.dita.utils.latex.latex_processor import DitaLaTeXProcessor
@@ -83,6 +84,46 @@ def index() -> ResponseReturnValue:
     except Exception as e:
         logger.error(f"Error in home redirect: {str(e)}")
         return jsonify({'error': 'Failed to load roadmap'}), 500
+
+@bp.route('/entry/<topic_id>')
+def view_entry(topic_id: str):
+    try:
+        logger.info(f"Processing entry request for: {topic_id}")
+
+        map_path = dita_processor.get_topic(topic_id)
+        if not map_path:
+            logger.error(f"Map not found: {topic_id}")
+            return render_template('academic.html', error="Entry not found"), 404
+
+        logger.debug(f"Found map at: {map_path}")
+
+        # Transform content
+        content = dita_processor.transform(map_path)
+        logger.debug(f"Transformed content received from processor, length: {len(content)}")
+        logger.debug(f"Content sample from processor:\n{content[:500]}")
+
+        debug_info = {
+            'topic_id': topic_id,
+            'map_path': str(map_path),
+            'content_length': len(content) if content else 0,
+            'has_content': bool(content and content.strip())
+        }
+
+        # Log template variables
+        logger.debug("Rendering template with variables:")
+        logger.debug(f"- Content length: {len(content) if content else 0}")
+        logger.debug(f"- Debug info: {debug_info}")
+
+        return render_template(
+            'academic.html',
+            content=content,
+            debug_info=debug_info
+        )
+
+    except Exception as e:
+        logger.error(f"Error viewing entry: {str(e)}", exc_info=True)
+        return render_template('academic.html', error=str(e)), 500
+
 
 
 @bp.route('/static/topics/<path:filename>')
@@ -174,56 +215,56 @@ def articles() -> ResponseReturnValue:
         return jsonify({'error': 'Failed to load articles'}), 500
 
 
-## Artifact-specific routes
-@bp.route('/api/artifacts/<path:artifact_id>')
-def get_artifact(artifact_id: str) -> ResponseReturnValue:
-    """Get rendered artifact content"""
-    try:
-        artifact_path = dita_processor.dita_root / 'artifacts' / artifact_id
-        if not artifact_path.exists():
-            return jsonify({'error': 'Artifact not found'}), 404
+# ## Artifact-specific routes
+# @bp.route('/api/artifacts/<path:artifact_id>')
+# def get_artifact(artifact_id: str) -> ResponseReturnValue:
+#     """Get rendered artifact content"""
+#     try:
+#         artifact_path = dita_processor.dita_root / 'artifacts' / artifact_id
+#         if not artifact_path.exists():
+#             return jsonify({'error': 'Artifact not found'}), 404
 
-        context_str = request.args.get('context', '{}')
-        try:
-            context = json.loads(context_str)
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid context JSON: {e}")
-            return jsonify({'error': 'Invalid context format'}), 400
+#         context_str = request.args.get('context', '{}')
+#         try:
+#             context = json.loads(context_str)
+#         except json.JSONDecodeError as e:
+#             logger.error(f"Invalid context JSON: {e}")
+#             return jsonify({'error': 'Invalid context format'}), 400
 
-        rendered_content = dita_processor.artifact_renderer.render_artifact(
-            artifact_path,
-            context
-        )
-        return Response(rendered_content, mimetype='text/html')
-    except Exception as e:
-        logger.error(f"Error serving artifact: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+#         rendered_content = dita_processor.artifact_renderer.render_artifact(
+#             artifact_path,
+#             context
+#         )
+#         return Response(rendered_content, mimetype='text/html')
+#     except Exception as e:
+#         logger.error(f"Error serving artifact: {str(e)}")
+#         return jsonify({'error': str(e)}), 500
 
-## Artifact debug routes
-@bp.route('/api/debug/ditamap/<map_id>')
-def debug_ditamap(map_id: str) -> ResponseReturnValue:
-    """Debug endpoint to examine DITAMAP processing"""
-    try:
-        map_path = Path(current_app.root_path) / 'dita' / 'maps' / f"{map_id}.ditamap"
-        if not map_path.exists():
-            return jsonify({'error': 'Map not found'}), 404
+# ## Artifact debug routes
+# @bp.route('/api/debug/ditamap/<map_id>')
+# def debug_ditamap(map_id: str) -> ResponseReturnValue:
+#     """Debug endpoint to examine DITAMAP processing"""
+#     try:
+#         map_path = Path(current_app.root_path) / 'dita' / 'maps' / f"{map_id}.ditamap"
+#         if not map_path.exists():
+#             return jsonify({'error': 'Map not found'}), 404
 
-        # Parse the map
-        parser = ArtifactParser(Path(current_app.root_path) / 'dita')
-        artifacts = parser.parse_artifact_references(map_path)
+#         # Parse the map
+#         parser = ArtifactParser(Path(current_app.root_path) / 'dita')
+#         artifacts = parser.parse_artifact_references(map_path)
 
-        # Read raw content
-        with open(map_path, 'r') as f:
-            content = f.read()
+#         # Read raw content
+#         with open(map_path, 'r') as f:
+#             content = f.read()
 
-        return jsonify({
-            'map_id': map_id,
-            'artifacts': artifacts,
-            'raw_content': content
-        })
+#         return jsonify({
+#             'map_id': map_id,
+#             'artifacts': artifacts,
+#             'raw_content': content
+#         })
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
 
 
 
@@ -239,107 +280,60 @@ def test_interface() -> ResponseReturnValue:
         return jsonify({'error': 'Failed to load application'}), 500
 
 
-@bp.route('/entry/<topic_id>')
-def view_entry(topic_id: str):
-    try:
-        logger.info(f"Processing entry request for: {topic_id}")
 
-        if not topic_id.endswith(('.md', '.dita', '.ditamap')):
-            topic_id = f"{topic_id}.ditamap"
 
-        map_path = dita_processor.get_topic(topic_id)
-        if not map_path:
-            logger.error(f"Map not found: {topic_id}")
-            return render_template('academic.html', error="Entry not found"), 404
+# @bp.route('/api/debug/heading-state/<topic_id>')
+# def debug_heading_state(topic_id: str) -> ResponseReturnValue:
+#     """Debug endpoint to check heading counter state"""
+#     try:
+#         if not topic_id.endswith(('.md', '.dita', '.ditamap')):
+#             topic_id = f"{topic_id}.ditamap"
 
-        # Get the actual content file path
-        tree = etree.parse(str(map_path))
-        topicref = tree.find(".//topicref")
-        if topicref is not None and (href := topicref.get('href')):
-            content_path = Path(map_path).parent / href
-            logger.info(f"Processing content file: {content_path}")
-        else:
-            logger.error("No content reference found in map")
-            return render_template('academic.html', error="Content not found"), 404
+#         topic_path = dita_processor.get_topic(topic_id)
+#         if not topic_path:
+#             return jsonify({
+#                 'error': 'Topic not found',
+#                 'topic_id': topic_id
+#             }), 404
 
-        # Process content
-        content = dita_processor.transform(map_path)
+#         # Create new processor to test clean state
+#         test_processor = DITAProcessor()
 
-        # Count LaTeX elements
-        latex_count = len(re.findall(r'class="math-(?:tex|block)"', content))
-        logger.info(f"Found {latex_count} LaTeX elements in transformed content")
+#         # Capture state at different points
+#         states = {
+#             'initial': dict(test_processor.transformer.heading_handler.counters),
+#         }
 
-        # Add debug info
-        debug_info = {
-            'topic_id': topic_id,
-            'map_path': str(map_path),
-            'content_path': str(content_path),
-            'latex_count': latex_count,
-            'has_latex_elements': latex_count > 0
-        }
+#         # Process content
+#         content = test_processor.transform(topic_path)
 
-        return render_template(
-            'academic.html',
-            content=content,
-            debug_info=debug_info
-        )
+#         # Capture final state
+#         states['final'] = dict(test_processor.transformer.heading_handler.counters)
 
-    except Exception as e:
-        logger.error(f"Error viewing entry: {str(e)}", exc_info=True)
-        return render_template('academic.html', error=str(e)), 500
+#         # Get all headings from processed content
+#         soup = BeautifulSoup(content, 'html.parser')
+#         headings = []
+#         for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+#             if isinstance(h, Tag):
+#                 headings.append({
+#                     'level': h.name,
+#                     'text': h.get_text(strip=True),
+#                     'id': h.get('id', '')
+#                 })
 
-@bp.route('/api/debug/heading-state/<topic_id>')
-def debug_heading_state(topic_id: str) -> ResponseReturnValue:
-    """Debug endpoint to check heading counter state"""
-    try:
-        if not topic_id.endswith(('.md', '.dita', '.ditamap')):
-            topic_id = f"{topic_id}.ditamap"
+#         return jsonify({
+#             'topic_id': topic_id,
+#             'heading_states': states,
+#             'headings_found': headings,
+#             'path': str(topic_path)
+#         })
 
-        topic_path = dita_processor.get_topic(topic_id)
-        if not topic_path:
-            return jsonify({
-                'error': 'Topic not found',
-                'topic_id': topic_id
-            }), 404
-
-        # Create new processor to test clean state
-        test_processor = DITAProcessor()
-
-        # Capture state at different points
-        states = {
-            'initial': dict(test_processor.transformer.heading_handler.counters),
-        }
-
-        # Process content
-        content = test_processor.transform(topic_path)
-
-        # Capture final state
-        states['final'] = dict(test_processor.transformer.heading_handler.counters)
-
-        # Get all headings from processed content
-        soup = BeautifulSoup(content, 'html.parser')
-        headings = []
-        for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-            if isinstance(h, Tag):
-                headings.append({
-                    'level': h.name,
-                    'text': h.get_text(strip=True),
-                    'id': h.get('id', '')
-                })
-
-        return jsonify({
-            'topic_id': topic_id,
-            'heading_states': states,
-            'headings_found': headings,
-            'path': str(topic_path)
-        })
-
-    except Exception as e:
-        logger.error(f"Debug error: {str(e)}", exc_info=True)
-        return jsonify({
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }), 500
+#     except Exception as e:
+#         logger.error(f"Debug error: {str(e)}", exc_info=True)
+#         return jsonify({
+#             'error': str(e),
+#             'traceback': traceback.format_exc()
+#         }), 500
 
 @bp.route('/static/<path:filename>')
 def serve_static(filename: str) -> ResponseReturnValue:
@@ -417,7 +411,7 @@ def view_topic(topic_id: str) -> ResponseReturnValue:
                 </div>
             """, mimetype='text/html')
 
-        html_content = dita_processor.transform(topic_path)  # Updated to use transform
+        html_content = dita_processor.transform(topic_path)
         if html_content:
             return Response(html_content, mimetype='text/html')
         else:
@@ -437,351 +431,77 @@ def view_topic(topic_id: str) -> ResponseReturnValue:
             </div>
         """, mimetype='text/html')
 
-@bp.route('/api/search', methods=['GET'])
-def search() -> ResponseReturnValue:
-    """Search through content"""
-    try:
-        query = request.args.get('q', '')
-        if not query:
-            return jsonify([])
 
-        # Get all topics
-        topics = dita_processor.list_topics()
-        results = []
-
-        for topic in topics:
-            topic_path = dita_processor.get_topic(topic['id'])
-            if not topic_path:
-                continue
-
-            try:
-                # Read content
-                with open(topic_path, 'r', encoding='utf-8') as f:
-                    content = f.read().lower()
-
-                # Simple text search
-                if query.lower() in content:
-                    # Get content preview
-                    index = content.lower().find(query.lower())
-                    start = max(0, index - 100)
-                    end = min(len(content), index + 100)
-                    preview = content[start:end]
-
-                    results.append({
-                        'id': topic['id'],
-                        'title': topic.get('title', topic['id']),
-                        'preview': f"...{preview}..." if start > 0 else preview,
-                        'type': topic.get('type', 'topic')
-                    })
-
-            except Exception as e:
-                logger.error(f"Error searching topic {topic['id']}: {str(e)}")
-                continue
-
-        return jsonify(results)
-
-    except Exception as e:
-        logger.error(f"Search error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@bp.route('/api/debug/topics')
-def debug_topics() -> ResponseReturnValue:
-    """Debug endpoint for topic listing and processing"""
-    try:
-        topics = dita_processor.list_topics()
-        debug_info = {
-            'topics_found': len(topics),
-            'topics': [],
-            'app_root': str(current_app.root_path),
-            'dita_root': str(dita_processor.dita_root)
-        }
-
-        # Get detailed information for each topic
-        for topic in topics:
-            topic_path = dita_processor.get_topic(topic['id'])
-            if not topic_path:
-                continue
-
-            try:
-                with open(topic_path, 'r', encoding='utf-8') as f:
-                    raw_content = f.read()
-
-                # Use transformer instead of process_content
-                processed_content = dita_processor.transform(topic_path)
-
-                # Parse processed content for structure info
-                soup = BeautifulSoup(processed_content, 'html.parser')
-                headings = []
-                for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-                    if isinstance(h, Tag):
-                        headings.append({
-                            'id': h.get('id', ''),
-                            'text': h.get_text(strip=True),
-                            'level': int(h.name[1])
-                        })
-
-                topic_info = {
-                    **topic,
-                    'exists': True,
-                    'size': len(raw_content),
-                    'headings': headings,
-                    'has_content': bool(processed_content.strip())
-                }
-                debug_info['topics'].append(topic_info)
-
-            except Exception as e:
-                logger.error(f"Error processing topic {topic['id']}: {str(e)}")
-                topic_info = {
-                    **topic,
-                    'exists': False,
-                    'error': str(e)
-                }
-                debug_info['topics'].append(topic_info)
-
-        return jsonify(debug_info)
-
-    except Exception as e:
-        logger.error(f"Error in debug endpoint: {str(e)}")
-        return jsonify({
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }), 500
 
 
 ## Debug routes
 
-## Topic content debug route
+# @bp.route('/api/debug/topics')
+# def debug_topics() -> ResponseReturnValue:
+#     """Debug endpoint for topic listing and processing"""
+#     try:
+#         topics = dita_processor.list_topics()
+#         debug_info = {
+#             'topics_found': len(topics),
+#             'topics': [],
+#             'app_root': str(current_app.root_path),
+#             'dita_root': str(dita_processor.dita_root)
+#         }
 
-@bp.route('/api/debug/content/<topic_id>')
-def debug_content(topic_id: str) -> ResponseReturnValue:
-    """Debug endpoint to examine processed content and transformations"""
-    try:
-        logger.info(f"Debug request for topic: {topic_id}")
+#         # Get detailed information for each topic
+#         for topic in topics:
+#             topic_path = dita_processor.get_topic(topic['id'])
+#             if not topic_path:
+#                 continue
 
-        # First get the map file
-        if not topic_id.endswith(('.md', '.dita', '.ditamap')):
-            topic_id = f"{topic_id}.ditamap"
+#             try:
+#                 with open(topic_path, 'r', encoding='utf-8') as f:
+#                     raw_content = f.read()
 
-        map_path = dita_processor.get_topic(topic_id)
-        if not map_path:
-            return jsonify({'error': 'Map not found'}), 404
+#                 # Use transformer instead of process_content
+#                 processed_content = dita_processor.transform(topic_path)
 
-        # Parse the DITA map to get the actual content file
-        try:
-            tree = etree.parse(str(map_path))
-            # Find the first topicref's href
-            topicref = tree.find(".//topicref")
-            if topicref is None:
-                return jsonify({'error': 'No topicref found in map'}), 404
+#                 # Parse processed content for structure info
+#                 soup = BeautifulSoup(processed_content, 'html.parser')
+#                 headings = []
+#                 for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+#                     if isinstance(h, Tag):
+#                         headings.append({
+#                             'id': h.get('id', ''),
+#                             'text': h.get_text(strip=True),
+#                             'level': int(h.name[1])
+#                         })
 
-            content_href = topicref.get('href')
-            if not content_href:
-                return jsonify({'error': 'No href attribute in topicref'}), 404
+#                 topic_info = {
+#                     **topic,
+#                     'exists': True,
+#                     'size': len(raw_content),
+#                     'headings': headings,
+#                     'has_content': bool(processed_content.strip())
+#                 }
+#                 debug_info['topics'].append(topic_info)
 
-            logger.info(f"Found content reference: {content_href}")
+#             except Exception as e:
+#                 logger.error(f"Error processing topic {topic['id']}: {str(e)}")
+#                 topic_info = {
+#                     **topic,
+#                     'exists': False,
+#                     'error': str(e)
+#                 }
+#                 debug_info['topics'].append(topic_info)
 
-            # Resolve the content path relative to the map using Path
-            content_path = Path(map_path).parent.joinpath(content_href)
-            content_path = content_path.resolve()  # Resolve any relative path components
-            logger.info(f"Resolved content path: {content_path}")
+#         return jsonify(debug_info)
 
-        except Exception as e:
-            logger.error(f"Error parsing map: {e}")
-            return jsonify({'error': f'Map parsing error: {str(e)}'}), 500
-
-        # Read the actual content file
-        try:
-            with open(content_path, 'r', encoding='utf-8') as f:
-                raw_content = f.read()
-        except Exception as e:
-            logger.error(f"Error reading content file: {e}")
-            return jsonify({'error': f'Content file error: {str(e)}'}), 500
-
-        # Extract LaTeX equations before transformation
-        latex_processor = DitaLaTeXProcessor()
-        equations = latex_processor.extract_equations(raw_content)
-
-        # Process content
-        processed_content = dita_processor.transform(content_path)
-
-        # Parse processed content
-        soup = BeautifulSoup(processed_content, 'html.parser')
-
-        # Get headings
-        headings = []
-        for h in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-            if isinstance(h, Tag):
-                headings.append({
-                    'id': h.get('id', ''),
-                    'text': h.get_text(strip=True),
-                    'level': int(h.name[1])
-                })
-
-        # Find LaTeX elements
-        math_elements = []
-        for elem in soup.find_all(['span', 'div'], class_=['math-tex', 'math-block']):
-            math_elements.append({
-                'type': 'block' if 'math-block' in elem.get('class', []) else 'inline',
-                'content': elem.get_text(strip=True),
-                'html': str(elem),
-                'attributes': {
-                    attr: elem.get(attr) for attr in elem.attrs
-                }
-            })
-
-        # Look for specific LaTeX patterns in raw content
-        latex_patterns = {
-            'block_dollars': len(re.findall(r'\$\$(.*?)\$\$', raw_content, re.DOTALL)),
-            'inline_dollars': len(re.findall(r'(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)', raw_content)),
-            'display_math': len(re.findall(r'\\\[(.*?)\\\]', raw_content, re.DOTALL)),
-            'inline_math': len(re.findall(r'\\\((.*?)\\\)', raw_content))
-        }
-
-        debug_info = {
-            'map_file': str(map_path),
-            'content_file': str(content_path),
-            'raw_content_length': len(raw_content),
-            'processed_content_length': len(processed_content),
-            'heading_count': len(headings),
-            'latex_patterns_found': latex_patterns,
-            'equations_found': {
-                'raw': [
-                    {
-                        'type': eq['type'],
-                        'latex': eq['latex'][:100],
-                        'full': eq['full'][:100]
-                    }
-                    for eq in equations
-                ],
-                'processed': math_elements
-            },
-            'equation_counts': {
-                'raw': len(equations),
-                'processed': len(math_elements)
-            }
-        }
-
-        return jsonify({
-            'success': True,
-            'topic_id': topic_id,
-            'raw_content': raw_content,
-            'processed_content': processed_content,
-            'headings': headings,
-            'debug_info': debug_info,
-            'equations': {
-                'raw': equations,
-                'processed': math_elements
-            }
-        })
-
-    except Exception as e:
-        logger.error(f"Error in debug endpoint: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'traceback': traceback.format_exc(),
-            'topic_id': topic_id
-        }), 500
+#     except Exception as e:
+#         logger.error(f"Error in debug endpoint: {str(e)}")
+#         return jsonify({
+#             'error': str(e),
+#             'traceback': traceback.format_exc()
+#         }), 500
 
 
 
-## LaTeX debug
-@bp.route('/api/debug/latex/<topic_id>')
-def debug_latex(topic_id: str):
-    try:
-        logger.info(f"Debug request for topic: {topic_id}")
 
-        # Add .ditamap extension if needed
-        if not topic_id.endswith(('.md', '.dita', '.ditamap')):
-            topic_id = f"{topic_id}.ditamap"
-
-        topic_path = dita_processor.get_topic(topic_id)
-        if not topic_path:
-            logger.error(f"Topic not found: {topic_id}")
-            return jsonify({
-                'error': 'Topic not found',
-                'topic_id': topic_id
-            }), 404
-
-        # Get raw content
-        with open(topic_path, 'r', encoding='utf-8') as f:
-            raw_content = f.read()
-
-        # Process content
-        processor = DitaLaTeXProcessor()
-        equations = processor.extract_equations(raw_content)
-        processed = processor.process_content(raw_content)
-
-        return jsonify({
-            'success': True,
-            'topic_id': topic_id,
-            'raw_content': raw_content[:500],
-            'equations_found': equations,
-            'processed_content': processed[:500],
-            'equation_count': len(equations)
-        })
-
-    except Exception as e:
-        logger.error(f"Debug endpoint error: {str(e)}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }), 500
-
-
-# Latex transformation debug
-
-@bp.route('/api/debug/latex-transform/<topic_id>')
-def debug_latex_transform(topic_id: str):
-    try:
-        if not topic_id.endswith(('.md', '.dita', '.ditamap')):
-            topic_id = f"{topic_id}.ditamap"
-
-        topic_path = dita_processor.get_topic(topic_id)
-        if not topic_path:
-            return jsonify({'error': 'Topic not found'}), 404
-
-        # Get content file path from map
-        tree = etree.parse(str(topic_path))
-        topicref = tree.find(".//topicref")
-        if topicref is None or not (href := topicref.get('href')):
-            return jsonify({'error': 'No content reference found'}), 404
-
-        content_path = Path(topic_path).parent.joinpath(href).resolve()
-
-        # Read content
-        with open(content_path, 'r', encoding='utf-8') as f:
-            raw_content = f.read()
-
-        # Process with LaTeX processor
-        latex_processor = DitaLaTeXProcessor()
-        processed = latex_processor.process_content(raw_content)
-
-        # Find equations in processed content
-        soup = BeautifulSoup(processed, 'html.parser')
-        math_elements = soup.find_all(['span', 'div'], class_=['math-tex', 'math-block'])
-
-        return jsonify({
-            'success': True,
-            'raw_content_sample': raw_content[:500],
-            'processed_content_sample': processed[:500],
-            'equations_found': len(math_elements),
-            'equation_samples': [
-                {
-                    'html': str(elem),
-                    'text': elem.get_text(strip=True),
-                    'attributes': {k: v for k, v in elem.attrs.items()}
-                }
-                for elem in math_elements[:5]  # First 5 equations
-            ]
-        })
-
-    except Exception as e:
-        return jsonify({
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }), 500
 
 ## Component registration debug
 @bp.route('/api/debug/components')
@@ -929,41 +649,41 @@ def get_map_content(map_id: str):
             'error': str(e)
         }), 500
 
-@bp.route('/api/topics')
-def get_topics():
-    """Get all available topics"""
-    try:
-        logger.info("Fetching topics")
-        topics = dita_processor.list_topics()
-        logger.info(f"Found {len(topics)} topics")
-        return jsonify({
-            'success': True,
-            'topics': topics
-        })
-    except Exception as e:
-        logger.error(f"Error getting topics: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+# @bp.route('/api/topics')
+# def get_topics():
+#     """Get all available topics"""
+#     try:
+#         logger.info("Fetching topics")
+#         topics = dita_processor.list_topics()
+#         logger.info(f"Found {len(topics)} topics")
+#         return jsonify({
+#             'success': True,
+#             'topics': topics
+#         })
+#     except Exception as e:
+#         logger.error(f"Error getting topics: {str(e)}")
+#         return jsonify({
+#             'success': False,
+#             'error': str(e)
+#         }), 500
 
-@bp.route('/api/maps')
-def get_maps() -> ResponseReturnValue:
-    """Get all available DITA maps"""
-    try:
-        logger.info("Fetching maps")
-        maps = dita_processor.list_maps()
-        logger.info(f"Found {len(maps)} maps")
-        return jsonify({
-            'success': True,
-            'maps': maps
-        })
-    except Exception as e:
-        logger.error(f"Error getting maps: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+# @bp.route('/api/maps')
+# def get_maps() -> ResponseReturnValue:
+#     """Get all available DITA maps"""
+#     try:
+#         logger.info("Fetching maps")
+#         maps = dita_processor.list_maps()
+#         logger.info(f"Found {len(maps)} maps")
+#         return jsonify({
+#             'success': True,
+#             'maps': maps
+#         })
+#     except Exception as e:
+#         logger.error(f"Error getting maps: {str(e)}")
+#         return jsonify({
+#             'success': False,
+#             'error': str(e)
+#         }), 500
 
 
 # Error handling

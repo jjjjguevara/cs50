@@ -8,12 +8,23 @@ class KaTeXRenderer:
 
     def render(self, latex: str, block: bool = False) -> str:
         try:
-            # Escape special characters in the latex attribute
-            escaped_latex = latex.replace('"', '&quot;').replace("'", "&#39;")
+            escaped_latex = (
+                latex.strip()
+                .replace('"', '&quot;')
+                .replace('&', '&amp;')
+                .replace('<', '&lt;')
+                .replace('>', '&gt;')
+            )
 
-            if block:
-                return f'<div class="math-block" data-latex-source="{escaped_latex}">{latex}</div>'
-            return f'<span class="math-tex" data-latex-source="{escaped_latex}">{latex}</span>'
+            element_type = 'div' if block else 'span'
+            class_name = 'math-block' if block else 'math-tex'
+
+            return (
+                f'<{element_type} class="{class_name}" '
+                f'data-latex-source="{escaped_latex}">'
+                f'{escaped_latex}'
+                f'</{element_type}>'
+            )
         except Exception as e:
             self.logger.error(f"KaTeX rendering error: {str(e)}")
             return f'<span class="latex-error">{latex}</span>'

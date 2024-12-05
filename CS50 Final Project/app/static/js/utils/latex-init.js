@@ -1,16 +1,23 @@
 // app/static/js/utils/latex-init.js
-document.addEventListener("DOMContentLoaded", function () {
-  console.log("LaTeX init starting");
+(function () {
+  const processedEquations = new Set();
 
   const renderLatex = () => {
     const equations = document.querySelectorAll("[data-latex-source]");
     console.log("Found equations:", equations.length);
 
     equations.forEach((elem, index) => {
-      if (!elem.hasAttribute("data-processed")) {
+      // Create unique identifier for each equation
+      const latex = elem.getAttribute("data-latex-source");
+      const uniqueId = `${index}-${latex}`;
+
+      if (!processedEquations.has(uniqueId)) {
         try {
-          const latex = elem.getAttribute("data-latex-source");
-          console.log(`Processing equation ${index}:`, latex);
+          console.log(`Processing equation ${index}:`, {
+            latex: latex,
+            processed: processedEquations.size,
+            uniqueId: uniqueId,
+          });
 
           katex.render(latex, elem, {
             throwOnError: false,
@@ -23,35 +30,62 @@ document.addEventListener("DOMContentLoaded", function () {
             trust: true,
           });
 
+          // Mark as processed
+          processedEquations.add(uniqueId);
           elem.setAttribute("data-processed", "true");
+          elem.setAttribute("data-equation-id", uniqueId);
+
           console.log(`Successfully rendered equation ${index}`);
         } catch (e) {
           console.error(`Error rendering equation ${index}:`, e);
-          console.error("LaTeX content:", latex);
         }
+      } else {
+        console.log(`Equation ${index} already processed`);
       }
     });
   };
 
-  // Initial render with delay
-  setTimeout(() => {
-    console.log("Running initial LaTeX render");
-    renderLatex();
-  }, 500);
-
-  // Watch for content changes
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === "childList") {
-        console.log("Content changed, re-rendering LaTeX");
-        renderLatex();
-        break;
-      }
+  // Wait for both DOM and KaTeX
+  const initialize = () => {
+    if (typeof katex === "undefined") {
+      console.log("Waiting for KaTeX...");
+      setTimeout(initialize, 100);
+      return;
     }
-  });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-});
+    console.log("KaTeX loaded, starting render");
+    renderLatex();
+
+    // Watch for content changes
+    const observer = new MutationObserver((mutations) => {
+      let needsUpdate = false;
+      for (const mutation of mutations) {
+        if (
+          mutation.type === "childList" &&
+          mutation.target.querySelector(
+            "[data-latex-source]:not([data-processed])",
+          )
+        ) {
+          needsUpdate = true;
+          break;
+        }
+      }
+      if (needsUpdate) {
+        console.log("New equations found, re-rendering");
+        renderLatex();
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  };
+
+  // Start initialization when DOM is ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initialize);
+  } else {
+    initialize();
+  }
+})();

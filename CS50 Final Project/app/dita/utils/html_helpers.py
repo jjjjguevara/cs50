@@ -13,6 +13,14 @@ class HTMLHelper:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
+
+    # Final content processor
+    def process_final_content(self, content: str) -> str:
+        """Apply final HTML processing"""
+        soup = BeautifulSoup(content, 'html.parser')
+        self.ensure_wrapper(soup)
+        return str(soup)
+
     # Content Wrapper Methods
     def ensure_wrapper(self, soup: BeautifulSoup,
                       wrapper_class: str = 'content-wrapper') -> Tag:

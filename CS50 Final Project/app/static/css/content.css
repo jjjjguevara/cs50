@@ -1,4 +1,4 @@
-/* Add font declaration at the top */
+/* Font declaration */
 @font-face {
     font-family: "Austera Text";
     src: url("../fonts/AusteraText-Regular.ttf") format("truetype");
@@ -98,16 +98,18 @@
     font-family: "Austera Text", Georgia, serif;
 }
 
+/* Article title */
+
 .map-title {
     border-bottom: 2px solid #eee;
     margin-bottom: 2rem;
-    padding-bottom: 1rem;
+    padding-bottom: 0.1rem;
 }
 
 .map-title h1 {
     color: #2d3748;
     font-weight: 300;
-    font-size: 40px;
+    font-size: 20px;
 }
 
 /* Typography */
