@@ -114,7 +114,30 @@ class MDElementContext:
     element_type: str
     classes: List[str]
     attributes: Dict[str, str]
+    topic_path: Optional[Path] = None
 
+# Feature types
+
+@dataclass
+@dataclass
+class ContentFeatures:
+    """Detected content features"""
+    has_latex: bool = False
+    has_code: bool = False
+    has_tables: bool = False
+    has_images: bool = False
+    has_xrefs: bool = False
+    has_artifacts: bool = False
+    # Future features can be added here
+
+@dataclass
+class ProcessingFeatures:
+    """Processing requirements"""
+    needs_heading_numbers: bool = True
+    needs_toc: bool = True
+    needs_artifacts: bool = False
+    needs_latex: bool = False
+    # Future processing features can be added here
 
 # Heading tracking types
 @dataclass
@@ -287,6 +310,7 @@ class DITAElementContext:
     attributes: Dict[str, str]
     topic_type: Optional[str] = None  # For tracking if inside concept/task/reference
     is_body: bool = False  # For tracking if inside conbody/taskbody/refbody
+    topic_path: Optional[Path] = None
 
 @dataclass
 class DITAElementInfo:

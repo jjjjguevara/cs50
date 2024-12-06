@@ -132,11 +132,9 @@ def serve_topic_files(filename: str) -> ResponseReturnValue:
     try:
         topics_dir = Path(current_app.root_path) / 'dita' / 'topics'
         logger.info(f"Request for topics file: {filename}")
-        logger.info(f"Looking in topics dir: {topics_dir}")
 
         # Clean the filename and construct full path
         file_path = (topics_dir / filename).resolve()
-        logger.info(f"Full file path: {file_path}")
 
         # Security check
         if not str(file_path).startswith(str(topics_dir)):
@@ -144,15 +142,21 @@ def serve_topic_files(filename: str) -> ResponseReturnValue:
             return jsonify({'error': 'Invalid path'}), 403
 
         if not file_path.exists():
-            logger.error(f"File not found: {file_path}")
-            return jsonify({'error': 'File not found'}), 404
+            # Try finding the file without extension
+            if '.' not in filename:
+                for ext in ['.svg', '.png', '.jpg', '.jpeg']:
+                    test_path = (topics_dir / f"{filename}{ext}").resolve()
+                    if test_path.exists():
+                        file_path = test_path
+                        break
+
+            if not file_path.exists():
+                logger.error(f"File not found: {file_path}")
+                return jsonify({'error': 'File not found'}), 404
 
         logger.info(f"Serving file: {file_path}")
-        # Get directory and filename for send_from_directory
-        directory = str(file_path.parent)
-        basename = file_path.name
+        return send_from_directory(str(file_path.parent), file_path.name)
 
-        return send_from_directory(directory, basename)
     except Exception as e:
         logger.error(f"Error serving topic file {filename}: {str(e)}")
         return jsonify({'error': str(e)}), 500

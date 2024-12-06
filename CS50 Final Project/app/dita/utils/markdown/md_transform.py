@@ -17,14 +17,16 @@ from ..types import (
 )
 from .md_elements import MarkdownContentProcessor
 from ..html_helpers import HTMLHelper
+from ..id_handler import DITAIDHandler
 
 class MarkdownTransformer:
     """Transforms Markdown content to HTML using element definitions."""
 
     def __init__(self, dita_root: Path):
         self.logger = logging.getLogger(__name__)
+        self.id_handler = DITAIDHandler()
         self.dita_root = dita_root
-        self.html = HTMLHelper()
+        self.html = HTMLHelper(dita_root)
         self.element_processor = MarkdownContentProcessor()
 
     def transform_topic(self, topic_path: Path) -> str:
@@ -186,6 +188,10 @@ class MarkdownTransformer:
         src = element_info.metadata.get('src', '')
         alt = element_info.metadata.get('alt', '')
 
+        # Resolve image path if topic path is available
+        if src and element_info.context.topic_path is not None:
+            src = self.html.resolve_image_path(src, element_info.context.topic_path)
+
         return (
             f'<img src="{src}" alt="{alt}" '
             f'class="{" ".join(element_info.attributes.classes)}">'
@@ -210,3 +216,48 @@ class MarkdownTransformer:
     def _transform_default(self, element_info: MDElementInfo) -> str:
         """Default transformation for unknown elements."""
         return element_info.content
+
+
+    # Cleanup
+
+    def cleanup(self) -> None:
+        """Clean up transformer resources and state."""
+        try:
+            self.logger.debug("Starting Markdown transformer cleanup")
+
+            # Reset internal state
+            self.reset()
+
+            # Clean up element processor
+            if hasattr(self.element_processor, 'cleanup'):
+                self.element_processor.cleanup()
+
+            # Clean up HTML helper
+            if hasattr(self.html, 'cleanup'):
+                self.html.cleanup()
+
+            # Reset ID handler
+            self.id_handler = DITAIDHandler()
+
+            self.logger.debug("Markdown transformer cleanup completed")
+
+        except Exception as e:
+            self.logger.error(f"Markdown transformer cleanup failed: {str(e)}")
+            raise
+
+    def reset(self) -> None:
+        """Reset transformer to initial state."""
+        try:
+            self.logger.debug("Resetting Markdown transformer")
+
+            # Reset element processor
+            self.element_processor = MarkdownContentProcessor()
+
+            # Reset HTML helper
+            self.html = HTMLHelper(self.dita_root)
+
+            self.logger.debug("Markdown transformer reset completed")
+
+        except Exception as e:
+            self.logger.error(f"Markdown transformer reset failed: {str(e)}")
+            raise

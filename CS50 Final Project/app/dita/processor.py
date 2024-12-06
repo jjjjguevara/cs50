@@ -43,6 +43,10 @@ from .utils.types import (
     ProcessingOptions,
     ProcessingError,
 
+    # Feature types
+    ContentFeatures,
+    ProcessingFeatures,
+
     # Artifact types
     ArtifactReference,
     ProcessedArtifact,
@@ -84,7 +88,7 @@ from .utils.logger import DITALogger
 class DITAProcessor:
     """
     Main orchestrator for DITA content processing.
-    Handles parsing, element tracking, and conditional processing pipelines.
+    Talks to parsing, element tracking, and conditional processing pipelines.
     """
     def __init__(self) -> None:
         try:
@@ -97,6 +101,7 @@ class DITAProcessor:
             self.processed_maps: Dict[str, MapContext] = {}
             self.processed_topics: Dict[str, TopicContext] = {}
             self.processing_options: ProcessingOptions = ProcessingOptions()
+            self._cache: Dict[str, Any] = {}
         except Exception as e:
             self.logger.logger.info("DITA Processor initialized successfully")
             raise
@@ -312,6 +317,54 @@ class DITAProcessor:
             self.logger.logger.error(f"Failed to initialize context: {str(e)}")
             raise ValueError(f"Context initialization failed: {str(e)}")
 
+
+    def _update_transformation_context(self) -> None:
+        """Update context for transformation phase."""
+        try:
+            if not self.current_context:
+                raise ProcessingError(
+                    error_type="context",
+                    message="No context available for transformation update",
+                    context="transformation_phase"
+                )
+
+            # Update topic states to processing
+            for topic_id in self.current_context.map_context.topic_order:
+                topic_context = self.current_context.topics.get(topic_id)
+                if topic_context and topic_context.state == ProcessingState.PENDING:
+                    topic_context.state = ProcessingState.PROCESSING
+
+            self.logger.logger.debug("Updated transformation context")
+
+        except Exception as e:
+            self.logger.logger.error(f"Transformation context update failed: {str(e)}")
+            raise
+
+    def _update_assembly_context(self) -> None:
+        """Update context for assembly phase."""
+        try:
+            if not self.current_context:
+                raise ProcessingError(
+                    error_type="context",
+                    message="No context available for assembly update",
+                    context="assembly_phase"
+                )
+
+            # Validate all topics are processed
+            for topic_id in self.current_context.map_context.topic_order:
+                topic_context = self.current_context.topics.get(topic_id)
+                if topic_context and topic_context.state != ProcessingState.COMPLETED:
+                    raise ProcessingError(
+                        error_type="assembly",
+                        message=f"Topic {topic_id} not fully processed",
+                        context="assembly_phase"
+                    )
+
+            self.logger.logger.debug("Updated assembly context")
+
+        except Exception as e:
+            self.logger.logger.error(f"Assembly context update failed: {str(e)}")
+            raise
 
     def _update_context_state(self, topic_id: str, state: ProcessingState) -> None:
         """
@@ -642,32 +695,6 @@ class DITAProcessor:
                 return self._create_error_html(str(e), parsed_map.source_path)
 
 
-    def _inject_additional_content(self, content_list: List[ProcessedContent]) -> List[ProcessedContent]:
-        """
-        Inject additional content.
-
-        @deprecated Use run_enrichment_phase instead.
-        """
-        try:
-            enriched_content = []
-
-            for content in content_list:
-                # Process artifacts if enabled
-                # if content.metadata.get('process_artifacts', True):
-                #     if hasattr(self, 'artifact_renderer'):
-                #         content.html = self.artifact_renderer.render_artifact(
-                #             content.html,
-                #             content.element_id
-                #         )
-
-                enriched_content.append(content)
-
-            return enriched_content
-
-        except Exception as e:
-            self.logger.logger.error(f"Error injecting additional content: {str(e)}")
-            raise
-
     def _assemble_final_html(self, content_list: List[ProcessedContent],
                             discovered_map: DiscoveredMap) -> str:
         """
@@ -877,7 +904,7 @@ class DITAProcessor:
                 if topic.type == ElementType.DITA:
                     return self.dita_transformer.transform_topic(topic.source_path)
                 elif topic.type == ElementType.MARKDOWN:
-                    return self.md_transformer.process_topic(topic.source_path)  # Changed method name
+                    return self.md_transformer.transform_topic(topic.source_path)
                 else:
                     raise ValueError(f"Unsupported topic type: {topic.type}")
 
@@ -975,12 +1002,12 @@ class DITAProcessor:
         """
         tracked = []
         try:
-            # Track map title if present
+            # Tracks map title if present
             if discovered_map.title:
                 tracked.append(TrackedElement(
                     id=discovered_map.id,
-                    type=ElementType.MAP_TITLE,  # Need to add this to ElementType enum
-                    path=discovered_map.path,  # Map's own path for title
+                    type=ElementType.MAP_TITLE,
+                    path=discovered_map.path,
                     content=discovered_map.title,
                     metadata=discovered_map.metadata,
                     state=ProcessingState.PENDING
@@ -992,7 +1019,7 @@ class DITAProcessor:
                     id=topic.id,
                     type=topic.type,
                     path=topic.path,  # Topic's actual path
-                    content=str(topic.path),  # Store path as string
+                    content=str(topic.path),  # Stores path as string
                     metadata=topic.metadata,
                     state=ProcessingState.PENDING
                 ))
@@ -1017,36 +1044,19 @@ class DITAProcessor:
             processed = []
 
             for element in elements:
-                # Update element state in context
-                if element.type in [ElementType.DITA, ElementType.MARKDOWN]:
-                    self._update_context_state(element.id, ProcessingState.PROCESSING)
-
                 try:
-                    # Use new routing system
+                    # Route content through new routing system
                     processed_content = self._route_content(element)
                     processed.append(processed_content)
 
-                    # Update successful processing state
-                    if element.type in [ElementType.DITA, ElementType.MARKDOWN]:
-                        self._update_context_state(element.id, ProcessingState.COMPLETED)
-
-                except ProcessingError:  # Removed unused 'as pe'
-                    # Update error state in context
-                    if element.type in [ElementType.DITA, ElementType.MARKDOWN]:
-                        self._update_context_state(element.id, ProcessingState.ERROR)
+                except ProcessingError:
                     raise
 
             return processed
 
-        except ProcessingError:
-            raise
         except Exception as e:
             self.logger.logger.error(f"Element processing failed: {str(e)}")
-            raise ProcessingError(
-                error_type="processing",
-                message=f"Element processing failed: {str(e)}",
-                context="element_processing"
-            )
+            raise
 
     def _get_element_topic_id(self, element: TrackedElement) -> Optional[str]:
         """Get topic ID for a TrackedElement."""
@@ -1142,155 +1152,10 @@ class DITAProcessor:
             self.logger.logger.error(f"Error validating element state: {str(e)}")
             return False
 
-    def _assemble_html(self, processed_contents: List[ProcessedContent]) -> str:
-        """
-        Assemble final HTML with proper heading structure.
 
-        Args:
-            processed_contents: List of processed content to assemble
-
-        Returns:
-            Assembled HTML content
-        """
-        try:
-            if not self.current_context:
-                raise ValueError("No processing context available")
-
-            html_parts = ['<div class="dita-content">']
-
-            # Process content in topic order
-            for topic_id in self.current_context.map_context.topic_order:
-                topic_content = next(
-                    (content for content in processed_contents
-                     if content.element_id == topic_id),
-                    None
-                )
-
-                if topic_content:
-                    # Create topic container
-                    html_parts.append(
-                        f'<div class="topic-section" '
-                        f'data-topic-id="{topic_id}">'
-                    )
-
-                    # Add processed content
-                    html_parts.append(topic_content.html)
-                    html_parts.append('</div>')
-                else:
-                    self.logger.logger.warning(f"Missing content for topic: {topic_id}")
-
-            html_parts.append('</div>')
-
-            # Validate final heading state
-            if not self._validate_heading_state():
-                self.logger.logger.warning("Final heading validation failed")
-
-            # Process final HTML
-            final_html = self.html.process_final_content('\n'.join(html_parts))
-
-            return final_html
-
-        except Exception as e:
-            self.logger.logger.error(f"Error assembling HTML: {str(e)}")
-            raise ProcessingError(
-                error_type="assembly",
-                message=f"HTML assembly failed: {str(e)}",
-                context="html_assembly"
-            )
-
-
-
-
-    def _assemble_html_with_context(self, processed_contents: List[ProcessedContent]) -> str:
-        """Assemble HTML with context-aware features"""
-        try:
-            if not self.current_context:
-                raise ValueError("No processing context available")
-
-            map_context = self.current_context.map_context
-
-            html_parts = [
-                f'<div class="dita-content" '
-                f'data-map-id="{map_context.map_id}">'
-            ]
-
-            # Add map-level features
-            if map_context.features['show_toc']:
-                html_parts.append(self._generate_toc())
-
-            # Process contents in topic order
-            for topic_id in map_context.topic_order:
-                topic_contents = [
-                    content for content in processed_contents
-                    if self._get_content_topic_id(content) == topic_id  # Use new method
-                ]
-
-                topic_context = self.current_context.topics[topic_id]
-                if topic_context.features['show_title']:
-                    html_parts.append(self._generate_topic_title(topic_context))
-
-                for content in topic_contents:
-                    html_parts.append(content.html)
-
-            html_parts.append('</div>')
-
-            # Apply final HTML processing
-            final_html = self.html.process_final_content('\n'.join(html_parts))
-
-            return final_html
-
-        except Exception as e:
-            self.logger.logger.error(f"Error assembling HTML: {str(e)}")
-            return self._create_error_html(str(e), Path("HTML Assembly"))
-
-
-    ####################################
-    # Conditionally processed elements #
-    ####################################
-
-    def _process_elements(self, elements: List[TrackedElement]) -> List[ProcessedContent]:
-        """Process elements using content routing system."""
-        try:
-            if not self._validate_context():
-                raise ProcessingError(
-                    error_type="processing",
-                    message="Invalid processing context",
-                    context="element_processing"
-                )
-
-            processed = []
-
-            for element in elements:
-                try:
-                    # Route content through new routing system
-                    processed_content = self._route_content(element)
-                    processed.append(processed_content)
-
-                except ProcessingError:
-                    raise
-
-            return processed
-
-        except Exception as e:
-            self.logger.logger.error(f"Element processing failed: {str(e)}")
-            raise
-
-    def _generate_toc(self) -> str:
-        """Generate table of contents using current context."""
-        if not self.current_context:
-            return ''
-
-        toc_parts = ['<nav class="dita-toc">']
-        for topic_id in self.current_context.map_context.topic_order:
-            topic = self.current_context.topics.get(topic_id)
-            if topic and topic.features.get('show_title', True):
-                toc_parts.append(
-                    f'<div class="toc-entry">'
-                    f'<a href="#{topic_id}">{topic.metadata.get("title", "")}</a>'
-                    f'</div>'
-                )
-        toc_parts.append('</nav>')
-        return '\n'.join(toc_parts)
+    #################################################
+    # Conditionally processed elements and features #
+    #################################################
 
     def _generate_topic_title(self, topic_context: TopicContext) -> str:
         """Generate topic title HTML"""
@@ -1334,6 +1199,109 @@ class DITAProcessor:
         except Exception as e:
             self.logger.logger.error(f"Error tracking elements: {str(e)}")
             return []
+
+    def _detect_features(self, content: str) -> ContentFeatures:
+        """
+        Detect features in content.
+
+        Args:
+            content: Content to analyze
+
+        Returns:
+            Detected features
+        """
+        try:
+            features = ContentFeatures()
+
+            # Detect LaTeX
+            features.has_latex = '$$' in content or '$' in content
+
+            # Detect code blocks
+            features.has_code = '<pre>' in content or '<code>' in content
+
+            # Detect tables
+            features.has_tables = '<table' in content
+
+            # Detect images
+            features.has_images = '<img' in content
+
+            # Detect cross-references
+            features.has_xrefs = 'href=' in content
+
+            # Detect artifacts
+            # TODO: Implement artifact detection once component is ready
+            features.has_artifacts = False  # Placeholder
+
+            self.logger.logger.debug(f"Detected features: {features}")
+            return features
+
+        except Exception as e:
+            self.logger.logger.error(f"Feature detection failed: {str(e)}")
+            return ContentFeatures()
+
+    def _generate_toc(self) -> str:
+        """
+        Generate table of contents.
+        TODO: Implement proper TOC generation
+        """
+        try:
+            if not self.current_context:
+                return ''
+
+            # Placeholder for TOC
+            toc_parts = ['<nav class="dita-toc">']
+            toc_parts.append('<div class="toc-placeholder">Table of Contents</div>')
+            toc_parts.append('</nav>')
+
+            return '\n'.join(toc_parts)
+
+        except Exception as e:
+            self.logger.logger.error(f"TOC generation failed: {str(e)}")
+            return ''
+
+    def _process_artifacts(self, content: str) -> str:
+        """
+        Process artifacts in content.
+        TODO: Implement proper artifact processing
+        """
+        try:
+            # Placeholder for artifact processing
+            return content
+
+        except Exception as e:
+            self.logger.logger.error(f"Artifact processing failed: {str(e)}")
+            return content
+
+    def _update_processing_options(self, features: ContentFeatures) -> None:
+        """
+        Update processing options based on detected features.
+
+        Args:
+            features: Detected content features
+        """
+        try:
+            if not self.current_context:
+                return
+
+            processing = ProcessingFeatures()
+
+            # Update based on content features
+            processing.needs_latex = features.has_latex
+            processing.needs_artifacts = features.has_artifacts
+
+            # TODO: Add more feature-based processing options
+
+            # Update context features
+            self.current_context.map_context.features.update({
+                'process_latex': processing.needs_latex,
+                'process_artifacts': processing.needs_artifacts,
+                'show_toc': processing.needs_toc,
+                'number_headings': processing.needs_heading_numbers
+            })
+
+        except Exception as e:
+            self.logger.logger.error(f"Processing options update failed: {str(e)}")
+
 
     #######################
     # Pipeline Management #
@@ -1392,7 +1360,6 @@ class DITAProcessor:
             raise
 
     def execute_pipeline(self, discovered_map: DiscoveredMap) -> str:
-        """Execute full processing pipeline."""
         try:
             self.logger.logger.info("Starting pipeline execution")
 
@@ -1419,7 +1386,13 @@ class DITAProcessor:
                     context=discovered_map.path
                 )
 
-            # Final assembly
+            # Detect features in processed content
+            features = self._detect_features('\n'.join(c.html for c in processed_content))
+
+            # Update processing options based on features
+            self._update_processing_options(features)
+
+            # Final assembly with features
             final_html = self.run_assembly_phase(processed_content)
 
             self.logger.logger.info("Pipeline execution completed successfully")
@@ -1519,10 +1492,16 @@ class DITAProcessor:
            raise
 
     def run_assembly_phase(self, content: List[ProcessedContent]) -> str:
-        """Assemble final HTML with context-aware features."""
         try:
             self.logger.logger.info("Starting assembly phase")
             self.transition_phase(ProcessingPhase.ASSEMBLY)
+
+            if not self.current_context:
+                raise ProcessingError(
+                    error_type="assembly",
+                    message="No context available",
+                    context="assembly_phase"
+                )
 
             # Initialize assembly
             self._initialize_assembly()
@@ -1530,12 +1509,41 @@ class DITAProcessor:
             # Update context
             self._update_context(ProcessingPhase.ASSEMBLY)
 
-            # Assemble content
-            return self._assemble_content(content)
+            html_parts = ['<div class="dita-content">']
+
+            # Add ToC if enabled
+            if self.current_context.map_context.features.get('show_toc', True):
+                html_parts.append(self._generate_toc())
+
+            # Process content in order with features
+            for topic_id in self.current_context.map_context.topic_order:
+                topic_content = next(
+                    (c for c in content if c.element_id == topic_id),
+                    None
+                )
+
+                if topic_content:
+                    # Apply features to topic content
+                    processed_content = topic_content.html
+
+                    # Process artifacts if enabled
+                    if self.current_context.map_context.features.get('process_artifacts', False):
+                        processed_content = self._process_artifacts(processed_content)
+
+                    html_parts.append(
+                        f'<div class="topic-section" data-topic-id="{topic_id}">'
+                        f'{processed_content}'
+                        f'</div>'
+                    )
+
+            html_parts.append('</div>')
+
+            return self.html.process_final_content('\n'.join(html_parts))
 
         except Exception as e:
             self.logger.logger.error(f"Assembly phase failed: {str(e)}")
             raise
+
 
     def _initialize_assembly(self) -> None:
         """Initialize assembly phase state and resources."""
@@ -1756,9 +1764,113 @@ class DITAProcessor:
 
 
 
-    #####################
-    # Routes Management #
-    #####################
+    #######################
+    # Final HTML assembly #
+    #######################
+
+    def _assemble_html(self, processed_contents: List[ProcessedContent]) -> str:
+        """
+        Assemble final HTML with proper heading structure.
+
+        Args:
+            processed_contents: List of processed content to assemble
+
+        Returns:
+            Assembled HTML content
+        """
+        try:
+            if not self.current_context:
+                raise ValueError("No processing context available")
+
+            html_parts = ['<div class="dita-content">']
+
+            # Process content in topic order
+            for topic_id in self.current_context.map_context.topic_order:
+                topic_content = next(
+                    (content for content in processed_contents
+                    if content.element_id == topic_id),
+                    None
+                )
+
+                if topic_content:
+                    # Create topic container
+                    html_parts.append(
+                        f'<div class="topic-section" '
+                        f'data-topic-id="{topic_id}">'
+                    )
+
+                    # Add processed content
+                    html_parts.append(topic_content.html)
+                    html_parts.append('</div>')
+                else:
+                    self.logger.logger.warning(f"Missing content for topic: {topic_id}")
+
+            html_parts.append('</div>')
+
+            # Validate final heading state
+            if not self._validate_heading_state():
+                self.logger.logger.warning("Final heading validation failed")
+
+            # Process final HTML
+            final_html = self.html.process_final_content('\n'.join(html_parts))
+
+            return final_html
+
+        except Exception as e:
+            self.logger.logger.error(f"Error assembling HTML: {str(e)}")
+            raise ProcessingError(
+                error_type="assembly",
+                message=f"HTML assembly failed: {str(e)}",
+                context="html_assembly"
+            )
+
+
+    def _assemble_html_with_context(self, processed_contents: List[ProcessedContent]) -> str:
+        """Assemble HTML with context-aware features"""
+        try:
+            if not self.current_context:
+                raise ValueError("No processing context available")
+
+            map_context = self.current_context.map_context
+
+            html_parts = [
+                f'<div class="dita-content" '
+                f'data-map-id="{map_context.map_id}">'
+            ]
+
+            # Add map-level features
+            if map_context.features['show_toc']:
+                html_parts.append(self._generate_toc())
+
+            # Process contents in topic order
+            for topic_id in map_context.topic_order:
+                topic_contents = [
+                    content for content in processed_contents
+                    if self._get_content_topic_id(content) == topic_id  # Use new method
+                ]
+
+                topic_context = self.current_context.topics[topic_id]
+                if topic_context.features['show_title']:
+                    html_parts.append(self._generate_topic_title(topic_context))
+
+                for content in topic_contents:
+                    html_parts.append(content.html)
+
+            html_parts.append('</div>')
+
+            # Apply final HTML processing
+            final_html = self.html.process_final_content('\n'.join(html_parts))
+
+            return final_html
+
+        except Exception as e:
+            self.logger.logger.error(f"Error assembling HTML: {str(e)}")
+            return self._create_error_html(str(e), Path("HTML Assembly"))
+
+
+    #################################
+    # Transformer Routes Management #
+    #################################
 
 
     def _route_content(self, element: TrackedElement) -> ProcessedContent:
@@ -1946,7 +2058,7 @@ class DITAProcessor:
 
     def _create_error_html(self, error: str, context: Union[str, Path]) -> str:
         """
-        @deprecated Use generate_error_response instead.
+        @deprecated Must use generate_error_response instead.
         """
         self.logger.logger.warning("Using deprecated _create_error_html method")
         return self.generate_error_response(
@@ -2005,3 +2117,99 @@ class DITAProcessor:
                 <p>Failed to generate error response</p>
             </div>
             """
+
+
+    ################################
+    # Cleanup and Waste Management #
+    ################################
+
+    def cleanup(self) -> None:
+        """Perform comprehensive cleanup of processor resources and state."""
+        try:
+            self.logger.logger.info("Starting processor cleanup")
+
+            # Clean up in order
+            self._cleanup_state()
+            self._cleanup_resources()
+            self._cleanup_handlers()
+            self._reset_transformers()
+
+            self.logger.logger.info("Processor cleanup completed")
+
+        except Exception as e:
+            self.logger.logger.error(f"Cleanup failed: {str(e)}")
+            raise
+
+    def _cleanup_state(self) -> None:
+        """Clean up processor state."""
+        try:
+            # Reset processing context
+            self.current_context = None
+
+            # Clear processed content
+            self.processed_maps.clear()
+            self.processed_topics.clear()
+
+            # Reset phase state
+            if hasattr(self, 'current_phase'):
+                delattr(self, 'current_phase')
+
+            self.logger.logger.debug("State cleanup completed")
+
+        except Exception as e:
+            self.logger.logger.error(f"State cleanup failed: {str(e)}")
+            raise
+
+    def _cleanup_resources(self) -> None:
+        """Clean up processor resources."""
+        try:
+            # Clear any cached data
+            if hasattr(self, '_cache'):
+                self._cache.clear()
+
+            # Reset any file handles or resources
+            # Currently no direct file handles, but placeholder for future use
+
+            self.logger.logger.debug("Resource cleanup completed")
+
+        except Exception as e:
+            self.logger.logger.error(f"Resource cleanup failed: {str(e)}")
+            raise
+
+    def _cleanup_handlers(self) -> None:
+        """Clean up and reset all handlers."""
+        try:
+            # Reset heading handler
+            self.heading_handler.reset()
+
+            # Reset ID handler
+            self.id_handler = DITAIDHandler()
+
+            # Reset HTML helper
+            self.html = HTMLHelper(self.dita_root)
+
+            # Reset metadata handler
+            self.metadata_handler = MetadataHandler()
+
+            self.logger.logger.debug("Handler cleanup completed")
+
+        except Exception as e:
+            self.logger.logger.error(f"Handler cleanup failed: {str(e)}")
+            raise
+
+    def _reset_transformers(self) -> None:
+        """Reset transformers to initial state."""
+        try:
+            # Reset DITA transformer
+            if hasattr(self, 'dita_transformer'):
+                self.dita_transformer = DITATransformer(self.dita_root)
+
+            # Reset Markdown transformer
+            if hasattr(self, 'md_transformer'):
+                self.md_transformer = MarkdownTransformer(self.dita_root)
+
+            self.logger.logger.debug("Transformer reset completed")
+
+        except Exception as e:
+            self.logger.logger.error(f"Transformer reset failed: {str(e)}")
+            raise

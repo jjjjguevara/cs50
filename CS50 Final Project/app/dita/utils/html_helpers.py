@@ -3,14 +3,23 @@
 import html
 import re
 from typing import Dict, List, Optional, Any
+from pathlib import Path
 from bs4 import BeautifulSoup, Tag
 import logging
 
 class HTMLHelper:
     """Utilities for HTML manipulation and validation."""
 
-    def __init__(self):
+    def __init__(self, dita_root: Optional[Path] = None) -> None:
+        """
+        Initialize HTML helper.
+
+        Args:
+            dita_root: Optional path to DITA root directory
+        """
         self.logger = logging.getLogger(__name__)
+        self.dita_root: Optional[Path] = dita_root
+        self._cache: Dict[str, Any] = {}
 
     def escape_html(self, content: str) -> str:
         """
@@ -195,3 +204,65 @@ class HTMLHelper:
         except Exception as e:
             self.logger.error(f"Error wrapping content: {str(e)}")
             return content
+
+    def resolve_image_path(self, src: str, topic_path: Path) -> str:
+        """
+        Resolve image path relative to topic file.
+
+        Args:
+            src: Original image source path
+            topic_path: Path to topic file
+
+        Returns:
+            Resolved image URL
+        """
+        try:
+            if not self.dita_root:
+                self.logger.error("DITA root not set")
+                return src
+
+            # Clean the source path
+            src = src.strip('/')
+
+            # Get topic directory
+            topic_dir = topic_path.parent
+
+            # Try potential image paths
+            extensions = ['.svg', '.png', '.jpg', '.jpeg']
+
+            # If extension provided, only try that path
+            if any(src.endswith(ext) for ext in extensions):
+                img_path = topic_dir / src
+                if img_path.exists():
+                    return f'/static/topics/{img_path.relative_to(self.dita_root)}'
+
+            # Try without extension
+            base_path = src.rsplit('.', 1)[0] if '.' in src else src
+            for ext in extensions:
+                img_path = topic_dir / f"{base_path}{ext}"
+                if img_path.exists():
+                    return f'/static/topics/{img_path.relative_to(self.dita_root)}'
+
+            self.logger.error(f"Image not found: {src} in {topic_path}")
+            return src  # Return original src if not found
+
+        except Exception as e:
+            self.logger.error(f"Error resolving image path: {str(e)}")
+            return src
+
+    # Cleanup
+
+    def cleanup(self) -> None:
+        """Clean up helper resources and state."""
+        try:
+            self.logger.debug("Starting HTML helper cleanup")
+
+            # Reset state
+            self.dita_root = None
+            self._cache.clear()
+
+            self.logger.debug("HTML helper cleanup completed")
+
+        except Exception as e:
+            self.logger.error(f"HTML helper cleanup failed: {str(e)}")
+            raise

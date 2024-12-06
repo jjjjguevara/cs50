@@ -15,6 +15,7 @@ from .types import (
 )
 from .dita_elements import DITAContentProcessor
 from .html_helpers import HTMLHelper
+from .id_handler import DITAIDHandler
 
 class DITATransformer:
     """Transforms DITA content to HTML using element definitions."""
@@ -22,7 +23,9 @@ class DITATransformer:
     def __init__(self, dita_root: Path):
         self.logger = logging.getLogger(__name__)
         self.dita_root = dita_root
+        self.id_handler = DITAIDHandler()
         self.html = HTMLHelper()
+        self.html = HTMLHelper(dita_root)
         self.element_processor = DITAContentProcessor()
 
     def transform_topic(self, topic_path: Path) -> str:
@@ -295,9 +298,14 @@ class DITATransformer:
         )
 
     def _transform_image(self, element_info: DITAElementInfo) -> str:
-        """Transform image."""
+        """Transform image element."""
         href = element_info.metadata.get('href', '')
         alt = element_info.metadata.get('alt', '')
+
+        # Resolve image path if topic path is available
+        if href and element_info.context.topic_path is not None:
+            href = self.html.resolve_image_path(href, element_info.context.topic_path)
+
         return (
             f'<img src="{href}" alt="{alt}" '
             f'class="dita-image {" ".join(element_info.attributes.classes)}">'
@@ -359,3 +367,48 @@ class DITATransformer:
     def _transform_default(self, element_info: DITAElementInfo) -> str:
         """Default transformation for unknown elements."""
         return element_info.content
+
+
+    # Cleanup
+
+    def cleanup(self) -> None:
+        """Clean up transformer resources and state."""
+        try:
+            self.logger.debug("Starting DITA transformer cleanup")
+
+            # Reset internal state
+            self.reset()
+
+            # Clean up element processor
+            if hasattr(self.element_processor, 'cleanup'):
+                self.element_processor.cleanup()
+
+            # Clean up HTML helper
+            if hasattr(self.html, 'cleanup'):
+                self.html.cleanup()
+
+            # Reset ID handler
+            self.id_handler = DITAIDHandler()
+
+            self.logger.debug("DITA transformer cleanup completed")
+
+        except Exception as e:
+            self.logger.error(f"DITA transformer cleanup failed: {str(e)}")
+            raise
+
+    def reset(self) -> None:
+        """Reset transformer to initial state."""
+        try:
+            self.logger.debug("Resetting DITA transformer")
+
+            # Reset element processor
+            self.element_processor = DITAContentProcessor()
+
+            # Reset HTML helper
+            self.html = HTMLHelper(self.dita_root)
+
+            self.logger.debug("DITA transformer reset completed")
+
+        except Exception as e:
+            self.logger.error(f"DITA transformer reset failed: {str(e)}")
+            raise

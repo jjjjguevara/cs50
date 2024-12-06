@@ -19,6 +19,7 @@ class DITAContentProcessor:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.id_handler = DITAIDHandler()
+        self._processed_elements: Dict[str, Any] = {}
 
     def process_element(self,
                        elem: etree._Element,
@@ -220,3 +221,22 @@ class DITAContentProcessor:
         except Exception as e:
             self.logger.error(f"Error validating element: {str(e)}")
             return False
+
+    # Cleanup
+
+    def cleanup(self) -> None:
+            """Clean up processor resources and state."""
+            try:
+                self.logger.debug("Starting DITA element processor cleanup")
+
+                # Reset ID handler
+                self.id_handler = DITAIDHandler()
+
+                # Clear processed elements cache
+                self._processed_elements.clear()
+
+                self.logger.debug("DITA element processor cleanup completed")
+
+            except Exception as e:
+                self.logger.error(f"DITA element processor cleanup failed: {str(e)}")
+                raise
