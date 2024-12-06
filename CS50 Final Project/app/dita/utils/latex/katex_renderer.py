@@ -1,30 +1,55 @@
-import katex
-from typing import Optional
+# app/dita/utils/latex/katex_renderer.py
 import logging
+from typing import Optional
+from ..types import LaTeXEquation
 
 class KaTeXRenderer:
+    """Renders LaTeX equations to HTML using KaTeX."""
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    def render(self, latex: str, block: bool = False) -> str:
+    def render_equation(self, equation: LaTeXEquation) -> str:
+        """
+        Render LaTeX equation to HTML.
+
+        Args:
+            equation: Equation to render
+
+        Returns:
+            HTML string with rendered equation
+
+        Raises:
+            ValueError: If rendering fails
+        """
         try:
-            escaped_latex = (
-                latex.strip()
-                .replace('"', '&quot;')
-                .replace('&', '&amp;')
-                .replace('<', '&lt;')
-                .replace('>', '&gt;')
+            # Prepare equation class based on type
+            equation_class = "display-equation" if equation.is_block else "inline-equation"
+
+            # Create KaTeX compatible HTML
+            html = (
+                f'<div class="katex-equation {equation_class}" '
+                f'data-equation-id="{equation.id}">'
+                f'{self._escape_html(equation.content)}'
+                f'</div>' if equation.is_block else
+                f'<span class="katex-equation {equation_class}" '
+                f'data-equation-id="{equation.id}">'
+                f'{self._escape_html(equation.content)}'
+                f'</span>'
             )
 
-            element_type = 'div' if block else 'span'
-            class_name = 'math-block' if block else 'math-tex'
+            return html
 
-            return (
-                f'<{element_type} class="{class_name}" '
-                f'data-latex-source="{escaped_latex}">'
-                f'{escaped_latex}'
-                f'</{element_type}>'
-            )
         except Exception as e:
-            self.logger.error(f"KaTeX rendering error: {str(e)}")
-            return f'<span class="latex-error">{latex}</span>'
+            self.logger.error(f"Failed to render equation {equation.id}: {str(e)}")
+            raise ValueError(f"Equation rendering failed: {str(e)}")
+
+    def _escape_html(self, content: str) -> str:
+        """Escape HTML special characters."""
+        return (
+            content.replace('&', '&amp;')
+                  .replace('<', '&lt;')
+                  .replace('>', '&gt;')
+                  .replace('"', '&quot;')
+                  .replace("'", '&#39;')
+        )

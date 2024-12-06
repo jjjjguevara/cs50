@@ -29,7 +29,6 @@ from bs4.element import NavigableString
 from .dita.utils.markdown.md_transform import MarkdownTransformer
 from .dita.processor import DITAProcessor
 from .dita.artifacts.parser import ArtifactParser
-from app.dita.utils.latex.latex_processor import DitaLaTeXProcessor
 
 
 # Type aliases
@@ -99,20 +98,22 @@ def view_entry(topic_id: str):
 
         # Transform content
         content = dita_processor.transform(map_path)
-        logger.debug(f"Transformed content received from processor, length: {len(content)}")
-        logger.debug(f"Content sample from processor:\n{content[:500]}")
+
+        # Log transformation for debugging
+        logger.debug(f"Content generated: {content[:200]}...")  # Log first 200 chars
+
+        # Log any LaTeX equation matches found for debugging
+        if '$$' in content:
+            logger.debug("Found block equations in content")
+        if '$' in content and '$$' not in content:
+            logger.debug("Found inline equations in content")
 
         debug_info = {
             'topic_id': topic_id,
             'map_path': str(map_path),
             'content_length': len(content) if content else 0,
-            'has_content': bool(content and content.strip())
+            'has_latex': '$$' in content or '$' in content
         }
-
-        # Log template variables
-        logger.debug("Rendering template with variables:")
-        logger.debug(f"- Content length: {len(content) if content else 0}")
-        logger.debug(f"- Debug info: {debug_info}")
 
         return render_template(
             'academic.html',
@@ -123,7 +124,6 @@ def view_entry(topic_id: str):
     except Exception as e:
         logger.error(f"Error viewing entry: {str(e)}", exc_info=True)
         return render_template('academic.html', error=str(e)), 500
-
 
 
 @bp.route('/static/topics/<path:filename>')

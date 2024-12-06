@@ -1,409 +1,361 @@
 # app/dita/utils/dita_transform.py
-from pathlib import Path
-from typing import Dict, List, Any, Optional
+
 import logging
-import re
-import html
-from bs4 import BeautifulSoup, Tag
+from pathlib import Path
+from typing import Optional, Dict, Any, List
 from lxml import etree
 
-# Local imports
-from .html_helpers import HTMLHelper
-from .heading import HeadingHandler
-from .metadata import MetadataHandler
-from .id_handler import DITAIDHandler
-from .dita_parser import DITAParser
+from .types import (
+    DITAElementType,
+    DITAElementInfo,
+    DITAElementContext,
+    ElementAttributes,
+    ProcessingError,
+    ProcessingState
+)
 from .dita_elements import DITAContentProcessor
-from ..artifacts.parser import ArtifactParser
-from ..artifacts.renderer import ArtifactRenderer
+from .html_helpers import HTMLHelper
 
 class DITATransformer:
-    """Handles DITA content transformation to HTML."""
+    """Transforms DITA content to HTML using element definitions."""
 
     def __init__(self, dita_root: Path):
         self.logger = logging.getLogger(__name__)
-        self.app_root = Path(__file__).parent.parent
         self.dita_root = dita_root
-        self.maps_dir = dita_root / 'maps'
-        self.topics_dir = dita_root / 'topics'
-        self.artifacts_dir = dita_root / 'artifacts'
-        self.dita_root = self.app_root / 'dita'
-
-
-        # Initialize utilities
         self.html = HTMLHelper()
-        self.heading_handler = HeadingHandler()
-        self.metadata_handler = MetadataHandler()
-        self.id_handler = DITAIDHandler()
-        self.dita_parser = DITAParser()
-        self.dita_processor = DITAContentProcessor()
-
-        # Initialize artifact handlers
-        self.artifact_parser = ArtifactParser(self.dita_root)
-        self.artifact_renderer = ArtifactRenderer(self.artifacts_dir)
-
-
-    def transform_map(self, map_path: Path) -> str:
-        try:
-            self.logger.debug(f"\n{'='*50}")
-            self.logger.debug(f"Starting map transformation for {map_path}")
-
-            # Reset state at start of map
-            self.heading_handler.reset()
-            self.logger.debug(f"Initial heading state: {self.heading_handler.counters}")
-
-            map_id = self.id_handler.generate_map_id(map_path)
-
-            # Parse artifacts
-            artifacts = self._process_map_artifacts(map_path)
-
-            tree = self.dita_parser.parse_file(map_path)
-            if tree is None:
-                raise ValueError(f"Failed to parse map file: {map_path}")
-
-            html_content = [f'<div class="map-content" data-map-id="{map_id}">']
-
-            # Handle map title
-            title_elem = tree.find(".//title")
-            if title_elem is not None and title_elem.text:
-                title_id = self.id_handler.generate_content_id(Path(title_elem.text))
-                html_content.append(
-                    f'<div id="{title_id}" class="map-title">'
-                    f'<div class="title display-4 mb-4">{title_elem.text}</div>'
-                    f'</div>'
-                )
-
-            # Process topics
-            topic_refs = tree.xpath(".//topicref")
-            self.logger.debug(f"Found {len(topic_refs)} topicrefs to process")
-
-            for topicref in topic_refs:
-                href = topicref.get('href')
-                if not href:
-                    continue
-
-                topic_path = Path(map_path).parent / href
-                if not topic_path.exists() or not topic_path.suffix == '.dita':
-                    continue
-
-                self.logger.debug(f"Before processing topic {href}:")
-                self.logger.debug(f"H1 counter: {self.heading_handler.counters['h1']}")
-                self.heading_handler.start_new_section()
-                self.logger.debug(f"After start_new_section. Counters: {self.heading_handler.counters}")
-
-                topic_id = self.id_handler.generate_topic_id(topic_path, map_path)
-                html_content.append(f'<div class="topic-section" data-topic-id="{topic_id}">')
-                content = self._transform_dita_topic(topic_path)
-                html_content.append(content)
-                html_content.append('</div>')
-
-            html_content.append('</div>')
-            combined_content = '\n'.join(html_content)
-
-            # Inject artifacts if any
-            if artifacts:
-                combined_content = self._inject_map_artifacts(combined_content, artifacts)
-
-            return combined_content
-
-        except Exception as e:
-            self.logger.error(f"Error transforming map {map_path}: {str(e)}")
-            return self._create_error_html(e, map_path)
+        self.element_processor = DITAContentProcessor()
 
     def transform_topic(self, topic_path: Path) -> str:
-        """Transform single topic to HTML."""
+        """Transform DITA topic to HTML."""
         try:
-            self.logger.info(f"Transforming topic: {topic_path}")
-            self.heading_handler.reset()
-            return self._transform_dita_topic(topic_path)
+            self.logger.debug(f"Transforming DITA topic: {topic_path}")
+
+            # Parse DITA XML
+            parser = etree.XMLParser(
+                remove_blank_text=True,
+                resolve_entities=False,
+                dtd_validation=False,
+                load_dtd=False,
+                no_network=True
+            )
+
+            tree = etree.parse(str(topic_path), parser)
+            if tree is None:
+                raise ProcessingError(
+                    error_type="dita_transformation",
+                    message="Failed to parse DITA file",
+                    context=str(topic_path)
+                )
+
+            root = tree.getroot()
+
+            # Process root element
+            root_info = self.element_processor.process_element(root)
+            transformed_content = self._transform_element(root_info)
+
+            return transformed_content
 
         except Exception as e:
             self.logger.error(f"Error transforming topic {topic_path}: {str(e)}")
-            return self._create_error_html(e, topic_path)
-
-    def _process_map_artifacts(self, map_path: Path) -> List[Dict[str, Any]]:
-            """Process and validate map artifacts."""
-            artifacts = self.artifact_parser.parse_artifact_references(map_path)
-            if artifacts:
-                self.logger.info(f"Found artifacts: {artifacts}")
-                for artifact in artifacts:
-                    if target := artifact.get('target'):
-                        self.heading_handler.register_existing_id(target, target)
-                        self.logger.debug(f"Registered target heading: {target}")
-            return artifacts
-
-    def _generate_map_html(
-        self,
-        tree: etree._Element,
-        map_id: str,
-        map_path: Path,
-        artifacts: List[Dict[str, Any]]
-    ) -> str:
-        """Generate HTML content for map."""
-        html_content = [f'<div class="map-content" data-map-id="{map_id}">']
-
-        # Process title
-        html_content.extend(self._process_map_title(tree))
-
-        # Process topics
-        html_content.extend(self._process_map_topics(tree, map_path))
-
-        html_content.append('</div>')
-        return '\n'.join(html_content)
-
-    def _process_map_title(self, tree: etree._Element) -> List[str]:
-        """Process map title section."""
-        title_parts = []
-        title_elem = tree.find(".//title")
-        if title_elem is not None and title_elem.text:
-            # Create a Path-like object for the title
-            title_path = Path(title_elem.text)
-            title_id = self.id_handler.generate_content_id(title_path)
-            title_parts.append(
-                f'<div id="{title_id}" class="map-title">'
-                f'<h1 class="display-4 mb-4">{title_elem.text}</h1>'
-                f'</div>'
+            raise ProcessingError(
+                error_type="dita_transformation",
+                message=f"Failed to transform DITA: {str(e)}",
+                context=str(topic_path)
             )
-        return title_parts
 
-    def _process_map_topics(self, tree: etree._Element, map_path: Path) -> List[str]:
-        """Process map topics."""
-        topic_parts = []
-        for topicref in tree.xpath(".//topicref"):
-            href = topicref.get('href')
-            if not href:
-                continue
+    def _transform_element(self, element_info: DITAElementInfo) -> str:
+        """Transform element info to HTML."""
+        try:
+            # Get transformation method based on element type
+            transform_method = self._get_transform_method(element_info.type)
 
-            self.logger.info(f"Processing topicref: {href}")
-            topic_path = self.resolve_path(map_path, href)
+            if transform_method:
+                return transform_method(element_info)
 
-            if not topic_path or not topic_path.exists():
-                self.logger.error(f"Could not resolve topic for href: {href}")
-                topic_parts.append(self._create_topic_error_message(href))
-                continue
+            # Default transformation
+            return self._transform_default(element_info)
 
-            topic_parts.extend(self._process_single_topic(topic_path, map_path))
+        except Exception as e:
+            self.logger.error(f"Error transforming element: {str(e)}")
+            return ""
 
-        return topic_parts
+    def _get_transform_method(self, element_type: DITAElementType):
+        """Get appropriate transformation method for element type."""
+        transform_methods = {
+            DITAElementType.CONCEPT: self._transform_concept,
+            DITAElementType.TASK: self._transform_task,
+            DITAElementType.REFERENCE: self._transform_reference,
+            DITAElementType.TOPIC: self._transform_topic_element,
+            DITAElementType.SECTION: self._transform_section,
+            DITAElementType.PARAGRAPH: self._transform_paragraph,
+            DITAElementType.NOTE: self._transform_note,
+            DITAElementType.TABLE: self._transform_table,
+            DITAElementType.LIST: self._transform_list,
+            DITAElementType.ORDERED_LIST: self._transform_ordered_list,
+            DITAElementType.LIST_ITEM: self._transform_list_item,
+            DITAElementType.CODE_BLOCK: self._transform_code_block,
+            DITAElementType.CODE_PHRASE: self._transform_code_phrase,
+            DITAElementType.FIGURE: self._transform_figure,
+            DITAElementType.IMAGE: self._transform_image,
+            DITAElementType.XREF: self._transform_xref,
+            DITAElementType.LINK: self._transform_link,
+            DITAElementType.TITLE: self._transform_title,
+            DITAElementType.SHORTDESC: self._transform_shortdesc,
+            DITAElementType.ABSTRACT: self._transform_abstract,
+            DITAElementType.PREREQ: self._transform_prereq,
+            DITAElementType.STEPS: self._transform_steps,
+            DITAElementType.BOLD: self._transform_bold,
+            DITAElementType.ITALIC: self._transform_italic,
+            DITAElementType.UNDERLINE: self._transform_underline,
+            DITAElementType.PHRASE: self._transform_phrase,
+            DITAElementType.QUOTE: self._transform_quote
+        }
+        return transform_methods.get(element_type)
 
-    def _process_single_topic(self, topic_path: Path, map_path: Path) -> List[str]:
-        """Process a single topic."""
-        topic_parts = []
-        topic_id = self.id_handler.generate_topic_id(topic_path, map_path)
+    # Topic-level transformations
+    def _transform_concept(self, element_info: DITAElementInfo) -> str:
+        """Transform concept topic."""
+        return self.html.wrap_content(
+            element_info.content,
+            'div',
+            ['dita-concept']
+        )
 
-        # Extract metadata
-        metadata = self.metadata_handler.extract_metadata(topic_path, content_id=topic_id)
+    def _transform_task(self, element_info: DITAElementInfo) -> str:
+        """Transform task topic."""
+        return self.html.wrap_content(
+            element_info.content,
+            'div',
+            ['dita-task']
+        )
 
-        # Start topic section
-        topic_parts.append(f'<div class="topic-section" data-topic-id="{topic_id}">')
+    def _transform_reference(self, element_info: DITAElementInfo) -> str:
+        """Transform reference topic."""
+        return self.html.wrap_content(
+            element_info.content,
+            'div',
+            ['dita-reference']
+        )
 
-        # Process topic content
-        topic_content = self.transform_topic(topic_path)
+    def _transform_topic_element(self, element_info: DITAElementInfo) -> str:
+        """Transform generic topic."""
+        return self.html.wrap_content(
+            element_info.content,
+            'div',
+            ['dita-topic']
+        )
 
-        # Add metadata features
-        features = self.metadata_handler.get_toggleable_features(metadata)
-        if features.get('show_journal_table'):
-            topic_parts.append(self._generate_journal_table(metadata))
-        if features.get('show_abstract'):
-            topic_parts.append(self._generate_abstract(metadata))
+    # Section-level transformations
+    def _transform_section(self, element_info: DITAElementInfo) -> str:
+        """Transform section."""
+        return self.html.wrap_content(
+            element_info.content,
+            'section',
+            ['dita-section']
+        )
 
-        # Add content and close section
-        topic_parts.append(topic_content)
-        topic_parts.append('</div>')
-
-        return topic_parts
-
-    def _create_topic_error_message(self, href: str) -> str:
-        """Create error message for missing topic."""
+    def _transform_title(self, element_info: DITAElementInfo) -> str:
+        """Transform title."""
+        level = element_info.metadata.get('level', 1)
         return (
-            f'<div class="error-message">'
-            f'Topic not found: {href}'
+            f'<h{level} id="{element_info.attributes.id}" '
+            f'class="dita-title {" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}'
+            f'<a href="#{element_info.attributes.id}" class="heading-anchor">¶</a>'
+            f'</h{level}>'
+        )
+
+    # Block-level transformations
+    def _transform_paragraph(self, element_info: DITAElementInfo) -> str:
+        """Transform paragraph."""
+        return (
+            f'<p class="dita-p {" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}'
+            f'</p>'
+        )
+
+    def _transform_note(self, element_info: DITAElementInfo) -> str:
+        """Transform note."""
+        note_type = element_info.metadata.get('type', 'note')
+        return (
+            f'<div class="dita-note note-{note_type} '
+            f'{" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}'
             f'</div>'
         )
 
-    def _inject_map_artifacts(self, content: str, artifacts: List[Dict[str, Any]]) -> str:
-        """Inject artifacts into map content."""
-        self.logger.info("Processing artifacts...")
-        soup = BeautifulSoup(content, 'html.parser')
+    # List transformations
+    def _transform_list(self, element_info: DITAElementInfo) -> str:
+        """Transform unordered list."""
+        return (
+            f'<ul class="dita-ul {" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}'
+            f'</ul>'
+        )
 
-        for artifact in artifacts:
-            artifact_path = self.dita_root / artifact['href'].lstrip('../')
-            target_id = artifact['target']
+    def _transform_ordered_list(self, element_info: DITAElementInfo) -> str:
+        """Transform ordered list."""
+        return (
+            f'<ol class="dita-ol {" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}'
+            f'</ol>'
+        )
 
-            target_elem = self.html.find_target_element(soup, target_id)
-            if not target_elem:
-                self.logger.warning(f"Target element not found: {target_id}")
-                continue
+    def _transform_list_item(self, element_info: DITAElementInfo) -> str:
+        """Transform list item."""
+        return (
+            f'<li class="dita-li {" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}'
+            f'</li>'
+        )
 
-            self.logger.info(f"Processing artifact: {artifact_path}")
-            artifact_html = self.artifact_renderer.render_artifact(
-                artifact_path,
-                target_id
-            )
+    # Code transformations
+    def _transform_code_block(self, element_info: DITAElementInfo) -> str:
+        """Transform code block."""
+        return (
+            f'<pre><code class="dita-codeblock '
+            f'{" ".join(element_info.attributes.classes)}">'
+            f'{self.html.escape_html(element_info.content)}'
+            f'</code></pre>'
+        )
 
-            new_content = BeautifulSoup(artifact_html, 'html.parser')
-            target_elem.insert_after(new_content)
+    def _transform_code_phrase(self, element_info: DITAElementInfo) -> str:
+        """Transform inline code."""
+        return (
+            f'<code class="dita-codeph {" ".join(element_info.attributes.classes)}">'
+            f'{self.html.escape_html(element_info.content)}'
+            f'</code>'
+        )
 
-        return str(soup)
+    # Table transformations
 
-    def _generate_journal_table(self, metadata: Dict[str, Any]) -> str:
-        """Generate HTML table for journal metadata."""
-        table_html = ['<div class="journal-metadata">']
-        table_html.append('<table class="metadata-table">')
+    def _transform_table(self, element_info: DITAElementInfo) -> str:
+        """Transform table element."""
+        try:
+            classes = ['dita-table', *element_info.attributes.classes]
+            frame = element_info.metadata.get('frame', 'all')
+            if frame != 'none':
+                classes.append(f'frame-{frame}')
 
-        fields = [
-            ('journal', 'Journal'),
-            ('doi', 'DOI'),
-            ('publication-date', 'Published'),
-            ('authors', 'Authors'),
-            ('institution', 'Institution')
-        ]
-
-        for key, label in fields:
-            if value := metadata.get(key):
-                if isinstance(value, list):
-                    value = ', '.join(value)
-                table_html.append(
-                    f'<tr><th>{label}</th><td>{value}</td></tr>'
-                )
-
-        table_html.append('</table></div>')
-        return '\n'.join(table_html)
-
-    def _generate_abstract(self, metadata: Dict[str, Any]) -> str:
-        """Generate HTML for abstract section."""
-        if abstract := metadata.get('abstract'):
             return (
-                f'<div class="abstract-section">'
-                f'<h2>Abstract</h2>'
-                f'<p>{abstract}</p>'
+                f'<div class="table-wrapper overflow-x-auto">'
+                f'<table class="{" ".join(classes)}">'
+                f'{element_info.content}'
+                f'</table>'
                 f'</div>'
             )
-        return ''
-
-    def _transform_dita_topic(self, topic_path: Path) -> str:
-        """Transform DITA topic to HTML with consistent heading handling."""
-        try:
-            tree = self.dita_parser.parse_file(topic_path)
-            if tree is None:
-                raise ValueError(f"Failed to parse DITA topic: {topic_path}")
-
-            self.logger.debug(f"Starting DITA topic transformation: {topic_path}")
-            html_parts = []
-
-            # Process title (H1)
-            title_elem = tree.find('.//title')
-            if title_elem is not None and title_elem.text:
-                # Pass our heading handler to the DITA processor
-                self.dita_processor.heading_handler = self.heading_handler
-
-                self.logger.debug(f"Before processing DITA title. Heading state: {self.heading_handler.counters}")
-                content = self.dita_processor.process_element(tree, topic_path)
-                self.logger.debug(f"After processing DITA title. Heading state: {self.heading_handler.counters}")
-                html_parts.append(content)
-
-            return '\n'.join(html_parts)
-
         except Exception as e:
-            self.logger.error(f"Error transforming DITA topic {topic_path}: {str(e)}")
-            raise
+            self.logger.error(f"Error transforming table: {str(e)}")
+            return ""
 
-    def _process_main_title(self, tree: etree._Element, html_parts: List[str]) -> None:
-        """Process the main title of a DITA topic."""
-        title_elem = tree.find('.//title')
-        if title_elem is not None and title_elem.text:
-            title_id = self.id_handler.generate_content_id(Path(title_elem.text))
+    def _transform_shortdesc(self, element_info: DITAElementInfo) -> str:
+        """Transform short description."""
+        return (
+            f'<p class="dita-shortdesc {" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}'
+            f'</p>'
+        )
 
-            # Process title - removed LaTeX processing
-            heading_id, formatted_text = self.heading_handler.process_heading(
-                title_elem.text,  # Direct text use
-                1,  # Level 1
-                is_map_title=True  # Only map titles should be unnumbered
-            )
+    def _transform_abstract(self, element_info: DITAElementInfo) -> str:
+        """Transform abstract."""
+        return (
+            f'<div class="dita-abstract {" ".join(element_info.attributes.classes)}">'
+            f'<div class="abstract-title">Abstract</div>'
+            f'{element_info.content}'
+            f'</div>'
+        )
 
-            html_parts.append(
-                f'<h1 id="{title_id}" class="topic-title">'
-                f'{formatted_text}'
-                f'<a href="#{title_id}" class="heading-anchor">¶</a>'
-                f'</h1>'
-            )
+    def _transform_prereq(self, element_info: DITAElementInfo) -> str:
+        """Transform prerequisites."""
+        return (
+            f'<div class="dita-prereq {" ".join(element_info.attributes.classes)}">'
+            f'<div class="prereq-title">Prerequisites</div>'
+            f'{element_info.content}'
+            f'</div>'
+        )
 
-    def _process_body_content(self, tree: etree._Element, html_parts: List[str], current_h1: int) -> None:
-        """Process the body content of a DITA topic."""
-        body_elem = self._get_body_element(tree)
-        if body_elem is not None:
-            for elem in body_elem:
-                if elem.tag == 'section':
-                    self._process_section(elem, html_parts, current_h1)
-                else:
-                    self._process_non_section_element(elem, html_parts)
+    def _transform_steps(self, element_info: DITAElementInfo) -> str:
+        """Transform steps element."""
+        return (
+            f'<div class="dita-steps {" ".join(element_info.attributes.classes)}">'
+            f'<div class="steps-title">Steps</div>'
+            f'<ol class="steps-list">'
+            f'{element_info.content}'
+            f'</ol>'
+            f'</div>'
+        )
 
-    def _get_body_element(self, tree: etree._Element) -> Optional[etree._Element]:
-        """Get the appropriate body element based on topic type."""
-        root_tag = etree.QName(tree).localname
-        body_tag = {
-            'concept': './/conbody',
-            'task': './/taskbody',
-            'reference': './/refbody',
-            'topic': './/body'
-        }.get(root_tag, './/body')
+    # Media transformations
+    def _transform_figure(self, element_info: DITAElementInfo) -> str:
+        """Transform figure."""
+        return (
+            f'<figure class="dita-fig {" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}'
+            f'</figure>'
+        )
 
-        return tree.find(body_tag)
+    def _transform_image(self, element_info: DITAElementInfo) -> str:
+        """Transform image."""
+        href = element_info.metadata.get('href', '')
+        alt = element_info.metadata.get('alt', '')
+        return (
+            f'<img src="{href}" alt="{alt}" '
+            f'class="dita-image {" ".join(element_info.attributes.classes)}">'
+        )
 
-    def _process_section(self, section_elem: etree._Element, html_parts: List[str], current_h1: int) -> None:
-        """Process a section element."""
-        self._process_section_title(section_elem, html_parts, current_h1)
-        self._process_section_content(section_elem, html_parts)
+    # Link transformations
+    def _transform_xref(self, element_info: DITAElementInfo) -> str:
+        """Transform cross-reference."""
+        href = element_info.metadata.get('href', '#')
+        return (
+            f'<a href="{href}" class="dita-xref '
+            f'{" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}</a>'
+        )
 
-    def _process_section_title(self, section_elem: etree._Element, html_parts: List[str], current_h1: int) -> None:
-        """Process a section title."""
-        section_title = section_elem.find('title')
-        if section_title is not None and section_title.text:
-            # Removed LaTeX processing, use text directly
-            self.heading_handler._current_h1 = current_h1
-            heading_id, formatted_text = self.heading_handler.process_heading(
-                section_title.text,  # Direct text use
-                2  # Section titles are H2
-            )
+    def _transform_link(self, element_info: DITAElementInfo) -> str:
+        """Transform link."""
+        href = element_info.metadata.get('href', '#')
+        scope = element_info.metadata.get('scope', 'local')
+        classes = ['dita-link']
+        if scope == 'external':
+            classes.append('external-link')
+        return (
+            f'<a href="{href}" class="{" ".join(classes)} '
+            f'{" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}</a>'
+        )
 
-            html_parts.append(
-                f'<h2 id="{heading_id}" class="section-title">'
-                f'{formatted_text}'
-                f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
-                f'</h2>'
-            )
+    # Inline transformations
+    def _transform_bold(self, element_info: DITAElementInfo) -> str:
+        """Transform bold text."""
+        return f'<strong>{element_info.content}</strong>'
 
-    def _process_section_content(self, section_elem: etree._Element, html_parts: List[str]) -> None:
-        """Process the content within a section."""
-        for child in section_elem:
-            if child.tag != 'title':  # Skip title as we've already processed it
-                content = self.dita_processor.process_element(child)
-                html_parts.append(content)
+    def _transform_italic(self, element_info: DITAElementInfo) -> str:
+        """Transform italic text."""
+        return f'<em>{element_info.content}</em>'
 
-    def _process_non_section_element(self, elem: etree._Element, html_parts: List[str]) -> None:
-        """Process a non-section element."""
-        # Remove LaTeX processing, pass element directly to DITA processor
-        content = self.dita_processor.process_element(elem)
-        html_parts.append(content)
+    def _transform_underline(self, element_info: DITAElementInfo) -> str:
+        """Transform underlined text."""
+        return (
+            f'<span class="underline {" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}</span>'
+        )
 
-    def resolve_path(self, base_path: Path, href: str) -> Optional[Path]:
-        """Resolve relative path from base path."""
-        try:
-            if href.startswith('../'):
-                return (base_path.parent / href).resolve()
-            return (self.topics_dir / href).resolve()
-        except Exception as e:
-            self.logger.error(f"Error resolving path: {str(e)}")
-            return None
+    def _transform_phrase(self, element_info: DITAElementInfo) -> str:
+        """Transform phrase."""
+        return (
+            f'<span class="dita-ph {" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}</span>'
+        )
 
-    def _create_error_html(self, error: Exception, context: Path) -> str:
-        """Create error message HTML."""
-        return f"""
-        <div class="error-container bg-red-50 border-l-4 border-red-500 p-4 rounded-lg my-4">
-            <h3 class="text-lg font-medium text-red-800">Processing Error</h3>
-            <p class="text-red-700">{str(error)}</p>
-            <div class="mt-2 text-sm text-red-600">
-                <p>Error occurred processing: {context}</p>
-            </div>
-        </div>
-        """
+    def _transform_quote(self, element_info: DITAElementInfo) -> str:
+        """Transform quote."""
+        return (
+            f'<q class="dita-quote {" ".join(element_info.attributes.classes)}">'
+            f'{element_info.content}</q>'
+        )
+
+    def _transform_default(self, element_info: DITAElementInfo) -> str:
+        """Default transformation for unknown elements."""
+        return element_info.content

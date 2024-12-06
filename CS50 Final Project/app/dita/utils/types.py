@@ -1,7 +1,7 @@
 # app/dita/utils/types.py
-
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Any, Union
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Dict, List, Optional, Any, Union, Set
 from pathlib import Path
 from enum import Enum
 
@@ -17,6 +17,15 @@ class ElementType(Enum):
     MARKDOWN = "markdown"
     LATEX = "latex"
     ARTIFACT = "artifact"
+    MAP_TITLE = "map_title"
+
+class ProcessingPhase(Enum):
+    """Phases of the processing pipeline"""
+    DISCOVERY = "discovery"
+    VALIDATION = "validation"
+    TRANSFORMATION = "transformation"
+    ENRICHMENT = "enrichment" # LaTeX, artifacts
+    ASSEMBLY = "assembly"
 
 class ProcessingState(Enum):
     """States for processing pipeline"""
@@ -42,14 +51,6 @@ class ParsedMap:
     metadata: Dict[str, Any]
     source_path: Path
 
-@dataclass
-class TrackedElement:
-    """Element with tracking information"""
-    id: str
-    type: ElementType
-    content: str
-    metadata: Dict[str, Any]
-    state: ProcessingState = ProcessingState.PENDING
 
 @dataclass
 class ProcessedContent:
@@ -58,6 +59,25 @@ class ProcessedContent:
     element_id: str
     heading_level: Optional[int] = None
     metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class DiscoveredTopic:
+    """Represents a discovered topic file"""
+    id: str
+    path: Path
+    type: ElementType
+    href: str  # Original href from map
+    metadata: Dict[str, Any]
+
+@dataclass
+class DiscoveredMap:
+    """Represents discovered map content"""
+    id: str
+    path: Path
+    title: Optional[str]
+    topics: List[DiscoveredTopic]
+    metadata: Dict[str, Any]
 
 # Context tracking types
 @dataclass
@@ -85,6 +105,34 @@ class ProcessingContext:
     map_context: MapContext
     topics: Dict[str, TopicContext]  # topic_id -> TopicContext
     current_topic_id: Optional[str] = None
+
+# MD types
+@dataclass
+class MDElementContext:
+    """Context for markdown element processing"""
+    parent_id: Optional[str]
+    element_type: str
+    classes: List[str]
+    attributes: Dict[str, str]
+
+
+# Heading tracking types
+@dataclass
+class HeadingState:
+    """State for heading tracking"""
+    current_h1: int = 0
+    counters: Dict[str, int] = field(default_factory=lambda: {
+        'h1': 0, 'h2': 0, 'h3': 0, 'h4': 0, 'h5': 0, 'h6': 0
+    })
+    used_ids: Set[str] = field(default_factory=set)
+
+@dataclass
+class HeadingContext:
+    """Context for heading processing"""
+    parent_id: Optional[str] = None
+    level: int = 1
+    is_topic_title: bool = False
+
 
 # Reference tracking types
 @dataclass
@@ -141,13 +189,29 @@ class ProcessedEquation:
 
 # Error types
 @dataclass
-class ProcessingError:
-    """Processing error information"""
-    error_type: str
-    message: str
-    context: Union[str, Path]
+class ProcessingError(Exception):
+    """Custom error for processing failures"""
+    def __init__(
+        self,
+        error_type: str,
+        message: str,
+        context: Union[str, Path],
+        element_id: Optional[str] = None,
+        stacktrace: Optional[str] = None
+    ):
+        self.error_type = error_type
+        self.message = message
+        self.context = context
+        self.element_id = element_id
+        self.stacktrace = stacktrace
+        super().__init__(self.message)
+
+@dataclass
+class LogContext:
+    phase: ProcessingPhase
     element_id: Optional[str] = None
-    stacktrace: Optional[str] = None
+    topic_id: Optional[str] = None
+    map_id: Optional[str] = None
 
 # Processing pipeline types
 @dataclass
@@ -167,3 +231,160 @@ class ProcessingOptions:
     process_artifacts: bool = True
     show_toc: bool = True
     features: Optional[Dict[str, bool]] = None
+
+
+
+
+## Element tracking
+@dataclass
+class ElementAttributes:
+    """Base attributes for any element"""
+    id: str
+    classes: List[str]
+    custom_attrs: Dict[str, str]
+
+
+class DITAElementType(Enum):
+    """Types of DITA elements"""
+    CONCEPT = "concept"
+    TASK = "task"
+    REFERENCE = "reference"
+    TOPIC = "topic"
+    SECTION = "section"
+    PARAGRAPH = "p"
+    NOTE = "note"
+    TABLE = "table"
+    LIST = "ul"
+    LIST_ITEM = "li"
+    ORDERED_LIST = "ol"
+    CODE_BLOCK = "codeblock"
+    CODE_PHRASE = "codeph"
+    FIGURE = "fig"
+    IMAGE = "image"
+    XREF = "xref"
+    LINK = "link"
+    TITLE = "title"
+    SHORTDESC = "shortdesc"
+    ABSTRACT = "abstract"
+    PREREQ = "prereq"
+    STEPS = "steps"
+    DEFINITION = "dlentry"
+    TERM = "term"
+    BOLD = "b"
+    ITALIC = "i"
+    UNDERLINE = "u"
+    PHRASE = "ph"
+    QUOTE = "q"
+    PRE = "pre"
+    CITE = "cite"
+
+@dataclass
+class DITAElementContext:
+    """Context for DITA element processing"""
+    parent_id: Optional[str]
+    element_type: str
+    classes: List[str]
+    attributes: Dict[str, str]
+    topic_type: Optional[str] = None  # For tracking if inside concept/task/reference
+    is_body: bool = False  # For tracking if inside conbody/taskbody/refbody
+
+@dataclass
+class DITAElementInfo:
+    """Information about a DITA element"""
+    type: DITAElementType
+    content: str
+    attributes: ElementAttributes
+    context: DITAElementContext
+    metadata: Dict[str, Any]
+
+class MDElementType(Enum):
+    """Types of Markdown elements"""
+    HEADING = "heading"
+    PARAGRAPH = "paragraph"
+    LIST = "list"
+    LIST_ITEM = "list_item"
+    CODE = "code"
+    BLOCKQUOTE = "blockquote"
+    LINK = "link"
+    IMAGE = "image"
+    TABLE = "table"
+    EMPHASIS = "emphasis"
+    STRONG = "strong"
+    INLINE_CODE = "inline_code"
+
+@dataclass
+class MDElementInfo:
+    """Information about a Markdown element"""
+    type: MDElementType
+    content: str
+    attributes: ElementAttributes
+    context: MDElementContext
+    metadata: Dict[str, Any]
+
+@dataclass
+class TrackedElement:
+    """Element with comprehensive tracking information."""
+    # Core identification
+    id: str
+
+    # Content info
+    type: ElementType
+    path: Path
+    content: str  # Actual content or title for map titles
+
+    # Processing metadata
+    metadata: Dict[str, Any]
+
+    # Processing state tracking
+    state: ProcessingState = ProcessingState.PENDING
+    previous_state: Optional[ProcessingState] = None
+    processing_attempts: int = 0
+
+    # Context tracking
+    parent_map_id: Optional[str] = None
+    sequence_number: Optional[int] = None  # For ordering
+
+    # Timestamp tracking
+    created_at: datetime = field(default_factory=datetime.now)
+    last_updated: Optional[datetime] = None
+
+    # Error tracking
+    last_error: Optional[str] = None
+
+    def update_state(self, new_state: ProcessingState) -> None:
+        """Update element processing state with timestamp."""
+        self.previous_state = self.state
+        self.state = new_state
+        self.last_updated = datetime.now()
+
+    def increment_attempts(self) -> None:
+        """Increment processing attempts counter."""
+        self.processing_attempts += 1
+        self.last_updated = datetime.now()
+
+    def set_error(self, error: str) -> None:
+        """Record processing error."""
+        self.last_error = error
+        self.last_updated = datetime.now()
+
+    def can_process(self) -> bool:
+        """Check if element can be processed."""
+        return (
+            self.state != ProcessingState.ERROR and
+            self.processing_attempts < 3 and  # Max attempts
+            self.state != ProcessingState.COMPLETED
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            'id': self.id,
+            'type': self.type.value,
+            'path': str(self.path),
+            'state': self.state.value,
+            'attempts': self.processing_attempts,
+            'created': self.created_at.isoformat(),
+            'updated': self.last_updated.isoformat() if self.last_updated else None,
+            'error': self.last_error,
+            'metadata': self.metadata
+        }

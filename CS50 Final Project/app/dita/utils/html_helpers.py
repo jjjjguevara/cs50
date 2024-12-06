@@ -1,221 +1,197 @@
 # app/dita/utils/html_helpers.py
-from typing import List, Optional, Dict, Any, Union
-from bs4 import BeautifulSoup, Tag, NavigableString
-import logging
+
 import html
 import re
-from pathlib import Path
-import json
+from typing import Dict, List, Optional, Any
+from bs4 import BeautifulSoup, Tag
+import logging
 
 class HTMLHelper:
-    """Comprehensive HTML manipulation helper"""
+    """Utilities for HTML manipulation and validation."""
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
+    def escape_html(self, content: str) -> str:
+        """
+        Escape HTML special characters in content.
 
-    # Final content processor
+        Args:
+            content: String content to escape
+
+        Returns:
+            Escaped HTML content
+        """
+        try:
+            return html.escape(content, quote=True)
+        except Exception as e:
+            self.logger.error(f"Error escaping HTML: {str(e)}")
+            return ""
+
     def process_final_content(self, content: str) -> str:
-        """Apply final HTML processing"""
-        soup = BeautifulSoup(content, 'html.parser')
-        self.ensure_wrapper(soup)
-        return str(soup)
-
-    # Content Wrapper Methods
-    def ensure_wrapper(self, soup: BeautifulSoup,
-                      wrapper_class: str = 'content-wrapper') -> Tag:
         """
-        Ensure content has wrapper div.
-        Returns the wrapper div as a Tag.
+        Process final HTML content before output.
+
+        Args:
+            content: HTML content to process
+
+        Returns:
+            Processed HTML content
         """
-        content_div = soup.find('div', class_=wrapper_class)
+        try:
+            # Parse HTML
+            soup = BeautifulSoup(content, 'html.parser')
 
-        if not content_div or not isinstance(content_div, Tag):
-            content_div = soup.new_tag('div')
-            content_div['class'] = wrapper_class
+            # Clean whitespace
+            output = self._clean_whitespace(str(soup))
 
-            # Move all content inside wrapper
-            for tag in soup.contents[:]:
-                content_div.append(tag.extract())
-            soup.append(content_div)
+            # Ensure proper nesting
+            output = self._ensure_proper_nesting(output)
 
-        return content_div
+            return output
 
-    # Class Manipulation Methods
-    def add_class(self, element: Optional[Tag], class_name: str) -> None:
-        """Add class to element safely"""
-        if element and isinstance(element, Tag):
-            classes = self.get_classes(element)
-            if class_name not in classes:
-                classes.append(class_name)
-                element['class'] = ' '.join(classes)
-
-    def remove_class(self, element: Optional[Tag], class_name: str) -> None:
-        """Remove class from element safely"""
-        if element and isinstance(element, Tag):
-            classes = self.get_classes(element)
-            if class_name in classes:
-                classes.remove(class_name)
-                element['class'] = ' '.join(classes)
-
-    def has_class(self, element: Optional[Tag], class_name: str) -> bool:
-        """Check if element has specific class"""
-        if element and isinstance(element, Tag):
-            return class_name in self.get_classes(element)
-        return False
-
-    def get_classes(self, element: Tag) -> List[str]:
-        """Get element's classes as list"""
-        classes = element.get('class', [])
-        if isinstance(classes, str):
-            return classes.split()
-        elif isinstance(classes, list):
-            return classes
-        return []
-
-    def set_classes(self, element: Tag, classes: List[str]) -> None:
-        """Set element's classes from list"""
-        if element and isinstance(element, Tag):
-            element['class'] = ' '.join(classes)
-
-    # Attribute Manipulation Methods
-    def set_data_attributes(self, element: Tag,
-                              attributes: Dict[str, Any]) -> None:
-            """
-            Set data attributes on element safely.
-
-            Args:
-                element: BeautifulSoup Tag to modify
-                attributes: Dictionary of attribute names and values
-            """
-            if not self.is_valid_element(element):
-                self.logger.warning("Invalid element for setting data attributes")
-                return
-
-            try:
-                for key, value in attributes.items():
-                    # Sanitize key
-                    safe_key = self.sanitize_attribute_name(key)
-                    # Convert value to string safely
-                    safe_value = str(value)
-                    # Set attribute
-                    element[f'data-{safe_key}'] = safe_value
-
-            except Exception as e:
-                self.logger.error(f"Error setting data attributes: {str(e)}")
-
-    def sanitize_attribute_name(self, name: str) -> str:
-        """
-        Sanitize attribute name for safe use in HTML.
-        Converts spaces and special characters to hyphens.
-        """
-        return re.sub(r'[^\w\-]', '-', name.lower()).strip('-')
-
-    def is_valid_element(self, element: Any) -> bool:
-        """
-        Check if element is valid BS4 Tag.
-        """
-        return element is not None and isinstance(element, Tag)
+        except Exception as e:
+            self.logger.error(f"Error processing final content: {str(e)}")
+            return content
 
     def find_target_element(self, soup: BeautifulSoup, target_id: str) -> Optional[Tag]:
         """
-        Find target element by ID, with fallback strategies.
+        Find target element by ID in BeautifulSoup object.
 
         Args:
             soup: BeautifulSoup object to search
-            target_id: Target ID to find
+            target_id: ID to find
 
         Returns:
-            Optional[Tag]: Found element or None
+            Target element if found and is a Tag, None otherwise
         """
         try:
-            # Try exact match first
-            target_elem = soup.find(id=target_id)
-            if target_elem and isinstance(target_elem, Tag):
-                self.logger.debug(f"Found target element with exact ID: {target_id}")
-                return target_elem
-
-            # Try finding by generated ID patterns
-            for elem in soup.find_all(True):  # Find all tags
-                if isinstance(elem, Tag):
-                    elem_id = elem.get('id')
-                    if isinstance(elem_id, str):  # Ensure ID is a string
-                        # Check if current ID is a variation of target ID
-                        if (elem_id.startswith(target_id) or
-                            target_id in elem_id or
-                            elem_id.endswith(target_id)):
-                            self.logger.debug(f"Found target element with related ID: {elem_id}")
-                            return elem
-
-            self.logger.warning(f"Target element not found: {target_id}")
+            element = soup.find(id=target_id)
+            # Only return if element is a Tag
+            if isinstance(element, Tag):
+                return element
             return None
-
         except Exception as e:
             self.logger.error(f"Error finding target element: {str(e)}")
             return None
 
-    # Artifact helper methods
-    def create_artifact_error_message(self, artifact: Dict[str, Any], error: str) -> str:
-            """Create error message for failed artifact injection"""
-            return f"""
-            <div class="artifact-error bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd"
-                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                  clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <h3 class="text-sm font-medium text-red-800">
-                            Failed to load artifact: {html.escape(artifact.get('name', 'Unknown'))}
-                        </h3>
-                        <div class="mt-2 text-sm text-red-700">
-                            {html.escape(error)}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            """
+    def _clean_whitespace(self, content: str) -> str:
+        """
+        Clean excess whitespace from HTML content.
 
-    def add_injection_status(self, soup: BeautifulSoup,
-                            successful: List[str],
-                            failed: List[Dict[str, str]]) -> None:
-        """Add injection status information to document"""
+        Args:
+            content: Content to clean
+
+        Returns:
+            Cleaned content
+        """
         try:
-            status_div = soup.new_tag('div', attrs={
-                'class': 'hidden',
-                'data-artifact-status': 'true',
-                'data-successful': json.dumps(successful),
-                'data-failed': json.dumps(failed)
-            })
+            # Remove multiple spaces
+            content = re.sub(r'\s+', ' ', content)
 
-            # Find or create content wrapper
-            wrapper = self.ensure_wrapper(soup)
-            wrapper.append(status_div)
+            # Clean space around tags
+            content = re.sub(r'>\s+<', '><', content)
+
+            # Clean empty lines
+            content = re.sub(r'\n\s*\n', '\n', content)
+
+            return content.strip()
 
         except Exception as e:
-            self.logger.error(f"Error adding injection status: {str(e)}")
+            self.logger.error(f"Error cleaning whitespace: {str(e)}")
+            return content
 
-    def add_critical_error_message(self, content: str, error: str) -> str:
-        """Add critical error message to content"""
-        error_html = f"""
-        <div class="critical-error bg-red-50 border-l-4 border-red-500 p-4 mb-8">
-            <div class="flex">
-                <div class="ml-3">
-                    <h3 class="text-sm font-medium text-red-800">
-                        Critical Error Loading Content
-                    </h3>
-                    <div class="mt-2 text-sm text-red-700">
-                        {html.escape(error)}
-                    </div>
-                    <div class="mt-1 text-xs text-red-600">
-                        The article content is still available below.
-                    </div>
-                </div>
-            </div>
-        </div>
-        {content}
+    def _ensure_proper_nesting(self, content: str) -> str:
         """
-        return error_html
+        Ensure proper HTML tag nesting.
+
+        Args:
+            content: HTML content to check
+
+        Returns:
+            Properly nested HTML
+        """
+        try:
+            soup = BeautifulSoup(content, 'html.parser')
+            return str(soup)
+        except Exception as e:
+            self.logger.error(f"Error ensuring proper nesting: {str(e)}")
+            return content
+
+    def validate_html(self, content: str) -> bool:
+        """
+        Validate HTML content structure.
+
+        Args:
+            content: HTML content to validate
+
+        Returns:
+            True if valid, False otherwise
+        """
+        try:
+            soup = BeautifulSoup(content, 'html.parser')
+            return True
+        except Exception as e:
+            self.logger.error(f"HTML validation failed: {str(e)}")
+            return False
+
+    def add_classes(self, tag: Tag, classes: List[str]) -> None:
+        """
+        Add classes to HTML tag.
+
+        Args:
+            tag: BeautifulSoup tag
+            classes: List of classes to add
+        """
+        try:
+            existing_classes = tag.get('class', [])
+            if isinstance(existing_classes, str):
+                existing_classes = existing_classes.split()
+
+            # Add new classes
+            tag['class'] = list(set(existing_classes + classes))
+
+        except Exception as e:
+            self.logger.error(f"Error adding classes: {str(e)}")
+
+    def remove_classes(self, tag: Tag, classes: List[str]) -> None:
+        """
+        Remove classes from HTML tag.
+
+        Args:
+            tag: BeautifulSoup tag
+            classes: List of classes to remove
+        """
+        try:
+            existing_classes = tag.get('class', [])
+            if isinstance(existing_classes, str):
+                existing_classes = existing_classes.split()
+
+            # Remove specified classes
+            remaining_classes = [c for c in existing_classes if c not in classes]
+            if remaining_classes:
+                tag['class'] = remaining_classes
+            else:
+                del tag['class']
+
+        except Exception as e:
+            self.logger.error(f"Error removing classes: {str(e)}")
+
+    def wrap_content(self, content: str, wrapper_tag: str, classes: Optional[List[str]] = None) -> str:
+        """
+        Wrap content in HTML tag.
+
+        Args:
+            content: Content to wrap
+            wrapper_tag: HTML tag to wrap with
+            classes: Optional classes to add
+
+        Returns:
+            Wrapped content
+        """
+        try:
+            class_attr = f' class="{" ".join(classes)}"' if classes else ''
+            return f'<{wrapper_tag}{class_attr}>{content}</{wrapper_tag}>'
+        except Exception as e:
+            self.logger.error(f"Error wrapping content: {str(e)}")
+            return content

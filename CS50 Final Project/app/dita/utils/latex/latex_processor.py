@@ -1,31 +1,76 @@
-import re
-from typing import List, Dict, Optional, Any
-from bs4 import BeautifulSoup
+# app/dita/utils/latex/latex_processor.py
+
+from typing import List, Optional, Dict, Any
+from pathlib import Path
 import logging
 
-from ..interfaces.latex_definitions import LaTeXProcessor
-from .katex_renderer import KaTeXRenderer
+from ..types import (
+    LaTeXEquation,
+    ProcessedEquation,
+    ProcessingError,
+    ProcessingState
+)
 from .latex_validator import LaTeXValidator
+from .katex_renderer import KaTeXRenderer
 
-class DitaLaTeXProcessor(LaTeXProcessor):
+class LaTeXProcessor:
+    """Main orchestrator for LaTeX processing pipeline."""
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.renderer = KaTeXRenderer()
         self.validator = LaTeXValidator()
+        self.renderer = KaTeXRenderer()
 
-    def process_equation(self, latex: str, block: bool = False) -> str:
-        """Process a single equation."""
-        if self.validate_equation(latex):
-            return self.renderer.render(latex, block)
-        else:
-            self.logger.error(f"Invalid LaTeX equation: {latex[:50]}")
-            return f'<span class="latex-error">{latex}</span>'
+    def process_equations(self, equations: List[LaTeXEquation]) -> List[ProcessedEquation]:
+        """
+        Process LaTeX equations through validation and rendering pipeline.
 
-    def process_equations(self, equations: List[Dict[str, Any]]) -> List[str]:
-        """Process a batch of equations."""
-        return [self.process_equation(eq['latex'], eq.get('block', True))
-                for eq in equations]
+        Args:
+            equations: List of equations found in content
 
-    def validate_equation(self, latex: str) -> bool:
-        """Validate equation."""
-        return self.validator.validate_equation(latex)
+        Returns:
+            List of processed equations
+
+        Raises:
+            ProcessingError: If processing fails
+        """
+        try:
+            self.logger.debug(f"Processing {len(equations)} LaTeX equations")
+            processed_equations = []
+
+            for equation in equations:
+                try:
+                    # Validate equation
+                    if not self.validator.validate_equation(equation):
+                        raise ProcessingError(
+                            error_type="latex_validation",
+                            message=f"Invalid LaTeX equation: {equation.id}",
+                            context=equation.content
+                        )
+
+                    # Render equation
+                    html_content = self.renderer.render_equation(equation)
+
+                    # Create processed result
+                    processed = ProcessedEquation(
+                        id=equation.id,
+                        html=html_content,
+                        original=equation.content,
+                        is_block=equation.is_block
+                    )
+
+                    processed_equations.append(processed)
+
+                except Exception as e:
+                    self.logger.error(f"Failed to process equation {equation.id}: {str(e)}")
+                    raise
+
+            return processed_equations
+
+        except Exception as e:
+            self.logger.error(f"LaTeX processing failed: {str(e)}")
+            raise ProcessingError(
+                error_type="latex_processing",
+                message=f"LaTeX processing failed: {str(e)}",
+                context="equation_processing"
+            )

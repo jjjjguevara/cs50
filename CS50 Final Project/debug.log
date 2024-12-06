@@ -26582,3 +26582,864 @@ Python-Ma
 2024-12-04 22:33:44,711 - werkzeug - INFO - 127.0.0.1 - - [04/Dec/2024 22:33:44] "[36mGET /static/fonts/AusteraText-Bold.ttf HTTP/1.1[0m" 304 -
 2024-12-04 22:33:44,711 - werkzeug - INFO - 127.0.0.1 - - [04/Dec/2024 22:33:44] "[36mGET /static/fonts/AusteraText-Regular.ttf HTTP/1.1[0m" 304 -
 2024-12-04 22:33:44,711 - werkzeug - INFO - 127.0.0.1 - - [04/Dec/2024 22:33:44] "[36mGET /static/fonts/AusteraText-DemiBold.ttf HTTP/1.1[0m" 304 -
+2024-12-04 23:34:41,032 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/dita_transform.py', reloading
+2024-12-04 23:34:41,098 - werkzeug - INFO -  * Restarting with stat
+2024-12-04 23:34:41,217 - app - INFO - Configuring CORS for development environment
+2024-12-04 23:34:41,520 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-04 23:34:41,520 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-04 23:34:41,520 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-04 23:34:41,520 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-04 23:34:41,520 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-04 23:34:41,520 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-04 23:34:41,520 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-04 23:34:41,520 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-04 23:34:41,520 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-04 23:34:41,530 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-04 23:34:41,530 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-04 23:34:41,530 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-04 23:34:41,530 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-04 23:34:41,533 - app - INFO - Successfully registered routes blueprint
+2024-12-04 23:34:41,551 - werkzeug - WARNING -  * Debugger is active!
+2024-12-04 23:34:41,558 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-04 23:34:46,712 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-04 23:34:46,770 - werkzeug - INFO -  * Restarting with stat
+2024-12-04 23:34:46,867 - app - INFO - Configuring CORS for development environment
+2024-12-04 23:34:47,066 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-04 23:34:47,066 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-04 23:34:47,066 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-04 23:34:47,066 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-04 23:34:47,066 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-04 23:34:47,066 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-04 23:34:47,066 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-04 23:34:47,066 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-04 23:34:47,066 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-04 23:34:47,072 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-04 23:34:47,072 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-04 23:34:47,072 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-04 23:34:47,072 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-04 23:34:47,077 - app - INFO - Successfully registered routes blueprint
+2024-12-04 23:34:47,094 - werkzeug - WARNING -  * Debugger is active!
+2024-12-04 23:34:47,100 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-04 23:54:59,532 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/dita_transform.py', reloading
+2024-12-04 23:54:59,636 - werkzeug - INFO -  * Restarting with stat
+2024-12-04 23:54:59,775 - app - INFO - Configuring CORS for development environment
+2024-12-04 23:55:00,117 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-04 23:55:00,117 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-04 23:55:00,117 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-04 23:55:00,117 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-04 23:55:00,117 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-04 23:55:00,117 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-04 23:55:00,117 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-04 23:55:00,117 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-04 23:55:00,117 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-04 23:55:00,134 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-04 23:55:00,135 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-04 23:55:00,135 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-04 23:55:00,135 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-04 23:55:00,140 - app - INFO - Successfully registered routes blueprint
+2024-12-04 23:55:00,163 - werkzeug - WARNING -  * Debugger is active!
+2024-12-04 23:55:00,175 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-04 23:59:10,273 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/dita_transform.py', reloading
+2024-12-04 23:59:10,354 - werkzeug - INFO -  * Restarting with stat
+2024-12-04 23:59:10,491 - app - INFO - Configuring CORS for development environment
+2024-12-04 23:59:10,815 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-04 23:59:10,815 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-04 23:59:10,815 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-04 23:59:10,815 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-04 23:59:10,815 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-04 23:59:10,815 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-04 23:59:10,815 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-04 23:59:10,815 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-04 23:59:10,815 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-04 23:59:10,824 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-04 23:59:10,824 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-04 23:59:10,824 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-04 23:59:10,824 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-04 23:59:10,828 - app - INFO - Successfully registered routes blueprint
+2024-12-04 23:59:10,846 - werkzeug - WARNING -  * Debugger is active!
+2024-12-04 23:59:10,853 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 00:06:27,457 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/types.py', reloading
+2024-12-05 00:06:27,596 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 00:06:27,720 - app - INFO - Configuring CORS for development environment
+2024-12-05 00:06:28,019 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 00:06:28,019 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 00:06:28,019 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 00:06:28,019 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 00:06:28,019 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 00:06:28,019 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 00:06:28,019 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 00:06:28,019 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 00:06:28,019 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 00:06:28,029 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 00:06:28,029 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 00:06:28,030 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 00:06:28,030 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 00:06:28,032 - app - INFO - Successfully registered routes blueprint
+2024-12-05 00:06:28,047 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 00:06:28,053 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 00:08:28,171 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 00:08:28,318 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 00:08:28,434 - app - INFO - Configuring CORS for development environment
+2024-12-05 00:08:28,714 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 00:08:28,714 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 00:08:28,714 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 00:08:28,714 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 00:08:28,714 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 00:08:28,714 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 00:08:28,714 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 00:08:28,714 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 00:08:28,714 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 00:08:28,723 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 00:08:28,724 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 00:08:28,724 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 00:08:28,724 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 00:08:28,726 - app - INFO - Successfully registered routes blueprint
+2024-12-05 00:08:28,744 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 00:08:28,749 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 00:12:47,612 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 00:12:47,695 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 00:12:47,797 - app - INFO - Configuring CORS for development environment
+2024-12-05 00:12:48,043 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 00:12:48,043 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 00:12:48,043 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 00:12:48,043 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 00:12:48,043 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 00:12:48,043 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 00:12:48,043 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 00:12:48,043 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 00:12:48,043 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 00:12:48,049 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 00:12:48,049 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 00:12:48,050 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 00:12:48,050 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 00:12:48,052 - app - INFO - Successfully registered routes blueprint
+2024-12-05 00:12:48,068 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 00:12:48,077 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 00:18:58,833 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 00:18:58,896 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 00:18:59,007 - app - INFO - Configuring CORS for development environment
+2024-12-05 00:18:59,291 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 00:18:59,291 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 00:18:59,291 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 00:18:59,291 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 00:18:59,291 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 00:18:59,291 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 00:18:59,291 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 00:18:59,291 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 00:18:59,291 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 00:18:59,301 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 00:18:59,301 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 00:18:59,301 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 00:18:59,301 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 00:18:59,303 - app - INFO - Successfully registered routes blueprint
+2024-12-05 00:18:59,326 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 00:18:59,332 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 00:21:32,967 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 00:21:33,070 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 00:21:33,206 - app - INFO - Configuring CORS for development environment
+2024-12-05 00:21:33,533 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 00:21:33,533 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 00:21:33,533 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 00:21:33,533 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 00:21:33,533 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 00:21:33,533 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 00:21:33,533 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 00:21:33,533 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 00:21:33,533 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 00:21:33,544 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 00:21:33,545 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 00:21:33,545 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 00:21:33,545 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 00:21:33,552 - app - INFO - Successfully registered routes blueprint
+2024-12-05 00:21:33,575 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 00:21:33,581 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 00:24:20,237 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 00:24:20,294 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 00:24:20,398 - app - INFO - Configuring CORS for development environment
+2024-12-05 00:24:20,665 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 00:24:20,665 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 00:24:20,665 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 00:24:20,665 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 00:24:20,665 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 00:24:20,665 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 00:24:20,665 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 00:24:20,665 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 00:24:20,666 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 00:24:20,674 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 00:24:20,674 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 00:24:20,674 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 00:24:20,674 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 00:24:20,677 - app - INFO - Successfully registered routes blueprint
+2024-12-05 00:24:20,694 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 00:24:20,699 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 00:25:19,241 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 00:25:19,296 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 00:25:19,484 - app - INFO - Configuring CORS for development environment
+2024-12-05 00:25:19,759 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 00:25:19,759 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 00:25:19,759 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 00:25:19,759 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 00:25:19,759 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 00:25:19,759 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 00:25:19,760 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 00:25:19,760 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 00:25:19,760 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 00:25:19,768 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 00:25:19,768 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 00:25:19,768 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 00:25:19,768 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 00:25:19,771 - app - INFO - Successfully registered routes blueprint
+2024-12-05 00:25:19,787 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 00:25:19,794 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 00:31:43,787 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 00:31:43,857 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 00:31:43,970 - app - INFO - Configuring CORS for development environment
+2024-12-05 00:31:44,269 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 00:31:44,269 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 00:31:44,269 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 00:31:44,269 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 00:31:44,269 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 00:31:44,269 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 00:31:44,269 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 00:31:44,269 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 00:31:44,269 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 00:31:44,278 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 00:31:44,278 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 00:31:44,278 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 00:31:44,278 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 00:31:44,282 - app - INFO - Successfully registered routes blueprint
+2024-12-05 00:31:44,299 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 00:31:44,305 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 00:36:37,310 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/types.py', reloading
+2024-12-05 00:36:37,389 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 00:36:37,503 - app - INFO - Configuring CORS for development environment
+2024-12-05 00:36:37,562 - app - ERROR - Failed to register blueprint: name 'field' is not defined
+2024-12-05 19:33:50,748 - app - INFO - Configuring CORS for development environment
+2024-12-05 19:33:50,925 - app - ERROR - Failed to register blueprint: cannot import name 'DitaLaTeXProcessor' from 'app.dita.utils.latex.latex_processor' (/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/latex/latex_processor.py)
+2024-12-05 19:34:41,785 - app - INFO - Configuring CORS for development environment
+2024-12-05 19:34:41,857 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 19:34:41,857 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 19:34:41,857 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 19:34:41,857 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 19:34:41,857 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 19:34:41,857 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 19:34:41,857 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 19:34:41,857 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 19:34:41,857 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 19:34:41,870 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 19:34:41,870 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 19:34:41,870 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 19:34:41,870 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 19:34:41,873 - app - INFO - Successfully registered routes blueprint
+2024-12-05 19:34:41,949 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2024-12-05 19:34:41,949 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2024-12-05 19:34:41,949 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 19:34:42,032 - app - INFO - Configuring CORS for development environment
+2024-12-05 19:34:42,075 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 19:34:42,075 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 19:34:42,075 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 19:34:42,075 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 19:34:42,075 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 19:34:42,075 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 19:34:42,075 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 19:34:42,075 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 19:34:42,076 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 19:34:42,081 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 19:34:42,081 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 19:34:42,081 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 19:34:42,081 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 19:34:42,083 - app - INFO - Successfully registered routes blueprint
+2024-12-05 19:34:42,102 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 19:34:42,109 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 19:35:07,570 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-05 19:35:07,571 - app.dita.processor - INFO - Looking for topic with ID: brownian-motion
+2024-12-05 19:35:07,571 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-05 19:35:07,572 - app.dita.processor - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-05 19:35:07,572 - app.dita.processor - DEBUG - Processing ditamap...
+2024-12-05 19:35:07,572 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-05 19:35:07,576 - app.dita.processor - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-05 19:35:07,577 - app.dita.utils.markdown.md_transform - INFO - Transforming markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-05 19:35:07,577 - app.dita.utils.markdown.md_transform - INFO - Raw markdown content length: 9329
+2024-12-05 19:35:07,577 - app.dita.utils.markdown.md_transform - INFO - Raw markdown sample: > _The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found [here](https://ia601603.us.archive.org/14/items/investigationont000
+2024-12-05 19:35:07,577 - app.dita.utils.markdown.md_transform - INFO - Frontmatter: {}
+2024-12-05 19:35:07,577 - app.dita.utils.markdown.md_transform - INFO - Content length: 9328
+2024-12-05 19:35:07,588 - app.dita.utils.markdown.md_transform - INFO - Initial HTML conversion length: 9786
+2024-12-05 19:35:07,588 - app.dita.utils.markdown.md_transform - INFO - Initial HTML sample: <blockquote>
+<p><em>The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found <a href="https://ia601603.us.archive.org/14/items/
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Found 69 elements to process
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 0: blockquote - 
+The contents presented here have been reproduced 
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 1: p - The contents presented here have been reproduced f
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 2: h1 - INVESTIGATIONS ON THE THEORY OF THE BROWNIAN MOVEM
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 3: h2 - ON THE MOVEMENT OF SMALL PARTICLES SUSPENDED IN A 
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 4: p - In this paper it will be shown that according to t
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 5: p - If the movement discussed here can actually be obs
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 6: h3 - § ON THE OSMOTIC PRESSURE TO BE ASCRIBED TO THE SU
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 7: p - Let z gram-molecules of a non-electrolyte be disso
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 8: p - $$pV* = RTz$$
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 9: p - when V*/z is sufficiently great.
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 10: p - On the other hand, if small suspended particles ar
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 11: p - But a different conception is reached from the sta
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 12: p - $$p = \frac{RT}{V*N} n = \frac{RT}{N} v$$
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 13: p - where N signifies the actual number of molecules c
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 14: h3 - § OSMOTIC PRESSURE FROM THE STANDPOINT OF THE MOLE
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 15: p - If p₁, p₂, ... pₗ are the variables of state of a 
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 16: p - $$\frac{\partial p_v}{\partial t} = \phi_v(p_1 ...
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 17: p - whence
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 18: p - $$\sum\frac{\partial\phi_v}{\partial p_v} = 0$$
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 19: p - then the entropy of the system is given by the exp
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 20: p - $$S = \frac{\bar{E}}{T} + 2x \lg\int e^{-\frac{E}{
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 21: p - where T is the absolute temperature, Ē the energy 
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 22: p - $$F = -\frac{RT}{N}\lg\int e^{-\frac{EN}{RT}}dp_1 
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 23: p - Now let us consider a quantity of liquid enclosed 
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 24: p - We will call x₁, y₁, z₁ the rectangular coordinate
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 25: h3 - § THEORY OF THE DIFFUSION OF SMALL SPHERES IN SUSP
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 26: p - Suppose there be suspended particles irregularly d
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 27: p - Let v be the number of suspended particles per uni
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 28: p - $$δF = δE - TδS = 0$$
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 29: p - It will be assumed that the liquid has unit area o
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 30: p - $$δE = -\int_0^l Kvδxdx$$
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 31: p - and
+2024-12-05 19:35:07,592 - app.dita.utils.markdown.md_transform - INFO - Element 32: p - $$δS = \int_0^l R\frac{v}{N}\frac{δx}{δx}dx = -\fr
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 33: p - The required condition of equilibrium is therefore
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 34: p - $$-Kv + \frac{RT}{N}\frac{∂v}{∂x} = 0$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 35: p - or
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 36: p - $$Kv - \frac{∂p}{∂x} = 0$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 37: p - The last equation states that equilibrium with the
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 38: p - If the suspended particles have spherical form (ra
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 39: p - $$\frac{K}{6πkP}$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 40: p - and there will pass a unit area per unit of time
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 41: p - $$\frac{vK}{6πkP}$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 42: p - particles.
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 43: p - We can calculate the coefficient of diffusion from
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 44: p - $$D = \frac{RT}{N}\frac{1}{6πkP}$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 45: p - The coefficient of diffusion of the suspended subs
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 46: h3 - § ON THE IRREGULAR MOVEMENT OF PARTICLES SUSPENDED
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 47: p - We will turn now to a closer consideration of the 
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 48: p - For the value of Δ a certain probability-law will 
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 49: p - $$dn = nφ(Δ)dΔ$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 50: p - where
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 51: p - $$\int_{-\infty}^{+\infty}\phi(Δ)dΔ = 1$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 52: p - and φ only differs from zero for very small values
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 53: p - $$φ(Δ) = φ(-Δ)$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 54: p - The probable distribution of the resulting displac
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 55: p - $$f(x, t) = \frac{n}{\sqrt{4πD}}\frac{e^{-\frac{x^
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 56: p - We will now calculate the displacement λx in the d
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 57: p - $$λ_x = \sqrt{x^2} = \sqrt{2Dt}$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 58: h3 - § FORMULA FOR THE MEAN DISPLACEMENT OF SUSPENDED P
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 59: p - By eliminating D we obtain
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 60: p - $$λ_x = \sqrt{t}\sqrt{\frac{RT}{N}\frac{1}{3πkP}}$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 61: p - This equation shows how λx depends on T, k, and P.
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 62: p - We will calculate how great λx is for one second, 
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 63: p - $$λ_x = 8·10^{-5} \text{ cm} = 0.8μ$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 64: p - The mean displacement in one minute would be, ther
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 65: p - On the other hand, the relation found can be used 
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 66: p - $$N = \frac{1}{λ_x^2}\frac{RT}{3πkP}$$
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 67: p - It is to be hoped that some enquirer may succeed s
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Element 68: p - Berne, May, 1905.
+(Received, 11 May, 1905.)
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Processing element: blockquote
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_elements - INFO - Processed blockquote result length: 228
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Processed blockquote: <blockquote class="md-quote border-l-4 border-gray-300 pl-4 my-4 italic">
+The contents presented her
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 165
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">The contents presented here have been reproduced from Albert Einstein&#x27;s wo
+2024-12-05 19:35:07,593 - app.dita.utils.markdown.md_transform - INFO - Processing element: h1
+2024-12-05 19:35:07,593 - app.dita.utils.heading - DEBUG - Processing heading: text='INVESTIGATIONS ON THE THEORY OF THE BROWNIAN MOVEMENT', level=1, is_map_title=False, current_state={'h1': 0, 'h2': 0, 'h3': 0, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,593 - app.dita.utils.heading - DEBUG - Generated section number: 1.
+2024-12-05 19:35:07,594 - app.dita.utils.heading - DEBUG - Final result: id='investigations-on-the-theory', text='1. INVESTIGATIONS ON THE THEORY OF THE BROWNIAN MOVEMENT', new_state={'h1': 1, 'h2': 0, 'h3': 0, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed h1 result length: 187
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed h1: <h1 id="investigations-on-the-theory" class="topic-title">1. INVESTIGATIONS ON THE THEORY OF THE BRO
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: h2
+2024-12-05 19:35:07,594 - app.dita.utils.heading - DEBUG - Processing heading: text='ON THE MOVEMENT OF SMALL PARTICLES SUSPENDED IN A STATIONARY LIQUID DEMANDED BY THE MOLECULAR-KINETIC THEORY OF HEAT', level=2, is_map_title=False, current_state={'h1': 1, 'h2': 0, 'h3': 0, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,594 - app.dita.utils.heading - DEBUG - Numbering for level 2: current_h1=1, counters={'h1': 1, 'h2': 1, 'h3': 0, 'h4': 0, 'h5': 0, 'h6': 0}, result=1.1
+2024-12-05 19:35:07,594 - app.dita.utils.heading - DEBUG - Generated section number: 1.1.
+2024-12-05 19:35:07,594 - app.dita.utils.heading - DEBUG - Final result: id='on-the-movement-of', text='1.1. ON THE MOVEMENT OF SMALL PARTICLES SUSPENDED IN A STATIONARY LIQUID DEMANDED BY THE MOLECULAR-KINETIC THEORY OF HEAT', new_state={'h1': 1, 'h2': 1, 'h3': 0, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed h2 result length: 234
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed h2: <h2 id="on-the-movement-of" class="section-title">1.1. ON THE MOVEMENT OF SMALL PARTICLES SUSPENDED 
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 572
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">In this paper it will be shown that according to the molecular-kinetic theory o
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 536
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">If the movement discussed here can actually be observed (together with the laws
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: h3
+2024-12-05 19:35:07,594 - app.dita.utils.heading - DEBUG - Processing heading: text='§ ON THE OSMOTIC PRESSURE TO BE ASCRIBED TO THE SUSPENDED PARTICLES', level=3, is_map_title=False, current_state={'h1': 1, 'h2': 1, 'h3': 0, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,594 - app.dita.utils.heading - DEBUG - Numbering for level 3: current_h1=1, counters={'h1': 1, 'h2': 1, 'h3': 1, 'h4': 0, 'h5': 0, 'h6': 0}, result=1.1.1
+2024-12-05 19:35:07,594 - app.dita.utils.heading - DEBUG - Generated section number: 1.1.1.
+2024-12-05 19:35:07,594 - app.dita.utils.heading - DEBUG - Final result: id='on-the-osmotic-pressure', text='1.1.1. § ON THE OSMOTIC PRESSURE TO BE ASCRIBED TO THE SUSPENDED PARTICLES', new_state={'h1': 1, 'h2': 1, 'h3': 1, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed h3 result length: 200
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed h3: <h3 id="on-the-osmotic-pressure" class="subsection-title">1.1.1. § ON THE OSMOTIC PRESSURE TO BE ASC
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 377
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">Let z gram-molecules of a non-electrolyte be dissolved in a volume V forming pa
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 38
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$pV* = RTz$$</p>
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 57
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">when V*/z is sufficiently great.</p>
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 432
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">On the other hand, if small suspended particles are present in the fractional v
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 922
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">But a different conception is reached from the standpoint of the molecular-kine
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 66
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$p = \frac{RT}{V*N} n = \frac{RT}{N} v$$</p>
+2024-12-05 19:35:07,594 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 103
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">where N signifies the actual number of molecules contained in a gram-molecule.<
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: h3
+2024-12-05 19:35:07,595 - app.dita.utils.heading - DEBUG - Processing heading: text='§ OSMOTIC PRESSURE FROM THE STANDPOINT OF THE MOLECULAR-KINETIC THEORY OF HEAT', level=3, is_map_title=False, current_state={'h1': 1, 'h2': 1, 'h3': 1, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,595 - app.dita.utils.heading - DEBUG - Numbering for level 3: current_h1=1, counters={'h1': 1, 'h2': 1, 'h3': 2, 'h4': 0, 'h5': 0, 'h6': 0}, result=1.1.2
+2024-12-05 19:35:07,595 - app.dita.utils.heading - DEBUG - Generated section number: 1.1.2.
+2024-12-05 19:35:07,595 - app.dita.utils.heading - DEBUG - Final result: id='osmotic-pressure-from-the', text='1.1.2. § OSMOTIC PRESSURE FROM THE STANDPOINT OF THE MOLECULAR-KINETIC THEORY OF HEAT', new_state={'h1': 1, 'h2': 1, 'h3': 2, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed h3 result length: 215
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed h3: <h3 id="osmotic-pressure-from-the" class="subsection-title">1.1.2. § OSMOTIC PRESSURE FROM THE STAND
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 260
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">If p₁, p₂, ... pₗ are the variables of state of a physical system which complet
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 106
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$\frac{\partial p_v}{\partial t} = \phi_v(p_1 ... p_l) \quad (v = 1, 2, ... l)
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 31
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">whence</p>
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 72
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$\sum\frac{\partial\phi_v}{\partial p_v} = 0$$</p>
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 82
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">then the entropy of the system is given by the expression</p>
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 95
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$S = \frac{\bar{E}}{T} + 2x \lg\int e^{-\frac{E}{2xT}}dp_1 ... dp_l$$</p>
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 344
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">where T is the absolute temperature, Ē the energy of the system, E the energy a
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 107
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$F = -\frac{RT}{N}\lg\int e^{-\frac{EN}{RT}}dp_1 ... dp_l = -\frac{RT}{N} \lg 
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 475
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">Now let us consider a quantity of liquid enclosed in a volume V; let there be n
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 385
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">We will call x₁, y₁, z₁ the rectangular coordinates of the centre of gravity of
+2024-12-05 19:35:07,595 - app.dita.utils.markdown.md_transform - INFO - Processing element: h3
+2024-12-05 19:35:07,595 - app.dita.utils.heading - DEBUG - Processing heading: text='§ THEORY OF THE DIFFUSION OF SMALL SPHERES IN SUSPENSION', level=3, is_map_title=False, current_state={'h1': 1, 'h2': 1, 'h3': 2, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,595 - app.dita.utils.heading - DEBUG - Numbering for level 3: current_h1=1, counters={'h1': 1, 'h2': 1, 'h3': 3, 'h4': 0, 'h5': 0, 'h6': 0}, result=1.1.3
+2024-12-05 19:35:07,596 - app.dita.utils.heading - DEBUG - Generated section number: 1.1.3.
+2024-12-05 19:35:07,596 - app.dita.utils.heading - DEBUG - Final result: id='theory-of-the-diffusion', text='1.1.3. § THEORY OF THE DIFFUSION OF SMALL SPHERES IN SUSPENSION', new_state={'h1': 1, 'h2': 1, 'h3': 3, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed h3 result length: 189
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed h3: <h3 id="theory-of-the-diffusion" class="subsection-title">1.1.3. § THEORY OF THE DIFFUSION OF SMALL 
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 385
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">Suppose there be suspended particles irregularly dispersed in a liquid. We will
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 291
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">Let v be the number of suspended particles per unit volume; then in the conditi
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 46
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$δF = δE - TδS = 0$$</p>
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 179
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">It will be assumed that the liquid has unit area of cross-section perpendicular
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 50
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$δE = -\int_0^l Kvδxdx$$</p>
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 28
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">and</p>
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 111
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$δS = \int_0^l R\frac{v}{N}\frac{δx}{δx}dx = -\frac{R}{N}\int_0^l \frac{∂v}{∂x
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 75
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">The required condition of equilibrium is therefore</p>
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 64
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$-Kv + \frac{RT}{N}\frac{∂v}{∂x} = 0$$</p>
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 27
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">or</p>
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 51
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$Kv - \frac{∂p}{∂x} = 0$$</p>
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 128
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">The last equation states that equilibrium with the force K is brought about by 
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 211
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">If the suspended particles have spherical form (radius of the sphere = P), and 
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 43
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$\frac{K}{6πkP}$$</p>
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,596 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 73
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">and there will pass a unit area per unit of time</p>
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 44
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$\frac{vK}{6πkP}$$</p>
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 35
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">particles.</p>
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 136
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">We can calculate the coefficient of diffusion from the two conditions found for
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 59
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$D = \frac{RT}{N}\frac{1}{6πkP}$$</p>
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 255
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">The coefficient of diffusion of the suspended substance therefore depends (exce
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: h3
+2024-12-05 19:35:07,597 - app.dita.utils.heading - DEBUG - Processing heading: text='§ ON THE IRREGULAR MOVEMENT OF PARTICLES SUSPENDED IN A LIQUID AND THE RELATION OF THIS TO DIFFUSION', level=3, is_map_title=False, current_state={'h1': 1, 'h2': 1, 'h3': 3, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,597 - app.dita.utils.heading - DEBUG - Numbering for level 3: current_h1=1, counters={'h1': 1, 'h2': 1, 'h3': 4, 'h4': 0, 'h5': 0, 'h6': 0}, result=1.1.4
+2024-12-05 19:35:07,597 - app.dita.utils.heading - DEBUG - Generated section number: 1.1.4.
+2024-12-05 19:35:07,597 - app.dita.utils.heading - DEBUG - Final result: id='on-the-irregular-movement', text='1.1.4. § ON THE IRREGULAR MOVEMENT OF PARTICLES SUSPENDED IN A LIQUID AND THE RELATION OF THIS TO DIFFUSION', new_state={'h1': 1, 'h2': 1, 'h3': 4, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed h3 result length: 237
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed h3: <h3 id="on-the-irregular-movement" class="subsection-title">1.1.4. § ON THE IRREGULAR MOVEMENT OF PA
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 206
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">We will turn now to a closer consideration of the irregular movements which ari
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 244
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">For the value of Δ a certain probability-law will hold; the number dn of the pa
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 41
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$dn = nφ(Δ)dΔ$$</p>
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 30
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">where</p>
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 66
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$\int_{-\infty}^{+\infty}\phi(Δ)dΔ = 1$$</p>
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 106
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">and φ only differs from zero for very small values of Δ and fulfils the conditi
+2024-12-05 19:35:07,597 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 41
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$φ(Δ) = φ(-Δ)$$</p>
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 302
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">The probable distribution of the resulting displacements in a given time t is t
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 96
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$f(x, t) = \frac{n}{\sqrt{4πD}}\frac{e^{-\frac{x^2}{4Dt}}}{\sqrt{t}}$$</p>
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 280
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">We will now calculate the displacement λx in the direction of the X-axis which 
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 58
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$λ_x = \sqrt{x^2} = \sqrt{2Dt}$$</p>
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_transform - INFO - Processing element: h3
+2024-12-05 19:35:07,598 - app.dita.utils.heading - DEBUG - Processing heading: text='§ FORMULA FOR THE MEAN DISPLACEMENT OF SUSPENDED PARTICLES. A NEW METHOD OF DETERMINING THE REAL SIZE OF THE ATOM', level=3, is_map_title=False, current_state={'h1': 1, 'h2': 1, 'h3': 4, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,598 - app.dita.utils.heading - DEBUG - Numbering for level 3: current_h1=1, counters={'h1': 1, 'h2': 1, 'h3': 5, 'h4': 0, 'h5': 0, 'h6': 0}, result=1.1.5
+2024-12-05 19:35:07,598 - app.dita.utils.heading - DEBUG - Generated section number: 1.1.5.
+2024-12-05 19:35:07,598 - app.dita.utils.heading - DEBUG - Final result: id='formula-for-the-mean', text='1.1.5. § FORMULA FOR THE MEAN DISPLACEMENT OF SUSPENDED PARTICLES. A NEW METHOD OF DETERMINING THE REAL SIZE OF THE ATOM', new_state={'h1': 1, 'h2': 1, 'h3': 5, 'h4': 0, 'h5': 0, 'h6': 0}
+2024-12-05 19:35:07,598 - app.dita.utils.markdown.md_elements - INFO - Processed h3 result length: 240
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed h3: <h3 id="formula-for-the-mean" class="subsection-title">1.1.5. § FORMULA FOR THE MEAN DISPLACEMENT OF
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 51
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">By eliminating D we obtain</p>
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 76
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$λ_x = \sqrt{t}\sqrt{\frac{RT}{N}\frac{1}{3πkP}}$$</p>
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 75
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">This equation shows how λx depends on T, k, and P.</p>
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 259
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">We will calculate how great λx is for one second, if N is taken equal to 6·10²³
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 62
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$λ_x = 8·10^{-5} \text{ cm} = 0.8μ$$</p>
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 91
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">The mean displacement in one minute would be, therefore, about 6μ.</p>
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 112
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">On the other hand, the relation found can be used for the determination of N. W
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 63
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">$$N = \frac{1}{λ_x^2}\frac{RT}{3πkP}$$</p>
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 181
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">It is to be hoped that some enquirer may succeed shortly in solving the problem
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processing element: p
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_elements - INFO - Processed p result length: 68
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Processed p: <p class="md-p mb-4">Berne, May, 1905.
+(Received, 11 May, 1905.)</p>
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Final processed content length: 11822
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Final content sample: <blockquote class="md-quote border-l-4 border-gray-300 pl-4 my-4 italic">
+The contents presented here have been reproduced from Albert Einstein&#x27;s works during his Annus Mirabilis. The source can 
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - INFO - Final HTML length: 12103
+2024-12-05 19:35:07,599 - app.dita.utils.markdown.md_transform - DEBUG - Final HTML structure:
+
+            <div class="content-wrapper">
+                <div class="dita-content" data-map-id="brownian-motion">
+                    <nav class="dita-toc"></nav>
+                    <blockquote class="md-quote border-l-4 border-gray-300 pl-4 my-4 italic">
+The contents presented here have been reproduced from Albert Einstein&#x27;s works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="md-p mb-4">The contents presented here have been reproduced from Albert Einstein&#x27;s works during his Annus Mirabilis. The source can be found here.</p>
+<h1 id="investigations-on-the-theory" class="topic-title">1. INVESTIGATIONS ON THE THEORY OF THE BROWNIAN MOVEMENT<a href="#investigations-on-the-theory" class="heading-anchor">¶</a></h1>
+<h2 id="on-the-movement-of" class="section-title">1.1. ON THE MOVEMENT OF SMALL PARTICLES SUSPENDED IN A STATIONARY LIQUID DEMANDED BY THE MOLECULAR-KINETIC THEORY OF HEAT<a href="#on-the-movement-of" class="heading-anchor">¶</a></h2>
+<p class="md-p mb-4">In this paper it will be shown that according to the molecular-kinetic theory of heat, bodies of microscopically-visible size suspended in a liquid will perform movements of such magnitude that they can be easily observed in a microscope, on account of the molecular motions of heat. It is possible that the movements to be discussed here are identical with the so-called &quot;Brownian molecular motion&quot;; however, the information available to me regarding the latter is so lacking in precision, that I can form no judgment in the matter (1).</p>
+<p class="md-p mb-4">If the movement discussed here can actually be observed (together with the laws relating to it that one would expect to find), then classical thermodynamics can no longer be looked upon as applicable with precision to bodies even of dimensions distinguishable in a microscope: an exact determination of actual atomic dimensions is then possible. On the other hand, had the prediction of this movement proved to be incorrect, a weighty argument would be provided against the molecular-kinetic conception of heat.</p>
+<h3 id="on-the-osmotic-pressure" class="subsection-title">1.1.1. § ON THE OSMOTIC PRESSURE TO BE ASCRIBED TO THE SUSPENDED PARTICLES<a href="#on-the-osmotic-pressure" class="heading-anchor">¶</a></h3>
+<p class="md-p mb-4">Let z gram-molecules of a non-electrolyte be dissolved in a volume V forming part of a quantity of liquid of total volume V. If the volume V is separated from the pure solvent by a partition permeable for the solvent but impermeable for the solute, a so-called &quot;osmotic pressure,&quot; p, is exerted on this partition, which satisfies the equation</p>
+<p class="md-p mb-4">$$pV* = RTz$$</p>
+<p class="md-p mb-4">when V*/z is sufficiently great.</p>
+<p class="md-p mb-4">On the other hand, if small suspended particles are present in the fractional volume V* in place of the dissolved substance, which particles are also unable to pass through the partition permeable to the solvent: according to the classical theory of thermodynamics—at least when the force of gravity (which does not interest us here) is ignored—we would not expect to find any force acting on the partition.</p>
+<p class="md-p mb-4">But a different conception is reached from the standpoint of the molecular-kinetic theory of heat. According to this theory a dissolved molecule is differentiated from a suspended body solely by its dimensions, and it is not apparent why a number of suspended particles should not produce the same osmotic pressure as the same number of molecules. We must assume that the suspended particles perform an irregular movement—even if a very slow one—in the liquid, on account of the molecular movement of the liquid; if they are prevented from leaving the volume V by the partition, they will exert a pressure on the partition just like molecules in solution. Then, if there are n suspended particles present in the volume V, and therefore n/V* = v in a unit of volume, and if neighboring particles are sufficiently far separated, there will be a corresponding osmotic pressure p of magnitude given by</p>
+<p class="md-p mb-4">$$p = \frac{RT}{V*N} n = \frac{RT}{N} v$$</p>
+<p class="md-p mb-4">where N signifies the actual number of molecules contained in a gram-molecule.</p>
+<h3 id="osmotic-pressure-from-the" class="subsection-title">1.1.2. § OSMOTIC PRESSURE FROM THE STANDPOINT OF THE MOLECULAR-KINETIC THEORY OF HEAT<a href="#osmotic-pressure-from-the" class="heading-anchor">¶</a></h3>
+<p class="md-p mb-4">If p₁, p₂, ... pₗ are the variables of state of a physical system which completely define the instantaneous condition of the system, and if the complete system of the equations of change of these variables of state is given in the form</p>
+<p class="md-p mb-4">$$\frac{\partial p_v}{\partial t} = \phi_v(p_1 ... p_l) \quad (v = 1, 2, ... l)$$</p>
+<p class="md-p mb-4">whence</p>
+<p class="md-p mb-4">$$\sum\frac{\partial\phi_v}{\partial p_v} = 0$$</p>
+<p class="md-p mb-4">then the entropy of the system is given by the expression</p>
+<p class="md-p mb-4">$$S = \frac{\bar{E}}{T} + 2x \lg\int e^{-\frac{E}{2xT}}dp_1 ... dp_l$$</p>
+<p class="md-p mb-4">where T is the absolute temperature, Ē the energy of the system, E the energy as a function of p_v. The integral is extended over all possible values of p consistent with the conditions of the problem. x is connected with the constant N referred to before by the relation 2xN = R. We obtain hence for the free energy F,</p>
+<p class="md-p mb-4">$$F = -\frac{RT}{N}\lg\int e^{-\frac{EN}{RT}}dp_1 ... dp_l = -\frac{RT}{N} \lg B$$</p>
+<p class="md-p mb-4">Now let us consider a quantity of liquid enclosed in a volume V; let there be n solute molecules (or suspended particles respectively) in the portion V of this volume V which are retained in the volume V by a semi-permeable partition; the integration limits of the integral B obtained in the expressions for S and F will be affected accordingly. The combined volume of the solute molecules (or suspended particles) is taken as small compared with V*.</p>
+<p class="md-p mb-4">We will call x₁, y₁, z₁ the rectangular coordinates of the centre of gravity of the first particle, x₂, y₂, z₂ those of the second, etc., xₙ, yₙ, zₙ those of the last particle, and allocate for the centres of gravity of the particles the indefinitely small domains of parallelopiped form dx₁, dy₁, dz₁; dx₂, dy₂, dz₂, ... dxₙ, dyₙ, dzₙ, lying wholly within V*.</p>
+<h3 id="theory-of-the-diffusion" class="subsection-title">1.1.3. § THEORY OF THE DIFFUSION OF SMALL SPHERES IN SUSPENSION<a href="#theory-of-the-diffusion" class="heading-anchor">¶</a></h3>
+<p class="md-p mb-4">Suppose there be suspended particles irregularly dispersed in a liquid. We will consider their state of dynamic equilibrium, on the assumption that a force K acts on the single particles, which force depends on the position, but not on the time. It will be assumed for the sake of simplicity that the force is exerted everywhere in the direction of the x axis.</p>
+<p class="md-p mb-4">Let v be the number of suspended particles per unit volume; then in the condition of dynamic equilibrium v is such a function of x that the variation of the free energy vanishes for an arbitrary virtual displacement δx of the suspended substance. We have, therefore,</p>
+<p class="md-p mb-4">$$δF = δE - TδS = 0$$</p>
+<p class="md-p mb-4">It will be assumed that the liquid has unit area of cross-section perpendicular to the x axis and is bounded by the planes x = 0 and x = l. We have, then,</p>
+<p class="md-p mb-4">$$δE = -\int_0^l Kvδxdx$$</p>
+<p class="md-p mb-4">and</p>
+<p class="md-p mb-4">$$δS = \int_0^l R\frac{v}{N}\frac{δx}{δx}dx = -\frac{R}{N}\int_0^l \frac{∂v}{∂x}δxdx$$</p>
+<p class="md-p mb-4">The required condition of equilibrium is therefore</p>
+<p class="md-p mb-4">$$-Kv + \frac{RT}{N}\frac{∂v}{∂x} = 0$$</p>
+<p class="md-p mb-4">or</p>
+<p class="md-p mb-4">$$Kv - \frac{∂p}{∂x} = 0$$</p>
+<p class="md-p mb-4">The last equation states that equilibrium with the force K is brought about by osmotic pressure forces.</p>
+<p class="md-p mb-4">If the suspended particles have spherical form (radius of the sphere = P), and if the liquid has a coefficient of viscosity k, then the force K imparts to the single particles a velocity</p>
+<p class="md-p mb-4">$$\frac{K}{6πkP}$$</p>
+<p class="md-p mb-4">and there will pass a unit area per unit of time</p>
+<p class="md-p mb-4">$$\frac{vK}{6πkP}$$</p>
+<p class="md-p mb-4">particles.</p>
+<p class="md-p mb-4">We can calculate the coefficient of diffusion from the two conditions found for the dynamic equilibrium. We get</p>
+<p class="md-p mb-4">$$D = \frac{RT}{N}\frac{1}{6πkP}$$</p>
+<p class="md-p mb-4">The coefficient of diffusion of the suspended substance therefore depends (except for universal constants and the absolute temperature) only on the coefficient of viscosity of the liquid and on the size of the suspended particles.</p>
+<h3 id="on-the-irregular-movement" class="subsection-title">1.1.4. § ON THE IRREGULAR MOVEMENT OF PARTICLES SUSPENDED IN A LIQUID AND THE RELATION OF THIS TO DIFFUSION<a href="#on-the-irregular-movement" class="heading-anchor">¶</a></h3>
+<p class="md-p mb-4">We will turn now to a closer consideration of the irregular movements which arise from thermal molecular movement, and give rise to the diffusion investigated in the last paragraph.</p>
+<p class="md-p mb-4">For the value of Δ a certain probability-law will hold; the number dn of the particles which experience in the time-interval τ a displacement which lies between Δ and Δ + dΔ, will be expressed by an equation of the form</p>
+<p class="md-p mb-4">$$dn = nφ(Δ)dΔ$$</p>
+<p class="md-p mb-4">where</p>
+<p class="md-p mb-4">$$\int_{-\infty}^{+\infty}\phi(Δ)dΔ = 1$$</p>
+<p class="md-p mb-4">and φ only differs from zero for very small values of Δ and fulfils the condition</p>
+<p class="md-p mb-4">$$φ(Δ) = φ(-Δ)$$</p>
+<p class="md-p mb-4">The probable distribution of the resulting displacements in a given time t is therefore the same as that of fortuitous error, which was to be expected. But it is significant how the constants in the exponential term are related to the coefficient of diffusion. The solution is:</p>
+<p class="md-p mb-4">$$f(x, t) = \frac{n}{\sqrt{4πD}}\frac{e^{-\frac{x^2}{4Dt}}}{\sqrt{t}}$$</p>
+<p class="md-p mb-4">We will now calculate the displacement λx in the direction of the X-axis which a particle experiences on an average, or—more accurately expressed—the square root of the arithmetic mean of the squares of displacements in the direction of the X-axis; it is:</p>
+<p class="md-p mb-4">$$λ_x = \sqrt{x^2} = \sqrt{2Dt}$$</p>
+<h3 id="formula-for-the-mean" class="subsection-title">1.1.5. § FORMULA FOR THE MEAN DISPLACEMENT OF SUSPENDED PARTICLES. A NEW METHOD OF DETERMINING THE REAL SIZE OF THE ATOM<a href="#formula-for-the-mean" class="heading-anchor">¶</a></h3>
+<p class="md-p mb-4">By eliminating D we obtain</p>
+<p class="md-p mb-4">$$λ_x = \sqrt{t}\sqrt{\frac{RT}{N}\frac{1}{3πkP}}$$</p>
+<p class="md-p mb-4">This equation shows how λx depends on T, k, and P.</p>
+<p class="md-p mb-4">We will calculate how great λx is for one second, if N is taken equal to 6·10²³ in accordance with the kinetic theory of gases, water at 17° C. is chosen as the liquid (k = 1.35·10⁻²), and the diameter of the particles .001 mm. We get</p>
+<p class="md-p mb-4">$$λ_x = 8·10^{-5} \text{ cm} = 0.8μ$$</p>
+<p class="md-p mb-4">The mean displacement in one minute would be, therefore, about 6μ.</p>
+<p class="md-p mb-4">On the other hand, the relation found can be used for the determination of N. We obtain</p>
+<p class="md-p mb-4">$$N = \frac{1}{λ_x^2}\frac{RT}{3πkP}$$</p>
+<p class="md-p mb-4">It is to be hoped that some enquirer may succeed shortly in solving the problem suggested here, which is so important in connection with the theory of Heat.</p>
+<p class="md-p mb-4">Berne, May, 1905.
+(Received, 11 May, 1905.)</p>  <!-- THIS IS WHERE THE CONTENT GOES -->
+                </div>
+            </div>
+            
+2024-12-05 19:35:07,600 - app.dita.processor - DEBUG - Processed content length: 12077
+2024-12-05 19:35:07,600 - app.routes - DEBUG - Content generated: <div class="content-wrapper">
+                <div class="dita-content" data-map-id="brownian-motion">
+                    <nav class="dita-toc"></nav>
+                    <blockquote class="md-quote ...
+2024-12-05 19:35:07,600 - app.routes - DEBUG - Found block equations in content
+2024-12-05 19:35:07,603 - werkzeug - INFO - 127.0.0.1 - - [05/Dec/2024 19:35:07] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-05 19:35:07,661 - werkzeug - INFO - 127.0.0.1 - - [05/Dec/2024 19:35:07] "GET /static/css/academic.css HTTP/1.1" 200 -
+2024-12-05 19:35:08,036 - werkzeug - INFO - 127.0.0.1 - - [05/Dec/2024 19:35:08] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2024-12-05 20:03:44,879 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/types.py', reloading
+2024-12-05 20:03:44,911 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 20:03:45,018 - app - INFO - Configuring CORS for development environment
+2024-12-05 20:03:45,077 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 20:03:45,077 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 20:03:45,077 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 20:03:45,077 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 20:03:45,077 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 20:03:45,077 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 20:03:45,077 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 20:03:45,077 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 20:03:45,077 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 20:03:45,085 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 20:03:45,086 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 20:03:45,086 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 20:03:45,086 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 20:03:45,088 - app - INFO - Successfully registered routes blueprint
+2024-12-05 20:03:45,106 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 20:03:45,112 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 20:07:45,419 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/heading.py', reloading
+2024-12-05 20:07:45,444 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 20:07:45,552 - app - INFO - Configuring CORS for development environment
+2024-12-05 20:07:45,615 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 20:07:45,615 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 20:07:45,615 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 20:07:45,615 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 20:07:45,615 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 20:07:45,615 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 20:07:45,615 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 20:07:45,615 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 20:07:45,615 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 20:07:45,623 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 20:07:45,624 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 20:07:45,624 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 20:07:45,624 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 20:07:45,626 - app - INFO - Successfully registered routes blueprint
+2024-12-05 20:07:45,642 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 20:07:45,647 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 20:10:36,328 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 20:10:36,354 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 20:10:36,465 - app - INFO - Configuring CORS for development environment
+2024-12-05 20:10:36,530 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 20:10:36,530 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 20:10:36,530 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 20:10:36,530 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 20:10:36,530 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 20:10:36,530 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 20:10:36,530 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 20:10:36,530 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 20:10:36,530 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 20:10:36,540 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 20:10:36,540 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 20:10:36,540 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 20:10:36,540 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 20:10:36,542 - app - INFO - Successfully registered routes blueprint
+2024-12-05 20:10:36,560 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 20:10:36,565 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 20:13:44,959 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 20:13:44,991 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 20:13:45,077 - app - INFO - Configuring CORS for development environment
+2024-12-05 20:13:45,127 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 20:13:45,127 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 20:13:45,127 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 20:13:45,127 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 20:13:45,127 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 20:13:45,127 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 20:13:45,127 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 20:13:45,127 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 20:13:45,128 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 20:13:45,133 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 20:13:45,133 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 20:13:45,133 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 20:13:45,133 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 20:13:45,136 - app - INFO - Successfully registered routes blueprint
+2024-12-05 20:13:45,150 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 20:13:45,154 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 20:14:04,561 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 20:14:04,605 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 20:14:04,703 - app - INFO - Configuring CORS for development environment
+2024-12-05 20:14:04,754 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 20:14:04,754 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 20:14:04,754 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 20:14:04,754 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 20:14:04,754 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 20:14:04,754 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 20:14:04,754 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 20:14:04,754 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 20:14:04,754 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 20:14:04,760 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 20:14:04,760 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 20:14:04,760 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 20:14:04,760 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 20:14:04,763 - app - INFO - Successfully registered routes blueprint
+2024-12-05 20:14:04,781 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 20:14:04,786 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 20:15:24,036 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/heading.py', reloading
+2024-12-05 20:15:24,072 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 20:15:24,162 - app - INFO - Configuring CORS for development environment
+2024-12-05 20:15:24,209 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 20:15:24,209 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 20:15:24,209 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 20:15:24,209 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 20:15:24,209 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 20:15:24,209 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 20:15:24,209 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 20:15:24,209 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 20:15:24,209 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 20:15:24,215 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 20:15:24,215 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 20:15:24,215 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 20:15:24,215 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 20:15:24,218 - app - INFO - Successfully registered routes blueprint
+2024-12-05 20:15:24,236 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 20:15:24,240 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 20:24:12,538 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/logger.py', reloading
+2024-12-05 20:24:12,561 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 20:24:12,664 - app - INFO - Configuring CORS for development environment
+2024-12-05 20:24:12,721 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 20:24:12,721 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 20:24:12,721 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 20:24:12,721 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 20:24:12,721 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 20:24:12,721 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 20:24:12,721 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 20:24:12,721 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 20:24:12,721 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 20:24:12,729 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 20:24:12,730 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 20:24:12,730 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 20:24:12,730 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 20:24:12,732 - app - INFO - Successfully registered routes blueprint
+2024-12-05 20:24:12,750 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 20:24:12,759 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 20:25:41,102 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/types.py', reloading
+2024-12-05 20:25:41,125 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 20:25:41,231 - app - INFO - Configuring CORS for development environment
+2024-12-05 20:25:41,306 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 20:25:41,306 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 20:25:41,306 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 20:25:41,306 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 20:25:41,306 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 20:25:41,306 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 20:25:41,306 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 20:25:41,307 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 20:25:41,307 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 20:25:41,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 20:25:41,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 20:25:41,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 20:25:41,316 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 20:25:41,318 - app - INFO - Successfully registered routes blueprint
+2024-12-05 20:25:41,341 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 20:25:41,348 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 20:29:24,643 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 20:29:24,669 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 20:29:24,769 - app - INFO - Configuring CORS for development environment
+2024-12-05 20:29:24,827 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-05 20:29:24,827 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-05 20:29:24,827 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-05 20:29:24,827 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-05 20:29:24,827 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-05 20:29:24,827 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-05 20:29:24,827 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-05 20:29:24,827 - app.dita.processor - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-05 20:29:24,827 - app.dita.processor - DEBUG - Paths initialized successfully
+2024-12-05 20:29:24,832 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-05 20:29:24,832 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-05 20:29:24,832 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-05 20:29:24,832 - app.dita.processor - INFO - DITA Processor initialized successfully
+2024-12-05 20:29:24,835 - app - INFO - Successfully registered routes blueprint
+2024-12-05 20:29:24,852 - werkzeug - WARNING -  * Debugger is active!
+2024-12-05 20:29:24,857 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-05 20:32:47,348 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-05 20:32:47,372 - werkzeug - INFO -  * Restarting with stat
+2024-12-05 20:32:47,476 - app - INFO - Configuring CORS for development environment
+2024-12-05 20:32:47,538 - app - ERROR - Failed to register blueprint: name 'DiscoveredMap' is not defined
