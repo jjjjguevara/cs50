@@ -11,6 +11,10 @@ PathLike = Union[str, Path]
 HTMLString = str
 IDType = str
 
+
+
+
+
 class ElementType(Enum):
     """Types of elements that can be parsed"""
     DITA = "dita"
@@ -256,6 +260,32 @@ class ProcessingOptions:
     features: Optional[Dict[str, bool]] = None
 
 
+# Configuration
+@dataclass
+class ParserConfig:
+    """Parser configuration"""
+    validate_dtd: bool = False
+    resolve_entities: bool = False
+    load_dtd: bool = False
+    remove_blank_text: bool = True
+
+@dataclass
+class PathConfig:
+    """Path configuration"""
+    dita_root: Path
+    maps_dir: Path
+    topics_dir: Path
+    output_dir: Path
+    artifacts_dir: Path
+    media_dir: Path
+
+@dataclass
+class ProcessorConfig:
+    """Main processor configuration"""
+    parser: ParserConfig
+    paths: PathConfig
+    processing: ProcessingOptions
+    features: ProcessingFeatures
 
 
 ## Element tracking

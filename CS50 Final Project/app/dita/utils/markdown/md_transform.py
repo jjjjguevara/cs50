@@ -7,6 +7,9 @@ from bs4 import BeautifulSoup, Tag
 import markdown
 from markdown.extensions import Extension
 
+# Global config
+from config import DITAConfig
+
 from ..types import (
     MDElementType,
     MDElementInfo,
@@ -28,6 +31,25 @@ class MarkdownTransformer:
         self.dita_root = dita_root
         self.html = HTMLHelper(dita_root)
         self.element_processor = MarkdownContentProcessor()
+
+    def configure(self, config: DITAConfig) -> None:
+        """Configure element processor with provided settings."""
+        try:
+            self.logger.debug("Configuring Markdown element processor")
+
+            # Configure paths if needed
+            if hasattr(config.paths, 'dita_root'):
+                self.dita_root = config.paths.dita_root
+
+            # Configure ID handler
+            if hasattr(self.id_handler, 'configure'):
+                self.id_handler.configure(config)
+
+            self.logger.debug("Markdown element processor configuration completed")
+
+        except Exception as e:
+            self.logger.error(f"Markdown element processor configuration failed: {str(e)}")
+            raise
 
     def transform_topic(self, topic_path: Path) -> str:
         """Transform Markdown topic to HTML."""

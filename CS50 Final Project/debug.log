@@ -27443,3 +27443,1049 @@ The contents presented here have been reproduced from Albert Einstein&#x27;s wor
 2024-12-05 20:32:47,372 - werkzeug - INFO -  * Restarting with stat
 2024-12-05 20:32:47,476 - app - INFO - Configuring CORS for development environment
 2024-12-05 20:32:47,538 - app - ERROR - Failed to register blueprint: name 'DiscoveredMap' is not defined
+2024-12-06 14:01:35,778 - app - INFO - Configuring CORS for development environment
+2024-12-06 14:01:35,869 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 14:01:35,869 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 14:01:35,870 - dita - DEBUG - Paths initialized successfully
+2024-12-06 14:01:35,873 - app - INFO - Successfully registered routes blueprint
+2024-12-06 14:01:35,909 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2024-12-06 14:01:35,910 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2024-12-06 14:01:35,910 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 14:01:35,996 - app - INFO - Configuring CORS for development environment
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 14:01:36,045 - dita - DEBUG - Paths initialized successfully
+2024-12-06 14:01:36,048 - app - INFO - Successfully registered routes blueprint
+2024-12-06 14:01:36,061 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 14:01:36,068 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 14:01:44,352 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:01:44,352 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:01:44,352 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:44,353 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:44,353 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:01:44,354 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:44,357 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:01:44,357 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:01:44,378 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:01:44,379 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:01:44,379 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:01:44,379 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:01:44,380 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:01:44,380 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:01:44,382 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:01:44,382 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:01:44,382 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:01:44,383 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:01:44,390 - dita - DEBUG - Processed content length: 11338
+2024-12-06 14:01:44,390 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:01:44,390 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:01:44,394 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:01:44] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:01:44,432 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:01:44] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:01:51,939 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:01:51,941 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:01:51,941 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:51,942 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:51,942 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:01:51,942 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:51,943 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:01:51,943 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:01:51,944 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:01:51,944 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:01:51,944 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:01:51,944 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:01:51,944 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:01:51,944 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:01:51,945 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:01:51,945 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:01:51,945 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:01:51,945 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:01:51,961 - dita - DEBUG - Processed content length: 11350
+2024-12-06 14:01:51,962 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:01:51,962 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:01:51,962 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:01:51] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:01:51,987 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:01:51] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:01:54,026 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:01:54,026 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:01:54,026 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:54,027 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:54,027 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:01:54,027 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:54,028 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:01:54,028 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:01:54,028 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:01:54,028 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:01:54,028 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:01:54,029 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:01:54,029 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:01:54,029 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:01:54,029 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:01:54,029 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:01:54,029 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:01:54,029 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:01:54,044 - dita - DEBUG - Processed content length: 11358
+2024-12-06 14:01:54,044 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:01:54,044 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:01:54,045 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:01:54] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:01:54,071 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:01:54] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:01:55,391 - app.routes - INFO - Redirecting home to roadmap
+2024-12-06 14:01:55,391 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:01:55] "[32mGET / HTTP/1.1[0m" 302 -
+2024-12-06 14:01:55,397 - app.routes - INFO - Processing entry request for: roadmap
+2024-12-06 14:01:55,397 - dita - INFO - Looking for topic with ID: roadmap
+2024-12-06 14:01:55,397 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 14:01:55,398 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 14:01:55,398 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:01:55,398 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 14:01:55,399 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 14:01:55,399 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 14:01:55,400 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:01:55,400 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:01:55,400 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:01:55,400 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:01:55,400 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:01:55,400 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:01:55,400 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:01:55,400 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:01:55,400 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:01:55,401 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:01:55,405 - dita - DEBUG - Processed content length: 1370
+2024-12-06 14:01:55,406 - app.routes - DEBUG - Content generated: <h1 id="-223" class="">Introduction<a href="#-223" class="heading-anchor">¶</a></h1>
+<h2 id="-224" class="">Developer tools<a href="#-224" class="heading-anchor">¶</a></h2>
+<p class="">This project is...
+2024-12-06 14:01:55,406 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:01:55] "GET /entry/roadmap HTTP/1.1" 200 -
+2024-12-06 14:01:55,509 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:01:55] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:02:09,321 - app.routes - INFO - Processing entry request for: audio-engineering
+2024-12-06 14:02:09,321 - dita - INFO - Looking for topic with ID: audio-engineering
+2024-12-06 14:02:09,322 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:09,322 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:09,322 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:09,322 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:09,323 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:09,324 - app.dita.utils.dita_transform - DEBUG - Transforming DITA topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:09,327 - dita - DEBUG - Processed content length: 32
+2024-12-06 14:02:09,328 - app.routes - DEBUG - Content generated: <div class="dita-concept"></div>...
+2024-12-06 14:02:09,329 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:09] "GET /entry/audio-engineering HTTP/1.1" 200 -
+2024-12-06 14:02:10,641 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:02:10,641 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:02:10,642 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:02:10,642 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:02:10,642 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:10,642 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:02:10,643 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:02:10,643 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:02:10,644 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:02:10,644 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:02:10,644 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:02:10,644 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:02:10,645 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:02:10,645 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:02:10,645 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:02:10,645 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:02:10,645 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:02:10,645 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:02:10,661 - dita - DEBUG - Processed content length: 11358
+2024-12-06 14:02:10,661 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:02:10,661 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:02:10,662 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:10] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:02:10,762 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:10] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:02:24,903 - app.routes - INFO - Processing entry request for: audio-engineering
+2024-12-06 14:02:24,904 - dita - INFO - Looking for topic with ID: audio-engineering
+2024-12-06 14:02:24,904 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:24,905 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:24,905 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:24,905 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:24,906 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:24,906 - app.dita.utils.dita_transform - DEBUG - Transforming DITA topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:24,907 - dita - DEBUG - Processed content length: 32
+2024-12-06 14:02:24,907 - app.routes - DEBUG - Content generated: <div class="dita-concept"></div>...
+2024-12-06 14:02:24,907 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:24] "GET /entry/audio-engineering HTTP/1.1" 200 -
+2024-12-06 14:02:24,946 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:24] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:02:37,246 - app.routes - INFO - Processing entry request for: audio-engineering
+2024-12-06 14:02:37,246 - dita - INFO - Looking for topic with ID: audio-engineering
+2024-12-06 14:02:37,246 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:37,246 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:37,247 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:37,247 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:37,248 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:37,248 - app.dita.utils.dita_transform - DEBUG - Transforming DITA topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:37,248 - dita - DEBUG - Processed content length: 32
+2024-12-06 14:02:37,248 - app.routes - DEBUG - Content generated: <div class="dita-concept"></div>...
+2024-12-06 14:02:37,249 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:37] "GET /entry/audio-engineering HTTP/1.1" 200 -
+2024-12-06 14:02:37,269 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:37] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:02:44,260 - app.routes - INFO - Processing entry request for: roadmap
+2024-12-06 14:02:44,260 - dita - INFO - Looking for topic with ID: roadmap
+2024-12-06 14:02:44,260 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 14:02:44,260 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 14:02:44,260 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:44,260 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 14:02:44,262 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 14:02:44,262 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 14:02:44,263 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:02:44,263 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:02:44,263 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:02:44,263 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:02:44,263 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:02:44,263 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:02:44,263 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:02:44,263 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:02:44,263 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:02:44,263 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:02:44,267 - dita - DEBUG - Processed content length: 1370
+2024-12-06 14:02:44,268 - app.routes - DEBUG - Content generated: <h1 id="-318" class="">Introduction<a href="#-318" class="heading-anchor">¶</a></h1>
+<h2 id="-319" class="">Developer tools<a href="#-319" class="heading-anchor">¶</a></h2>
+<p class="">This project is...
+2024-12-06 14:02:44,268 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:44] "GET /entry/roadmap HTTP/1.1" 200 -
+2024-12-06 14:02:44,280 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:44] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:02:52,860 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:52] "[33mGET /audio-engineering HTTP/1.1[0m" 404 -
+2024-12-06 14:02:58,595 - app.routes - INFO - Processing entry request for: audio-engineering
+2024-12-06 14:02:58,595 - dita - INFO - Looking for topic with ID: audio-engineering
+2024-12-06 14:02:58,595 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:58,596 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:58,596 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:58,597 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:58,597 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:58,597 - app.dita.utils.dita_transform - DEBUG - Transforming DITA topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:58,598 - dita - DEBUG - Processed content length: 32
+2024-12-06 14:02:58,598 - app.routes - DEBUG - Content generated: <div class="dita-concept"></div>...
+2024-12-06 14:02:58,599 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:58] "GET /entry/audio-engineering HTTP/1.1" 200 -
+2024-12-06 14:02:58,635 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:02:58] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:16:54,856 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:16:54,857 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:16:54,857 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:16:54,858 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:16:54,858 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:16:54,858 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:16:54,859 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:16:54,859 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:16:54,860 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:16:54,860 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:16:54,860 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:16:54,860 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:16:54,861 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:16:54,861 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:16:54,861 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:16:54,861 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:16:54,861 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:16:54,861 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:16:54,876 - dita - DEBUG - Processed content length: 11358
+2024-12-06 14:16:54,877 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:16:54,877 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:16:54,877 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:16:54] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:16:54,899 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:16:54] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:17:04,158 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:17:04,159 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:17:04,162 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:17:04,163 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:17:04,167 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:17:04,167 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:17:04,172 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:17:04,175 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:17:04,176 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:17:04,179 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:17:04,180 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:17:04,180 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:17:04,180 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:17:04,180 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:17:04,184 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:17:04,185 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:17:04,185 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:17:04,189 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:17:04,199 - dita - DEBUG - Processed content length: 11358
+2024-12-06 14:17:04,202 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:17:04,202 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:17:04,203 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:17:04] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:17:04,226 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:17:04] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:19:43,548 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:19:43,548 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:19:43,548 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:19:43,549 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:19:43,549 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:19:43,549 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:19:43,549 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:19:43,549 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:19:43,550 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:19:43,550 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:19:43,550 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:19:43,550 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:19:43,550 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:19:43,550 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:19:43,550 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:19:43,551 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:19:43,551 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:19:43,551 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:19:43,559 - dita - DEBUG - Processed content length: 11366
+2024-12-06 14:19:43,559 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:19:43,559 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:19:43,559 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:19:43] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:19:43,585 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:19:43] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:20:12,309 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:20:12,310 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:20:12,310 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:20:12,311 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:20:12,311 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:20:12,311 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:20:12,312 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:20:12,312 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:20:12,313 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:20:12,313 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:20:12,313 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:20:12,313 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:20:12,313 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:20:12,313 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:20:12,313 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:20:12,313 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:20:12,313 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:20:12,313 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:20:12,330 - dita - DEBUG - Processed content length: 11370
+2024-12-06 14:20:12,331 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:20:12,331 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:20:12,331 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:20:12] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:20:12,354 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:20:12] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:21:02,160 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:21:02,161 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:21:02,162 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:21:02,162 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:21:02,162 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:21:02,162 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:21:02,163 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:21:02,163 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:21:02,163 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:21:02,163 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:21:02,163 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:21:02,163 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:21:02,163 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:21:02,163 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:21:02,163 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:21:02,163 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:21:02,164 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:21:02,164 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:21:02,175 - dita - DEBUG - Processed content length: 11382
+2024-12-06 14:21:02,175 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:21:02,175 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:21:02,176 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:21:02] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:21:02,199 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:21:02] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:21:43,854 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:21:43,854 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:21:43,854 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:21:43,854 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:21:43,854 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:21:43,855 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:21:43,855 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:21:43,855 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:21:43,856 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:21:43,856 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:21:43,856 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:21:43,856 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:21:43,856 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:21:43,856 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:21:43,856 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:21:43,856 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:21:43,857 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:21:43,857 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:21:43,865 - dita - DEBUG - Processed content length: 11388
+2024-12-06 14:21:43,865 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:21:43,865 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:21:43,866 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:21:43] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:21:43,886 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:21:43] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:22:01,958 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:22:01,959 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:22:01,959 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:22:01,959 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:22:01,960 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:22:01,960 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:22:01,960 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:22:01,960 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:22:01,961 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:22:01,961 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:22:01,961 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:22:01,961 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:22:01,961 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:22:01,961 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:22:01,962 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:22:01,962 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:22:01,962 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:22:01,962 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:22:01,976 - dita - DEBUG - Processed content length: 11390
+2024-12-06 14:22:01,976 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:22:01,977 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:22:01,977 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:22:01] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:22:02,006 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:22:02] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:22:11,976 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:22:11,978 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:22:11,978 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:22:11,979 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:22:11,979 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:22:11,979 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:22:11,980 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:22:11,980 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:22:11,980 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:22:11,980 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:22:11,980 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:22:11,981 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:22:11,981 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:22:11,981 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:22:11,981 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:22:11,981 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:22:11,981 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:22:11,981 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:22:11,995 - dita - DEBUG - Processed content length: 11392
+2024-12-06 14:22:11,995 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:22:11,995 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:22:11,996 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:22:11] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:22:12,021 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:22:12] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:23:06,442 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:23:06,442 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:23:06,442 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:06,442 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:06,443 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:23:06,443 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:06,443 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:23:06,443 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:23:06,443 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:23:06,443 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:23:06,443 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:23:06,443 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:23:06,444 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:23:06,444 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:23:06,444 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:23:06,444 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:23:06,444 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:23:06,444 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:23:06,450 - dita - DEBUG - Processed content length: 11399
+2024-12-06 14:23:06,450 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:23:06,450 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:23:06,451 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:23:06] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:23:06,473 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:23:06] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:23:23,683 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:23:23,683 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:23:23,683 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:23,684 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:23,684 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:23:23,684 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:23,684 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:23:23,684 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:23:23,685 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:23:23,685 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:23:23,685 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:23:23,685 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:23:23,685 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:23:23,685 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:23:23,685 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:23:23,685 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:23:23,685 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:23:23,685 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:23:23,694 - dita - DEBUG - Processed content length: 11415
+2024-12-06 14:23:23,695 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:23:23,695 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:23:23,695 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:23:23] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:23:23,720 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:23:23] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:23:57,098 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:23:57,099 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:23:57,100 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:57,100 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:57,100 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:23:57,100 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:57,101 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:23:57,101 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:23:57,101 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:23:57,101 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:23:57,101 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:23:57,101 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:23:57,102 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:23:57,102 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:23:57,102 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:23:57,102 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:23:57,102 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:23:57,102 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:23:57,114 - dita - DEBUG - Processed content length: 11424
+2024-12-06 14:23:57,114 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:23:57,114 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:23:57,115 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:23:57] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:23:57,136 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:23:57] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:24:36,002 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:24:36,003 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:24:36,003 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:24:36,004 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:24:36,004 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:24:36,004 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:24:36,005 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:24:36,005 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:24:36,006 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:24:36,006 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:24:36,006 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:24:36,006 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:24:36,006 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:24:36,006 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:24:36,006 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:24:36,006 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:24:36,006 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:24:36,006 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:24:36,013 - dita - DEBUG - Processed content length: 11425
+2024-12-06 14:24:36,013 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:24:36,013 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:24:36,013 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:24:36] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:24:36,035 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:24:36] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:24:54,063 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:24:54,063 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:24:54,063 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:24:54,064 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:24:54,064 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:24:54,064 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:24:54,064 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:24:54,064 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:24:54,065 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:24:54,065 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:24:54,065 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:24:54,065 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:24:54,065 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:24:54,065 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:24:54,065 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:24:54,065 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:24:54,065 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:24:54,066 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:24:54,079 - dita - DEBUG - Processed content length: 11426
+2024-12-06 14:24:54,079 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:24:54,079 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:24:54,080 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:24:54] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:24:54,104 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:24:54] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:25:07,099 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:25:07,101 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:25:07,101 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:25:07,102 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:25:07,102 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:25:07,102 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:25:07,102 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:25:07,102 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:25:07,103 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:25:07,103 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:25:07,103 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:25:07,103 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:25:07,103 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:25:07,103 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:25:07,103 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:25:07,103 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:25:07,103 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:25:07,103 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:25:07,120 - dita - DEBUG - Processed content length: 11342
+2024-12-06 14:25:07,120 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:25:07,120 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:25:07,120 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:25:07] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:25:07,147 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:25:07] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:25:33,313 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:25:33,313 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:25:33,313 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:25:33,313 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:25:33,314 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:25:33,314 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:25:33,314 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:25:33,314 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:25:33,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:25:33,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:25:33,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:25:33,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:25:33,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:25:33,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:25:33,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:25:33,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:25:33,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:25:33,315 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:25:33,326 - dita - DEBUG - Processed content length: 11344
+2024-12-06 14:25:33,326 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:25:33,326 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:25:33,326 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:25:33] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:25:33,346 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:25:33] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:26:01,711 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:26:01,713 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:26:01,715 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:01,716 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:01,716 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:26:01,716 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:01,719 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:26:01,719 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:26:01,719 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:26:01,719 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:26:01,719 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:26:01,719 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:26:01,719 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:26:01,720 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:26:01,720 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:26:01,720 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:26:01,720 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:26:01,720 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:26:01,740 - dita - DEBUG - Processed content length: 11429
+2024-12-06 14:26:01,740 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:26:01,740 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:26:01,741 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:26:01] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:26:01,766 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:26:01] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:26:15,018 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:26:15,019 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:26:15,019 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:15,020 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:15,020 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:26:15,020 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:15,020 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:26:15,021 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:26:15,021 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:26:15,021 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:26:15,021 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:26:15,021 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:26:15,021 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:26:15,021 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:26:15,021 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:26:15,021 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:26:15,021 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:26:15,021 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:26:15,038 - dita - DEBUG - Processed content length: 11347
+2024-12-06 14:26:15,038 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:26:15,038 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:26:15,039 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:26:15] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:26:15,065 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:26:15] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:26:51,903 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:26:51,904 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:26:51,904 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:51,904 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:51,904 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:26:51,904 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:51,905 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:26:51,905 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:26:51,905 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:26:51,906 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:26:51,906 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:26:51,906 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:26:51,906 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:26:51,906 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:26:51,906 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:26:51,906 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:26:51,906 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:26:51,906 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:26:51,922 - dita - DEBUG - Processed content length: 11359
+2024-12-06 14:26:51,922 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:26:51,922 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:26:51,923 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:26:51] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:26:51,948 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:26:51] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:27:35,555 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:27:35,555 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:27:35,556 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:27:35,556 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:27:35,557 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:27:35,557 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:27:35,557 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:27:35,557 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:27:35,558 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:27:35,558 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:27:35,558 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:27:35,558 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:27:35,558 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:27:35,558 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:27:35,558 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:27:35,558 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:27:35,558 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:27:35,558 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:27:35,576 - dita - DEBUG - Processed content length: 11357
+2024-12-06 14:27:35,576 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:27:35,576 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:27:35,577 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:27:35] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:27:35,604 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:27:35] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:27:45,847 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:27:45,848 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:27:45,849 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:27:45,849 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:27:45,849 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:27:45,849 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:27:45,850 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:27:45,850 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:27:45,850 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:27:45,850 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:27:45,850 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:27:45,850 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:27:45,850 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:27:45,850 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:27:45,850 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:27:45,850 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:27:45,850 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:27:45,851 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:27:45,857 - dita - DEBUG - Processed content length: 11353
+2024-12-06 14:27:45,857 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:27:45,857 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:27:45,857 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:27:45] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:27:45,878 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:27:45] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:29:59,965 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:29:59,965 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:29:59,965 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:29:59,965 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:29:59,965 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:29:59,966 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:29:59,966 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:29:59,966 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:29:59,966 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:29:59,967 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:29:59,967 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:29:59,967 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:29:59,967 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:29:59,967 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:29:59,967 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:29:59,967 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:29:59,967 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:29:59,967 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:29:59,974 - dita - DEBUG - Processed content length: 11339
+2024-12-06 14:29:59,974 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:29:59,974 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:29:59,974 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:29:59] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:29:59,998 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:29:59] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:30:45,395 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:30:45,395 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:30:45,396 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:30:45,396 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:30:45,396 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:30:45,396 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:30:45,397 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:30:45,397 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:30:45,397 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:30:45,398 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:30:45,398 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:30:45,398 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:30:45,398 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:30:45,398 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:30:45,398 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:30:45,398 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:30:45,398 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:30:45,398 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:30:45,412 - dita - DEBUG - Processed content length: 11341
+2024-12-06 14:30:45,412 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:30:45,413 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:30:45,413 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:30:45] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:30:45,439 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:30:45] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:32:05,914 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:32:05,915 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:32:05,915 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:32:05,916 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:32:05,916 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:32:05,916 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:32:05,917 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:32:05,917 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:32:05,917 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:32:05,918 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:32:05,918 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:32:05,918 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:32:05,918 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:32:05,918 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:32:05,918 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:32:05,918 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:32:05,918 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:32:05,918 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:32:05,933 - dita - DEBUG - Processed content length: 11349
+2024-12-06 14:32:05,933 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:32:05,934 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:32:05,934 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:32:05] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:32:05,965 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:32:05] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:33:44,630 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:33:44,631 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:33:44,632 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:33:44,632 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:33:44,632 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:33:44,632 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:33:44,633 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:33:44,633 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:33:44,633 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:33:44,633 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:33:44,634 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:33:44,634 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:33:44,634 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:33:44,634 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:33:44,634 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:33:44,634 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:33:44,634 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:33:44,634 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:33:44,643 - dita - DEBUG - Processed content length: 11352
+2024-12-06 14:33:44,643 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:33:44,643 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:33:44,643 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:33:44] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:33:44,675 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:33:44] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 14:34:14,048 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 14:34:14,048 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:34:14,048 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:34:14,049 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:34:14,049 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:34:14,049 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:34:14,050 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:34:14,050 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:34:14,050 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 14:34:14,051 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 14:34:14,052 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 14:34:14,052 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 14:34:14,052 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:34:14,053 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 14:34:14,053 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 14:34:14,053 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 14:34:14,053 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 14:34:14,053 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 14:34:14,071 - dita - DEBUG - Processed content length: 11355
+2024-12-06 14:34:14,071 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 14:34:14,071 - app.routes - DEBUG - Found block equations in content
+2024-12-06 14:34:14,071 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:34:14] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 14:34:14,103 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 14:34:14] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 15:19:14,704 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 15:19:14,705 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 15:19:14,706 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 15:19:14,707 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 15:19:14,707 - dita - DEBUG - Processing ditamap...
+2024-12-06 15:19:14,707 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 15:19:14,708 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 15:19:14,708 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 15:19:14,710 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 15:19:14,710 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 15:19:14,710 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 15:19:14,710 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 15:19:14,710 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 15:19:14,711 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 15:19:14,711 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 15:19:14,711 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 15:19:14,711 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 15:19:14,711 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 15:19:14,727 - dita - DEBUG - Processed content length: 11355
+2024-12-06 15:19:14,727 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 15:19:14,727 - app.routes - DEBUG - Found block equations in content
+2024-12-06 15:19:14,727 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 15:19:14] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 15:19:14,758 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 15:19:14] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 15:28:00,748 - app.routes - INFO - Processing entry request for: markdown-syntax-reference.md
+2024-12-06 15:28:00,749 - dita - INFO - Looking for topic with ID: markdown-syntax-reference.md
+2024-12-06 15:28:00,750 - dita - ERROR - No topic found with ID: markdown-syntax-reference.md
+2024-12-06 15:28:00,750 - app.routes - ERROR - Map not found: markdown-syntax-reference.md
+2024-12-06 15:28:00,751 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 15:28:00] "[33mGET /entry/markdown-syntax-reference.md HTTP/1.1[0m" 404 -
+2024-12-06 15:28:00,829 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 15:28:00] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 15:28:10,538 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 15:28:10] "[33mGET /markdown-syntax-reference.md HTTP/1.1[0m" 404 -
+2024-12-06 15:49:55,496 - app.routes - INFO - Processing entry request for: brownian-motion
+2024-12-06 15:49:55,497 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 15:49:55,498 - app.routes - DEBUG - Found map at: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 15:49:55,499 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 15:49:55,499 - dita - DEBUG - Processing ditamap...
+2024-12-06 15:49:55,499 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 15:49:55,500 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 15:49:55,500 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 15:49:55,501 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 15:49:55,502 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 15:49:55,502 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 15:49:55,502 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 15:49:55,502 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 15:49:55,502 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 15:49:55,502 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 15:49:55,502 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 15:49:55,502 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 15:49:55,502 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 15:49:55,517 - dita - DEBUG - Processed content length: 11357
+2024-12-06 15:49:55,518 - app.routes - DEBUG - Content generated: <blockquote class="">
+The contents presented here have been reproduced from Albert Einstein's works during his Annus Mirabilis. The source can be found here.
+</blockquote>
+<p class="">The contents pre...
+2024-12-06 15:49:55,518 - app.routes - DEBUG - Found block equations in content
+2024-12-06 15:49:55,518 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 15:49:55] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 15:49:55,543 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 15:49:55] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 17:10:25,075 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/heading.py', reloading
+2024-12-06 17:10:25,105 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 17:10:25,220 - app - INFO - Configuring CORS for development environment
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:10:25,302 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:10:25,305 - app - INFO - Successfully registered routes blueprint
+2024-12-06 17:10:25,323 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 17:10:25,329 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 17:10:44,677 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/metadata.py', reloading
+2024-12-06 17:10:44,701 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 17:10:44,787 - app - INFO - Configuring CORS for development environment
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:10:44,836 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:10:44,839 - app - INFO - Successfully registered routes blueprint
+2024-12-06 17:10:44,858 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 17:10:44,862 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 17:11:56,263 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/id_handler.py', reloading
+2024-12-06 17:11:56,285 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 17:11:56,380 - app - INFO - Configuring CORS for development environment
+2024-12-06 17:11:56,435 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:11:56,435 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:11:56,435 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:11:56,435 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:11:56,436 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:11:56,436 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:11:56,436 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:11:56,436 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:11:56,436 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:11:56,438 - app - INFO - Successfully registered routes blueprint
+2024-12-06 17:11:56,456 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 17:11:56,461 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 17:12:56,987 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/metadata.py', reloading
+2024-12-06 17:12:57,012 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 17:12:57,103 - app - INFO - Configuring CORS for development environment
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:12:57,160 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:12:57,160 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:12:57,162 - app - INFO - Successfully registered routes blueprint
+2024-12-06 17:12:57,181 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 17:12:57,186 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 17:13:04,358 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/metadata.py', reloading
+2024-12-06 17:13:04,383 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 17:13:04,476 - app - INFO - Configuring CORS for development environment
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:13:04,530 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:13:04,533 - app - INFO - Successfully registered routes blueprint
+2024-12-06 17:13:04,549 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 17:13:04,554 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 17:17:24,295 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/types.py', reloading
+2024-12-06 17:17:24,328 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 17:17:24,435 - app - INFO - Configuring CORS for development environment
+2024-12-06 17:17:24,496 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:17:24,497 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:17:24,499 - app - INFO - Successfully registered routes blueprint
+2024-12-06 17:17:24,521 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 17:17:24,526 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 17:17:45,974 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/types.py', reloading
+2024-12-06 17:17:45,996 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 17:17:46,081 - app - INFO - Configuring CORS for development environment
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:17:46,131 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:17:46,134 - app - INFO - Successfully registered routes blueprint
+2024-12-06 17:17:46,152 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 17:17:46,157 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 17:24:16,007 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/config.py', reloading
+2024-12-06 17:24:16,033 - werkzeug - INFO -  * Restarting with stat

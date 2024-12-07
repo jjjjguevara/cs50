@@ -3,10 +3,30 @@ from typing import Dict, List, Optional
 import re
 import logging
 
+# Global config
+from config import DITAConfig
+
 class DITAIDHandler:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.used_ids: Dict[str, int] = {}
+
+    def configure(self, config: DITAConfig) -> None:
+        """Configure ID handler with provided settings."""
+        try:
+            self.logger.debug("Configuring ID handler")
+
+            # Reset used IDs if needed
+            self.used_ids.clear()
+
+            # Add any configuration-specific settings here
+            # Currently just preparing for future configuration needs
+
+            self.logger.debug("ID handler configuration completed")
+
+        except Exception as e:
+            self.logger.error(f"ID handler configuration failed: {str(e)}")
+            raise
 
     def generate_content_id(self, path: Path) -> str:
         """Generate clean ID for content file"""
@@ -52,3 +72,17 @@ class DITAIDHandler:
                 return f"/entry/{self._sanitize_id(topic_ref)}#{heading_ref}"
             return f"#{heading_ref}"
         return f"/entry/{self._sanitize_id(target_ref)}"
+
+    def cleanup(self) -> None:
+            """Clean up ID handler resources and state."""
+            try:
+                self.logger.debug("Starting ID handler cleanup")
+
+                # Clear used IDs
+                self.used_ids.clear()
+
+                self.logger.debug("ID handler cleanup completed")
+
+            except Exception as e:
+                self.logger.error(f"ID handler cleanup failed: {str(e)}")
+                raise

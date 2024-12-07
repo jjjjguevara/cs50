@@ -10,6 +10,9 @@ from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 
+# Global config
+from config import DITAConfig
+
 class ContentType(Enum):
     DITA = "dita"
     DITAMAP = "ditamap"
@@ -27,6 +30,7 @@ class MetadataField:
 class MetadataHandler:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self._metadata_cache: Dict[str, Dict[str, Any]] = {}
         self.parser = etree.XMLParser(
             recover=True,
             remove_blank_text=True,
@@ -35,6 +39,17 @@ class MetadataHandler:
             load_dtd=False,
             no_network=True
         )
+
+
+    def configure(self, config: DITAConfig) -> None:
+        """Configure metadata handler."""
+        try:
+            self.logger.debug("Configuring metadata handler")
+            # Add any configuration-specific settings here
+            self.logger.debug("Metadata handler configuration completed")
+        except Exception as e:
+            self.logger.error(f"Metadata handler configuration failed: {str(e)}")
+            raise
 
     def extract_metadata(self,
                         file_path: Path,
@@ -197,3 +212,17 @@ class MetadataHandler:
             'show_abstract': 'abstract' in metadata,
             # Additional toggleable features go here
         }
+
+    def cleanup(self) -> None:
+            """Clean up metadata handler resources and state."""
+            try:
+                self.logger.debug("Starting metadata handler cleanup")
+
+                # Clear cached metadata
+                self._metadata_cache.clear()
+
+                self.logger.debug("Metadata handler cleanup completed")
+
+            except Exception as e:
+                self.logger.error(f"Metadata handler cleanup failed: {str(e)}")
+                raise

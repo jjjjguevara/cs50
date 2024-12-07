@@ -4,6 +4,10 @@ import logging
 import re
 from dataclasses import dataclass, field
 
+
+# Global config
+from config import DITAConfig
+
 from .types import HeadingState, HeadingContext
 
 class HeadingHandler:
@@ -22,6 +26,16 @@ class HeadingHandler:
             self.logger.debug("Initialized fresh heading state")
         except Exception as e:
             self.logger.error(f"Error initializing heading state: {str(e)}")
+            raise
+
+    def configure(self, config: DITAConfig) -> None:
+        """Configure heading handler."""
+        try:
+            self.logger.debug("Configuring heading handler")
+            # Add any configuration-specific settings here
+            self.logger.debug("Heading handler configuration completed")
+        except Exception as e:
+            self.logger.error(f"Heading handler configuration failed: {str(e)}")
             raise
 
     def save_state(self) -> None:
@@ -215,3 +229,26 @@ class HeadingHandler:
         """Reset all heading state."""
         self.init_state()
         self._saved_states.clear()
+
+    def cleanup(self) -> None:
+            """Clean up heading handler resources and state."""
+            try:
+                self.logger.debug("Starting heading handler cleanup")
+
+                # Reset counters and state
+                self._state.counters = {
+                    'h1': 0,
+                    'h2': 0,
+                    'h3': 0,
+                    'h4': 0,
+                    'h5': 0,
+                    'h6': 0
+                }
+                self._state.current_h1 = 0
+                self._state.used_ids.clear()
+
+                self.logger.debug("Heading handler cleanup completed")
+
+            except Exception as e:
+                self.logger.error(f"Heading handler cleanup failed: {str(e)}")
+                raise

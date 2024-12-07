@@ -2,7 +2,9 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map id="brownian-motion">
     <title>The Theory of Brownian Movement</title>
-
+<metadata>
+<othermeta name="index-numbers" content="true" />
+</metadata>
     <topicref
         href="../topics/articles/brownian-motion.md"
         format="markdown"

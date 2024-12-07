@@ -18,6 +18,9 @@ import frontmatter
 HTMLString = str
 XMLElement = Any
 
+# Global config
+from config import DITAConfig
+
 # Global types
 from .utils.types import (
     # Enums
@@ -87,23 +90,114 @@ from .utils.logger import DITALogger
 
 class DITAProcessor:
     """
-    Main orchestrator for DITA content processing.
+    Main orchestrator class for DITA content processing.
     Talks to parsing, element tracking, and conditional processing pipelines.
     """
-    def __init__(self) -> None:
+    def __init__(self, config: Optional[DITAConfig] = None):
+        """Initialize processor with optional configuration."""
+        self.logger = logging.getLogger(__name__)
+
+        # Initialize with config if provided
+        if config:
+            self._init_with_config(config)
+        else:
+            self._init_default()
+
+    def _init_with_config(self, config: DITAConfig) -> None:
+        """Initialize processor with provided configuration."""
         try:
-            # Initialize core components
-            self.logger = DITALogger()
-            self._init_paths()
-            self._init_handlers()
-            self._init_processors()
-            self.current_context: Optional[ProcessingContext] = None
-            self.processed_maps: Dict[str, MapContext] = {}
-            self.processed_topics: Dict[str, TopicContext] = {}
-            self.processing_options: ProcessingOptions = ProcessingOptions()
-            self._cache: Dict[str, Any] = {}
+            self.logger.debug("Initializing processor with config")
+
+            # Initialize paths from config
+            self.dita_root = config.paths.dita_root
+            self.maps_dir = config.paths.maps_dir
+            self.topics_dir = config.paths.topics_dir
+            self.output_dir = config.paths.output_dir
+            self.artifacts_dir = config.paths.artifacts_dir
+
+            # Initialize handlers with config
+            self._init_handlers(config)
+
+            # Initialize processors with config
+            self._init_processors(config)
+
+            # Initialize processing options
+            self.processing_options = ProcessingOptions(
+                process_latex=config.processing.process_latex,
+                number_headings=config.processing.number_headings,
+                enable_cross_refs=config.processing.enable_cross_refs,
+                process_artifacts=config.processing.process_artifacts,
+                show_toc=config.processing.show_toc
+            )
+
+            self.current_context = None
+            self.processed_maps = {}
+            self.processed_topics = {}
+
         except Exception as e:
-            self.logger.logger.info("DITA Processor initialized successfully")
+            self.logger.error(f"Processor initialization failed: {str(e)}")
+            raise
+
+    def _init_default(self) -> None:
+        """Initialize processor with default settings."""
+        self._init_paths()
+        self._init_handlers(None)
+        self._init_processors(None)
+        self.current_context = None
+        self.processed_maps = {}
+        self.processed_topics = {}
+        self.processing_options = ProcessingOptions()
+
+    def _init_handlers(self, config: Optional[DITAConfig] = None) -> None:
+        """Initialize handlers with optional configuration."""
+        try:
+            self.heading_handler = HeadingHandler()
+            self.id_handler = DITAIDHandler()
+            self.html = HTMLHelper(self.dita_root)
+            self.metadata_handler = MetadataHandler()
+
+            if config:
+                self._configure_handlers(config)
+
+        except Exception as e:
+            self.logger.error(f"Handler initialization failed: {str(e)}")
+            raise
+
+    def _init_processors(self, config: Optional[DITAConfig] = None) -> None:
+        """Initialize processors with optional configuration."""
+        try:
+            # Initialize transformers
+            self.dita_parser = DITAParser()
+            self.dita_transformer = DITATransformer(self.dita_root)
+            self.md_transformer = MarkdownTransformer(self.dita_root)
+
+            if config:
+                self._configure_transformers(config)
+
+        except Exception as e:
+            self.logger.error(f"Processor initialization failed: {str(e)}")
+            raise
+
+    def _init_paths(self) -> None:
+        """Initialize critical paths with defaults."""
+        try:
+            # Set up root paths
+            self.app_root = Path(__file__).parent.parent
+            self.dita_root = self.app_root / 'dita'
+
+            # Set up content directories
+            self.maps_dir = self.dita_root / 'maps'
+            self.topics_dir = self.dita_root / 'topics'
+            self.output_dir = self.dita_root / 'output'
+            self.artifacts_dir = self.dita_root / 'artifacts'
+
+            # Ensure directories exist
+            self._init_directories()
+
+            self.logger.debug("Paths initialized successfully")
+
+        except Exception as e:
+            self.logger.error(f"Error initializing paths: {str(e)}")
             raise
 
     def _init_directories(self) -> None:
@@ -124,60 +218,11 @@ class DITAProcessor:
                 # Create directories
                 for directory in required_dirs:
                     directory.mkdir(parents=True, exist_ok=True)
-                    self.logger.logger.debug(f"Ensured directory exists: {directory}")
+                    self.logger.debug(f"Ensured directory exists: {directory}")
 
             except Exception as e:
-                self.logger.logger.error(f"Failed to create directories: {str(e)}")
+                self.logger.error(f"Failed to create directories: {str(e)}")
                 raise
-
-
-    def _init_paths(self) -> None:
-        """Initialize critical paths"""
-        try:
-            # Set up root paths
-            self.app_root = Path(__file__).parent.parent
-            self.dita_root = self.app_root / 'dita'
-
-            # Set up content directories
-            self.maps_dir = self.dita_root / 'maps'
-            self.topics_dir = self.dita_root / 'topics'
-            self.output_dir = self.dita_root / 'output'
-            self.artifacts_dir = self.dita_root / 'artifacts'
-
-            # Ensure directories exist
-            self._init_directories()
-
-            self.logger.logger.debug("Paths initialized successfully")
-
-        except Exception as e:
-            self.logger.logger.error(f"Error initializing paths: {str(e)}")
-            raise
-
-    def _init_handlers(self) -> None:
-        """Initialize core handlers"""
-        self.id_handler = DITAIDHandler()
-        self.heading_handler = HeadingHandler()
-        self.metadata_handler = MetadataHandler()
-        self.html = HTMLHelper()
-
-    def _init_processors(self) -> None:
-        """Initialize processing pipelines"""
-        # Parser
-        self.dita_parser = DITAParser()
-
-        # DITA Pipeline
-        self.dita_transformer = DITATransformer(self.dita_root)
-
-        # Markdown Pipeline
-        self.md_transformer = MarkdownTransformer(self.dita_root)
-
-        # LaTeX Pipeline
-        self.latex_renderer = KaTeXRenderer()
-
-        # Artifact Pipeline
-        # self.artifact_parser = ArtifactParser(self.dita_root)
-        # self.artifact_renderer = ArtifactRenderer(self.artifacts_dir)
-
 
 
     def _init_map_context(self, map_path: Path) -> MapContext:
@@ -227,7 +272,7 @@ class DITAProcessor:
             self._reset_state()
 
         except Exception as e:
-            self.logger.logger.error(f"State initialization failed: {str(e)}")
+            self.logger.error(f"State initialization failed: {str(e)}")
             raise
 
     def _reset_state(self) -> None:
@@ -238,7 +283,7 @@ class DITAProcessor:
             self.processed_topics.clear()
 
         except Exception as e:
-            self.logger.logger.error(f"State reset failed: {str(e)}")
+            self.logger.error(f"State reset failed: {str(e)}")
             raise
 
     def _validate_state(self) -> bool:
@@ -264,7 +309,7 @@ class DITAProcessor:
             return True
 
         except Exception as e:
-            self.logger.logger.error(f"State validation failed: {str(e)}")
+            self.logger.error(f"State validation failed: {str(e)}")
             return False
 
 
@@ -311,10 +356,10 @@ class DITAProcessor:
                 topics=topics
             )
 
-            self.logger.logger.debug(f"Initialized context for map {discovered_map.id}")
+            self.logger.debug(f"Initialized context for map {discovered_map.id}")
 
         except Exception as e:
-            self.logger.logger.error(f"Failed to initialize context: {str(e)}")
+            self.logger.error(f"Failed to initialize context: {str(e)}")
             raise ValueError(f"Context initialization failed: {str(e)}")
 
 
@@ -334,10 +379,10 @@ class DITAProcessor:
                 if topic_context and topic_context.state == ProcessingState.PENDING:
                     topic_context.state = ProcessingState.PROCESSING
 
-            self.logger.logger.debug("Updated transformation context")
+            self.logger.debug("Updated transformation context")
 
         except Exception as e:
-            self.logger.logger.error(f"Transformation context update failed: {str(e)}")
+            self.logger.error(f"Transformation context update failed: {str(e)}")
             raise
 
     def _update_assembly_context(self) -> None:
@@ -360,10 +405,10 @@ class DITAProcessor:
                         context="assembly_phase"
                     )
 
-            self.logger.logger.debug("Updated assembly context")
+            self.logger.debug("Updated assembly context")
 
         except Exception as e:
-            self.logger.logger.error(f"Assembly context update failed: {str(e)}")
+            self.logger.error(f"Assembly context update failed: {str(e)}")
             raise
 
     def _update_context_state(self, topic_id: str, state: ProcessingState) -> None:
@@ -382,10 +427,10 @@ class DITAProcessor:
                 raise ValueError(f"Topic {topic_id} not found in context")
 
             self.current_context.topics[topic_id].state = state
-            self.logger.logger.debug(f"Updated topic {topic_id} state to {state.value}")
+            self.logger.debug(f"Updated topic {topic_id} state to {state.value}")
 
         except Exception as e:
-            self.logger.logger.error(f"Failed to update context state: {str(e)}")
+            self.logger.error(f"Failed to update context state: {str(e)}")
             raise
 
     def _get_topic_context(self, topic_id: str) -> Optional[TopicContext]:
@@ -405,7 +450,7 @@ class DITAProcessor:
             return self.current_context.topics.get(topic_id)
 
         except Exception as e:
-            self.logger.logger.error(f"Failed to get topic context: {str(e)}")
+            self.logger.error(f"Failed to get topic context: {str(e)}")
             return None
 
     def _update_context_features(self, features: Dict[str, bool]) -> None:
@@ -421,10 +466,10 @@ class DITAProcessor:
 
             # Update map-level features
             self.current_context.map_context.features.update(features)
-            self.logger.logger.debug("Updated context features")
+            self.logger.debug("Updated context features")
 
         except Exception as e:
-            self.logger.logger.error(f"Failed to update context features: {str(e)}")
+            self.logger.error(f"Failed to update context features: {str(e)}")
             raise
 
     def _process_discovered_content(self, discovered_map: DiscoveredMap) -> List[ProcessedContent]:
@@ -451,7 +496,7 @@ class DITAProcessor:
             return processed_content
 
         except Exception as e:
-            self.logger.logger.error(f"Error processing content: {str(e)}")
+            self.logger.error(f"Error processing content: {str(e)}")
             raise
 
 
@@ -485,10 +530,10 @@ class DITAProcessor:
                     state=ProcessingState.PENDING
                 )
 
-            self.logger.logger.debug(f"Initialized context for map {discovered_map.id}")
+            self.logger.debug(f"Initialized context for map {discovered_map.id}")
 
         except Exception as e:
-            self.logger.logger.error(f"Context initialization failed: {str(e)}")
+            self.logger.error(f"Context initialization failed: {str(e)}")
             raise
 
     def _update_context(self, phase: ProcessingPhase) -> None:
@@ -512,10 +557,10 @@ class DITAProcessor:
             elif phase == ProcessingPhase.ASSEMBLY:
                 self._update_assembly_context()
 
-            self.logger.logger.debug(f"Updated context for {phase.value} phase")
+            self.logger.debug(f"Updated context for {phase.value} phase")
 
         except Exception as e:
-            self.logger.logger.error(f"Context update failed: {str(e)}")
+            self.logger.error(f"Context update failed: {str(e)}")
             raise
 
     def _validate_context(self) -> bool:
@@ -544,7 +589,7 @@ class DITAProcessor:
             return True
 
         except Exception as e:
-            self.logger.logger.error(f"Context validation failed: {str(e)}")
+            self.logger.error(f"Context validation failed: {str(e)}")
             return False
 
     ########################
@@ -565,7 +610,7 @@ class DITAProcessor:
             ValueError: If map cannot be parsed or critical content is missing
         """
         try:
-            self.logger.logger.info(f"Beginning content discovery for map: {map_path}")
+            self.logger.info(f"Beginning content discovery for map: {map_path}")
 
             # Generate map ID
             map_id = self.id_handler.generate_map_id(map_path)
@@ -586,7 +631,7 @@ class DITAProcessor:
             discovered_topics = []
             topic_refs = tree.xpath(".//topicref")
 
-            self.logger.logger.debug(f"Found {len(topic_refs)} topic references to process")
+            self.logger.debug(f"Found {len(topic_refs)} topic references to process")
 
             for topicref in topic_refs:
                 topic = self._discover_topic(topicref, map_path)
@@ -602,7 +647,7 @@ class DITAProcessor:
                 metadata=map_metadata
             )
 
-            self.logger.logger.info(
+            self.logger.info(
                 f"Content discovery complete - Found {len(discovered_topics)} "
                 f"valid topics in map {map_id}"
             )
@@ -610,15 +655,15 @@ class DITAProcessor:
             return discovered_map
 
         except Exception as e:
-            self.logger.logger.error(f"Error during content discovery: {str(e)}")
+            self.logger.error(f"Error during content discovery: {str(e)}")
             raise
 
 
     def process_ditamap(self, map_path: Path) -> str:
         """Main entry point for ditamap processing."""
         try:
-            self.logger.logger.info(f"\n{'='*50}")
-            self.logger.logger.info(f"Starting map processing for {map_path}")
+            self.logger.info(f"\n{'='*50}")
+            self.logger.info(f"Starting map processing for {map_path}")
 
             # Reset state for new processing
             self.reset_processor_state()
@@ -642,16 +687,16 @@ class DITAProcessor:
                 return self.execute_pipeline(discovered_map)
 
             except ProcessingError as pe:
-                self.logger.logger.error(
+                self.logger.error(
                     f"Processing error in {pe.error_type} phase: {pe.message}\n"
                     f"Context: {pe.context}"
                 )
                 if pe.stacktrace:
-                    self.logger.logger.debug(f"Stack trace:\n{pe.stacktrace}")
+                    self.logger.debug(f"Stack trace:\n{pe.stacktrace}")
                 return self._create_error_html(pe.message, pe.context)
 
         except Exception as e:
-            self.logger.logger.error(f"Error processing map {map_path}: {str(e)}")
+            self.logger.error(f"Error processing map {map_path}: {str(e)}")
             return self._create_error_html(str(e), map_path)
 
 
@@ -691,7 +736,7 @@ class DITAProcessor:
                 return self._assemble_html_with_context(html_parts)
 
             except Exception as e:
-                self.logger.logger.error(f"Error processing map content: {str(e)}")
+                self.logger.error(f"Error processing map content: {str(e)}")
                 return self._create_error_html(str(e), parsed_map.source_path)
 
 
@@ -728,7 +773,7 @@ class DITAProcessor:
             return final_html
 
         except Exception as e:
-            self.logger.logger.error(f"Error assembling final HTML: {str(e)}")
+            self.logger.error(f"Error assembling final HTML: {str(e)}")
             raise
 
 
@@ -755,10 +800,10 @@ class DITAProcessor:
                 self.processed_maps.clear()
                 self.processed_topics.clear()
 
-                self.logger.logger.debug("Reset processor state completed")
+                self.logger.debug("Reset processor state completed")
 
             except Exception as e:
-                self.logger.logger.error(f"Error resetting processor state: {str(e)}")
+                self.logger.error(f"Error resetting processor state: {str(e)}")
 
 
     ##########################
@@ -779,13 +824,13 @@ class DITAProcessor:
         try:
             href = topicref.get('href')
             if not href:
-                self.logger.logger.warning("Found topicref without href - skipping")
+                self.logger.warning("Found topicref without href - skipping")
                 return None
 
             # Resolve topic path
             topic_path = (map_path.parent / href).resolve()
             if not topic_path.exists():
-                self.logger.logger.warning(f"Topic file not found: {topic_path}")
+                self.logger.warning(f"Topic file not found: {topic_path}")
                 return None
 
             # Determine content type
@@ -804,7 +849,7 @@ class DITAProcessor:
                 topic_id
             )
 
-            self.logger.logger.debug(
+            self.logger.debug(
                 f"Discovered topic: {topic_id} ({element_type}) "
                 f"at path: {topic_path}"
             )
@@ -818,7 +863,7 @@ class DITAProcessor:
             )
 
         except Exception as e:
-            self.logger.logger.error(f"Error discovering topic: {str(e)}")
+            self.logger.error(f"Error discovering topic: {str(e)}")
             return None
 
     def get_topic(self, topic_id: str) -> Optional[Path]:
@@ -836,13 +881,13 @@ class DITAProcessor:
                 Optional[Path]: Path to topic file if found
             """
             try:
-                self.logger.logger.info(f"Looking for topic with ID: {topic_id}")
+                self.logger.info(f"Looking for topic with ID: {topic_id}")
 
                 # Handle .ditamap files first
                 if topic_id.endswith('.ditamap'):
                     map_path = self.maps_dir / topic_id
                     if map_path.exists():
-                        self.logger.logger.info(f"Found map at: {map_path}")
+                        self.logger.info(f"Found map at: {map_path}")
                         return map_path
 
                 # Clean the topic ID
@@ -860,11 +905,11 @@ class DITAProcessor:
                         if topic_path.exists():
                             return topic_path
 
-                self.logger.logger.error(f"No topic found with ID: {topic_id}")
+                self.logger.error(f"No topic found with ID: {topic_id}")
                 return None
 
             except Exception as e:
-                self.logger.logger.error(f"Error getting topic path: {str(e)}")
+                self.logger.error(f"Error getting topic path: {str(e)}")
                 return None
 
 
@@ -909,7 +954,7 @@ class DITAProcessor:
                     raise ValueError(f"Unsupported topic type: {topic.type}")
 
             except Exception as e:
-                self.logger.logger.error(f"Error processing topic {topic.id}: {str(e)}")
+                self.logger.error(f"Error processing topic {topic.id}: {str(e)}")
                 return None
 
     def transform(self, path: Union[str, Path]) -> str:
@@ -920,11 +965,11 @@ class DITAProcessor:
             if not self._is_safe_path(content_path):
                 raise ValueError(f"Invalid path: {content_path}")
 
-            self.logger.logger.debug(f"Processing file: {content_path}")
+            self.logger.debug(f"Processing file: {content_path}")
 
             # For ditamaps, we need to process their referenced content
             if content_path.suffix == '.ditamap':
-                self.logger.logger.debug("Processing ditamap...")
+                self.logger.debug("Processing ditamap...")
                 # Parse the map to get the actual content file
                 tree = self.dita_parser.parse_file(content_path)
                 if tree is None:
@@ -935,7 +980,7 @@ class DITAProcessor:
                 if topicref is not None and (href := topicref.get('href')):
                     # Get the content file path
                     content_file = (content_path.parent / href).resolve()
-                    self.logger.logger.debug(f"Found content file in map: {content_file}")
+                    self.logger.debug(f"Found content file in map: {content_file}")
 
                     # Process based on content file type
                     if content_file.suffix == '.md':
@@ -945,7 +990,7 @@ class DITAProcessor:
                     else:
                         raise ValueError(f"Unsupported content file type: {content_file.suffix}")
 
-                    self.logger.logger.debug(f"Processed content length: {len(content)}")
+                    self.logger.debug(f"Processed content length: {len(content)}")
                     return content
                 else:
                     raise ValueError("No content reference found in map")
@@ -953,17 +998,17 @@ class DITAProcessor:
             # Direct file processing
             elif content_path.suffix == '.md':
                 content = self.md_transformer.transform_topic(content_path)
-                self.logger.logger.debug(f"Markdown transformed content length: {len(content)}")
+                self.logger.debug(f"Markdown transformed content length: {len(content)}")
                 return content
             elif content_path.suffix == '.dita':
                 content = self.dita_transformer.transform_topic(content_path)
-                self.logger.logger.debug(f"DITA transformed content length: {len(content)}")
+                self.logger.debug(f"DITA transformed content length: {len(content)}")
                 return content
             else:
                 raise ValueError(f"Unsupported file type: {content_path.suffix}")
 
         except Exception as e:
-            self.logger.logger.error(f"Transformation error: {str(e)}")
+            self.logger.error(f"Transformation error: {str(e)}")
             error_path = content_path if content_path else Path(str(path))
             return self._create_error_html(str(e), error_path)
 
@@ -981,7 +1026,7 @@ class DITAProcessor:
             return str(resolved_path).startswith(str(project_root))
 
         except Exception as e:
-            self.logger.logger.error(f"Error checking path safety: {str(e)}")
+            self.logger.error(f"Error checking path safety: {str(e)}")
             return False
 
 
@@ -1024,11 +1069,11 @@ class DITAProcessor:
                     state=ProcessingState.PENDING
                 ))
 
-            self.logger.logger.debug(f"Created {len(tracked)} tracked elements")
+            self.logger.debug(f"Created {len(tracked)} tracked elements")
             return tracked
 
         except Exception as e:
-            self.logger.logger.error(f"Error tracking elements: {str(e)}")
+            self.logger.error(f"Error tracking elements: {str(e)}")
             raise
 
     def _process_elements(self, elements: List[TrackedElement]) -> List[ProcessedContent]:
@@ -1055,7 +1100,7 @@ class DITAProcessor:
             return processed
 
         except Exception as e:
-            self.logger.logger.error(f"Element processing failed: {str(e)}")
+            self.logger.error(f"Element processing failed: {str(e)}")
             raise
 
     def _get_element_topic_id(self, element: TrackedElement) -> Optional[str]:
@@ -1098,7 +1143,7 @@ class DITAProcessor:
             return tracked
 
         except Exception as e:
-            self.logger.logger.error(f"Error tracking elements: {str(e)}")
+            self.logger.error(f"Error tracking elements: {str(e)}")
             return []
 
     def _update_element_state(self, element: TrackedElement, state: ProcessingState) -> None:
@@ -1111,9 +1156,9 @@ class DITAProcessor:
         """
         try:
             element.state = state
-            self.logger.logger.debug(f"Updated element {element.id} state to {state.value}")
+            self.logger.debug(f"Updated element {element.id} state to {state.value}")
         except Exception as e:
-            self.logger.logger.error(f"Error updating element state: {str(e)}")
+            self.logger.error(f"Error updating element state: {str(e)}")
             raise
 
     def _validate_element_state(self, element: TrackedElement) -> bool:
@@ -1149,7 +1194,7 @@ class DITAProcessor:
             return True
 
         except Exception as e:
-            self.logger.logger.error(f"Error validating element state: {str(e)}")
+            self.logger.error(f"Error validating element state: {str(e)}")
             return False
 
 
@@ -1197,7 +1242,7 @@ class DITAProcessor:
             return tracked
 
         except Exception as e:
-            self.logger.logger.error(f"Error tracking elements: {str(e)}")
+            self.logger.error(f"Error tracking elements: {str(e)}")
             return []
 
     def _detect_features(self, content: str) -> ContentFeatures:
@@ -1232,11 +1277,11 @@ class DITAProcessor:
             # TODO: Implement artifact detection once component is ready
             features.has_artifacts = False  # Placeholder
 
-            self.logger.logger.debug(f"Detected features: {features}")
+            self.logger.debug(f"Detected features: {features}")
             return features
 
         except Exception as e:
-            self.logger.logger.error(f"Feature detection failed: {str(e)}")
+            self.logger.error(f"Feature detection failed: {str(e)}")
             return ContentFeatures()
 
     def _generate_toc(self) -> str:
@@ -1256,7 +1301,7 @@ class DITAProcessor:
             return '\n'.join(toc_parts)
 
         except Exception as e:
-            self.logger.logger.error(f"TOC generation failed: {str(e)}")
+            self.logger.error(f"TOC generation failed: {str(e)}")
             return ''
 
     def _process_artifacts(self, content: str) -> str:
@@ -1269,7 +1314,7 @@ class DITAProcessor:
             return content
 
         except Exception as e:
-            self.logger.logger.error(f"Artifact processing failed: {str(e)}")
+            self.logger.error(f"Artifact processing failed: {str(e)}")
             return content
 
     def _update_processing_options(self, features: ContentFeatures) -> None:
@@ -1300,19 +1345,85 @@ class DITAProcessor:
             })
 
         except Exception as e:
-            self.logger.logger.error(f"Processing options update failed: {str(e)}")
+            self.logger.error(f"Processing options update failed: {str(e)}")
 
 
     #######################
     # Pipeline Management #
     #######################
 
+    # Configuration
+    def configure_processor(self, config: DITAConfig) -> None:
+        """Configure processor with provided settings."""
+        try:
+            self.logger.debug("Configuring processor")
+
+            # Configure paths
+            self.dita_root = config.paths.dita_root
+            self.maps_dir = config.paths.maps_dir
+            self.topics_dir = config.paths.topics_dir
+
+            # Convert DITAProcessingConfig to ProcessingOptions
+            self.processing_options = ProcessingOptions(
+                process_latex=config.processing.process_latex,
+                number_headings=config.processing.number_headings,
+                enable_cross_refs=config.processing.enable_cross_refs,
+                process_artifacts=config.processing.process_artifacts,
+                show_toc=config.processing.show_toc
+            )
+
+            # Configure components
+            self._configure_transformers(config)
+            self._configure_handlers(config)
+
+            self.logger.debug("Processor configuration completed")
+
+        except Exception as e:
+            self.logger.error(f"Processor configuration failed: {str(e)}")
+            raise
+
+    def _configure_transformers(self, config: DITAConfig) -> None:
+        """Configure all transformers."""
+        try:
+            self.logger.debug("Configuring transformers")
+
+            # Configure DITA transformer
+            if hasattr(self, 'dita_transformer'):
+                self.dita_transformer.configure(config)
+
+            # Configure Markdown transformer
+            if hasattr(self, 'md_transformer'):
+                self.md_transformer.configure(config)
+
+            self.logger.debug("Transformers configuration completed")
+
+        except Exception as e:
+            self.logger.error(f"Transformer configuration failed: {str(e)}")
+            raise
+
+    def _configure_handlers(self, config: DITAConfig) -> None:
+        """Configure all handlers."""
+        try:
+            self.logger.debug("Configuring handlers")
+
+            # Configure each handler
+            self.heading_handler.configure(config)
+            self.id_handler.configure(config)
+            self.html.configure_helper(config)
+            self.metadata_handler.configure(config)
+
+            self.logger.debug("Handlers configuration completed")
+
+        except Exception as e:
+            self.logger.error(f"Handlers configuration failed: {str(e)}")
+            raise
+
     # Pipeline init
 
     def run_discovery_phase(self, map_path: Path) -> DiscoveredMap:
         """Initial content discovery phase."""
         try:
-            self.logger.logger.info(f"Starting discovery phase for map: {map_path}")
+            self.logger.info(f"Starting discovery phase for map: {map_path}")
             self.transition_phase(ProcessingPhase.DISCOVERY)
 
             # Generate map ID
@@ -1338,7 +1449,7 @@ class DITAProcessor:
             discovered_topics = []
             topic_refs = tree.xpath(".//topicref")
 
-            self.logger.logger.debug(f"Found {len(topic_refs)} topic references")
+            self.logger.debug(f"Found {len(topic_refs)} topic references")
 
             for topicref in topic_refs:
                 topic = self._discover_topic(topicref, map_path)
@@ -1356,12 +1467,12 @@ class DITAProcessor:
             return discovered_map
 
         except Exception as e:
-            self.logger.logger.error(f"Discovery phase failed: {str(e)}")
+            self.logger.error(f"Discovery phase failed: {str(e)}")
             raise
 
     def execute_pipeline(self, discovered_map: DiscoveredMap) -> str:
         try:
-            self.logger.logger.info("Starting pipeline execution")
+            self.logger.info("Starting pipeline execution")
 
             # Initialize state
             self._init_state()
@@ -1395,11 +1506,11 @@ class DITAProcessor:
             # Final assembly with features
             final_html = self.run_assembly_phase(processed_content)
 
-            self.logger.logger.info("Pipeline execution completed successfully")
+            self.logger.info("Pipeline execution completed successfully")
             return final_html
 
         except Exception as e:
-            self.logger.logger.error(f"Pipeline execution failed: {str(e)}")
+            self.logger.error(f"Pipeline execution failed: {str(e)}")
             raise
 
     # Phase handlers
@@ -1418,31 +1529,31 @@ class DITAProcessor:
 
             # Validate map
             if not discovered_map.path.exists():
-                self.logger.logger.error(f"Map file not found: {discovered_map.path}")
+                self.logger.error(f"Map file not found: {discovered_map.path}")
                 return False
 
             # Validate topics
             for topic in discovered_map.topics:
                 if not topic.path.exists():
-                    self.logger.logger.error(f"Topic file not found: {topic.path}")
+                    self.logger.error(f"Topic file not found: {topic.path}")
                     return False
 
             return True
 
         except Exception as e:
-            self.logger.logger.error(f"Validation phase failed: {str(e)}")
+            self.logger.error(f"Validation phase failed: {str(e)}")
             return False
 
     def run_transformation_phase(self, elements: List[TrackedElement]) -> List[ProcessedContent]:
         """Transform tracked elements to processed content."""
         try:
-            self.logger.logger.info("Starting transformation phase")
+            self.logger.info("Starting transformation phase")
             self.transition_phase(ProcessingPhase.TRANSFORMATION)
 
             processed_content = []
 
             for element in elements:
-                self.logger.logger.debug(f"Processing element: {element.id}")
+                self.logger.debug(f"Processing element: {element.id}")
 
                 # Update context
                 self._update_context(ProcessingPhase.TRANSFORMATION)
@@ -1458,7 +1569,7 @@ class DITAProcessor:
             return processed_content
 
         except Exception as e:
-            self.logger.logger.error(f"Transformation phase failed: {str(e)}")
+            self.logger.error(f"Transformation phase failed: {str(e)}")
             raise
 
 
@@ -1488,12 +1599,12 @@ class DITAProcessor:
            return enriched_content
 
        except Exception as e:
-           self.logger.logger.error(f"Enrichment phase failed: {str(e)}")
+           self.logger.error(f"Enrichment phase failed: {str(e)}")
            raise
 
     def run_assembly_phase(self, content: List[ProcessedContent]) -> str:
         try:
-            self.logger.logger.info("Starting assembly phase")
+            self.logger.info("Starting assembly phase")
             self.transition_phase(ProcessingPhase.ASSEMBLY)
 
             if not self.current_context:
@@ -1541,14 +1652,14 @@ class DITAProcessor:
             return self.html.process_final_content('\n'.join(html_parts))
 
         except Exception as e:
-            self.logger.logger.error(f"Assembly phase failed: {str(e)}")
+            self.logger.error(f"Assembly phase failed: {str(e)}")
             raise
 
 
     def _initialize_assembly(self) -> None:
         """Initialize assembly phase state and resources."""
         try:
-            self.logger.logger.debug("Initializing assembly phase")
+            self.logger.debug("Initializing assembly phase")
             if not self._validate_context():
                 raise ProcessingError(
                     error_type="assembly",
@@ -1560,7 +1671,7 @@ class DITAProcessor:
             self._init_state()
 
         except Exception as e:
-            self.logger.logger.error(f"Assembly initialization failed: {str(e)}")
+            self.logger.error(f"Assembly initialization failed: {str(e)}")
             raise
 
     def _assemble_content(self, content_list: List[ProcessedContent]) -> str:
@@ -1600,7 +1711,7 @@ class DITAProcessor:
             return self.html.process_final_content('\n'.join(html_parts))
 
         except Exception as e:
-            self.logger.logger.error(f"Content assembly failed: {str(e)}")
+            self.logger.error(f"Content assembly failed: {str(e)}")
             raise
 
     def _assemble_topic_content(self, topic_content: ProcessedContent) -> str:
@@ -1626,7 +1737,7 @@ class DITAProcessor:
             )
 
         except Exception as e:
-            self.logger.logger.error(f"Topic assembly failed: {str(e)}")
+            self.logger.error(f"Topic assembly failed: {str(e)}")
             return ""
 
     def _assemble_section_content(self, section_content: ProcessedContent) -> str:
@@ -1647,7 +1758,7 @@ class DITAProcessor:
             )
 
         except Exception as e:
-            self.logger.logger.error(f"Section assembly failed: {str(e)}")
+            self.logger.error(f"Section assembly failed: {str(e)}")
             return ""
 
 
@@ -1678,7 +1789,7 @@ class DITAProcessor:
            return phase in valid_transitions.get(self.current_phase, [])
 
        except Exception as e:
-           self.logger.logger.error(f"Phase validation failed: {str(e)}")
+           self.logger.error(f"Phase validation failed: {str(e)}")
            return False
 
     def transition_phase(self, new_phase: ProcessingPhase) -> None:
@@ -1695,7 +1806,7 @@ class DITAProcessor:
            raise ValueError(f"Invalid phase transition to {new_phase.value}")
 
        self.current_phase = new_phase
-       self.logger.logger.info(f"Pipeline transitioned to {new_phase.value} phase")
+       self.logger.info(f"Pipeline transitioned to {new_phase.value} phase")
 
 
 
@@ -1707,9 +1818,9 @@ class DITAProcessor:
         """Initialize heading state for new processing."""
         try:
             self.heading_handler.init_state()
-            self.logger.logger.debug("Initialized heading state")
+            self.logger.debug("Initialized heading state")
         except Exception as e:
-            self.logger.logger.error(f"Failed to initialize heading state: {str(e)}")
+            self.logger.error(f"Failed to initialize heading state: {str(e)}")
             raise
 
     def _manage_heading_state(self, element_type: ElementType) -> None:
@@ -1727,9 +1838,9 @@ class DITAProcessor:
                 # Reset section counters but maintain H1
                 self.heading_handler.reset_section()
 
-            self.logger.logger.debug(f"Updated heading state for {element_type.value}")
+            self.logger.debug(f"Updated heading state for {element_type.value}")
         except Exception as e:
-            self.logger.logger.error(f"Failed to manage heading state: {str(e)}")
+            self.logger.error(f"Failed to manage heading state: {str(e)}")
             raise
 
     def _validate_heading_state(self) -> bool:
@@ -1742,7 +1853,7 @@ class DITAProcessor:
         try:
             # Check if we have a current context
             if not self.current_context:
-                self.logger.logger.warning("No context available for heading validation")
+                self.logger.warning("No context available for heading validation")
                 return False
 
             # Validate topic order matches heading hierarchy
@@ -1750,7 +1861,7 @@ class DITAProcessor:
             current_h1 = self.heading_handler._state.current_h1
 
             if len(topic_order) != current_h1:
-                self.logger.logger.warning(
+                self.logger.warning(
                     f"Heading count mismatch: {current_h1} H1s "
                     f"for {len(topic_order)} topics"
                 )
@@ -1759,7 +1870,7 @@ class DITAProcessor:
             return True
 
         except Exception as e:
-            self.logger.logger.error(f"Failed to validate heading state: {str(e)}")
+            self.logger.error(f"Failed to validate heading state: {str(e)}")
             return False
 
 
@@ -1803,13 +1914,13 @@ class DITAProcessor:
                     html_parts.append(topic_content.html)
                     html_parts.append('</div>')
                 else:
-                    self.logger.logger.warning(f"Missing content for topic: {topic_id}")
+                    self.logger.warning(f"Missing content for topic: {topic_id}")
 
             html_parts.append('</div>')
 
             # Validate final heading state
             if not self._validate_heading_state():
-                self.logger.logger.warning("Final heading validation failed")
+                self.logger.warning("Final heading validation failed")
 
             # Process final HTML
             final_html = self.html.process_final_content('\n'.join(html_parts))
@@ -1817,7 +1928,7 @@ class DITAProcessor:
             return final_html
 
         except Exception as e:
-            self.logger.logger.error(f"Error assembling HTML: {str(e)}")
+            self.logger.error(f"Error assembling HTML: {str(e)}")
             raise ProcessingError(
                 error_type="assembly",
                 message=f"HTML assembly failed: {str(e)}",
@@ -1864,7 +1975,7 @@ class DITAProcessor:
             return final_html
 
         except Exception as e:
-            self.logger.logger.error(f"Error assembling HTML: {str(e)}")
+            self.logger.error(f"Error assembling HTML: {str(e)}")
             return self._create_error_html(str(e), Path("HTML Assembly"))
 
 
@@ -1896,7 +2007,7 @@ class DITAProcessor:
             return transformer.transform_topic(element.path)
 
         except Exception as e:
-            self.logger.logger.error(f"Content routing failed: {str(e)}")
+            self.logger.error(f"Content routing failed: {str(e)}")
             raise
 
     def _get_transformer(self, element_type: ElementType) -> Any:
@@ -1917,7 +2028,7 @@ class DITAProcessor:
             return transformers.get(element_type)
 
         except Exception as e:
-            self.logger.logger.error(f"Error getting transformer: {str(e)}")
+            self.logger.error(f"Error getting transformer: {str(e)}")
             return None
 
     def _validate_transformer(self, transformer: Any, element_type: ElementType) -> bool:
@@ -1937,7 +2048,7 @@ class DITAProcessor:
 
             # Validate transformer has required method
             if not hasattr(transformer, 'transform_topic'):
-                self.logger.logger.error(
+                self.logger.error(
                     f"Transformer for {element_type.value} missing transform_topic method"
                 )
                 return False
@@ -1948,7 +2059,7 @@ class DITAProcessor:
             return True
 
         except Exception as e:
-            self.logger.logger.error(f"Transformer validation failed: {str(e)}")
+            self.logger.error(f"Transformer validation failed: {str(e)}")
             return False
 
 
@@ -1980,22 +2091,17 @@ class DITAProcessor:
 
             # If it's already a ProcessingError, log it directly
             if isinstance(error, ProcessingError):
-                self.logger.log_error(error, phase)
-                return
-
-            # Convert other exceptions to ProcessingError
-            processing_error = ProcessingError(
-                error_type=phase.value,
-                message=str(error),
-                context=str(context) if context else "Unknown",
-                stacktrace=traceback.format_exc()
-            )
-
-            self.logger.log_error(processing_error, phase)
-
+                self.logger.error(
+                    f"Processing error in {phase.value}: {error.message}\n"
+                    f"Context: {error.context}"
+                )
+            else:
+                self.logger.error(
+                    f"Error during {phase.value}: {str(error)}\n"
+                    f"Context: {context}"
+                )
         except Exception as e:
-            # Fallback logging if error handling fails
-            self.logger.logger.error(f"Error in error handler: {str(e)}")
+            self.logger.error(f"Error in error handler: {str(e)}")
 
     def _log_phase_transition(self,
                              from_phase: ProcessingPhase,
@@ -2016,13 +2122,13 @@ class DITAProcessor:
                 topic_id=self.current_context.current_topic_id if self.current_context else None
             )
 
-            self.logger.log_debug_info({
-                'transition': f"{from_phase.value} -> {to_phase.value}",
-                'state': debug_info
-            }, log_context)
+            self.logger.debug(
+                        f"Phase transition: {from_phase.value} -> {to_phase.value}\n"
+                        f"Debug info: {debug_info}"
+                    )
 
         except Exception as e:
-            self.logger.logger.error(f"Failed to log phase transition: {str(e)}")
+            self.logger.error(f"Failed to log phase transition: {str(e)}")
 
     def get_debug_info(self) -> Dict[str, Any]:
         """
@@ -2052,7 +2158,7 @@ class DITAProcessor:
             return debug_info
 
         except Exception as e:
-            self.logger.logger.error(f"Failed to get debug info: {str(e)}")
+            self.logger.error(f"Failed to get debug info: {str(e)}")
             return {'error': str(e)}
 
 
@@ -2060,7 +2166,7 @@ class DITAProcessor:
         """
         @deprecated Must use generate_error_response instead.
         """
-        self.logger.logger.warning("Using deprecated _create_error_html method")
+        self.logger.warning("Using deprecated _create_error_html method")
         return self.generate_error_response(
             ProcessingError(
                 error_type="processing",
@@ -2110,7 +2216,7 @@ class DITAProcessor:
             return html
 
         except Exception as e:
-            self.logger.logger.error(f"Failed to generate error response: {str(e)}")
+            self.logger.error(f"Failed to generate error response: {str(e)}")
             return f"""
             <div class="error-container p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
                 <h3 class="font-bold">Error</h3>
@@ -2126,7 +2232,7 @@ class DITAProcessor:
     def cleanup(self) -> None:
         """Perform comprehensive cleanup of processor resources and state."""
         try:
-            self.logger.logger.info("Starting processor cleanup")
+            self.logger.info("Starting processor cleanup")
 
             # Clean up in order
             self._cleanup_state()
@@ -2134,10 +2240,10 @@ class DITAProcessor:
             self._cleanup_handlers()
             self._reset_transformers()
 
-            self.logger.logger.info("Processor cleanup completed")
+            self.logger.info("Processor cleanup completed")
 
         except Exception as e:
-            self.logger.logger.error(f"Cleanup failed: {str(e)}")
+            self.logger.error(f"Cleanup failed: {str(e)}")
             raise
 
     def _cleanup_state(self) -> None:
@@ -2154,10 +2260,10 @@ class DITAProcessor:
             if hasattr(self, 'current_phase'):
                 delattr(self, 'current_phase')
 
-            self.logger.logger.debug("State cleanup completed")
+            self.logger.debug("State cleanup completed")
 
         except Exception as e:
-            self.logger.logger.error(f"State cleanup failed: {str(e)}")
+            self.logger.error(f"State cleanup failed: {str(e)}")
             raise
 
     def _cleanup_resources(self) -> None:
@@ -2170,10 +2276,10 @@ class DITAProcessor:
             # Reset any file handles or resources
             # Currently no direct file handles, but placeholder for future use
 
-            self.logger.logger.debug("Resource cleanup completed")
+            self.logger.debug("Resource cleanup completed")
 
         except Exception as e:
-            self.logger.logger.error(f"Resource cleanup failed: {str(e)}")
+            self.logger.error(f"Resource cleanup failed: {str(e)}")
             raise
 
     def _cleanup_handlers(self) -> None:
@@ -2191,10 +2297,10 @@ class DITAProcessor:
             # Reset metadata handler
             self.metadata_handler = MetadataHandler()
 
-            self.logger.logger.debug("Handler cleanup completed")
+            self.logger.debug("Handler cleanup completed")
 
         except Exception as e:
-            self.logger.logger.error(f"Handler cleanup failed: {str(e)}")
+            self.logger.error(f"Handler cleanup failed: {str(e)}")
             raise
 
     def _reset_transformers(self) -> None:
@@ -2208,8 +2314,8 @@ class DITAProcessor:
             if hasattr(self, 'md_transformer'):
                 self.md_transformer = MarkdownTransformer(self.dita_root)
 
-            self.logger.logger.debug("Transformer reset completed")
+            self.logger.debug("Transformer reset completed")
 
         except Exception as e:
-            self.logger.logger.error(f"Transformer reset failed: {str(e)}")
+            self.logger.error(f"Transformer reset failed: {str(e)}")
             raise

@@ -2,7 +2,9 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map id="audio-engineering">
     <title>Audio Engineering and Acoustics Fundamentals</title>
-
+    <metadata>
+    <othermeta name="index-numbers" content="true" />
+    </metadata>
     <!-- Core Concepts -->
     <topicgroup>
         <topicmeta>

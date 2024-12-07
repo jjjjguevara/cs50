@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 from lxml import etree
 
+# Global config
+from config import DITAConfig
+
 from .types import (
     DITAElementType,
     DITAElementInfo,
@@ -27,6 +30,25 @@ class DITATransformer:
         self.html = HTMLHelper()
         self.html = HTMLHelper(dita_root)
         self.element_processor = DITAContentProcessor()
+
+    def configure(self, config: DITAConfig) -> None:
+        """Configure element processor with provided settings."""
+        try:
+            self.logger.debug("Configuring DITA element processor")
+
+            # Configure paths if needed
+            if hasattr(config.paths, 'dita_root'):
+                self.dita_root = config.paths.dita_root
+
+            # Configure ID handler
+            if hasattr(self.id_handler, 'configure'):
+                self.id_handler.configure(config)
+
+            self.logger.debug("DITA element processor configuration completed")
+
+        except Exception as e:
+            self.logger.error(f"DITA element processor configuration failed: {str(e)}")
+            raise
 
     def transform_topic(self, topic_path: Path) -> str:
         """Transform DITA topic to HTML."""

@@ -7,6 +7,9 @@ from pathlib import Path
 from bs4 import BeautifulSoup, Tag
 import logging
 
+# Global config
+from config import DITAConfig
+
 class HTMLHelper:
     """Utilities for HTML manipulation and validation."""
 
@@ -20,6 +23,20 @@ class HTMLHelper:
         self.logger = logging.getLogger(__name__)
         self.dita_root: Optional[Path] = dita_root
         self._cache: Dict[str, Any] = {}
+
+    def configure_helper(self, config: DITAConfig) -> None:
+        """Configure HTML helper with provided settings."""
+        try:
+            self.logger.debug("Configuring HTML helper")
+
+            # Update root path
+            self.dita_root = config.paths.dita_root
+
+            self.logger.debug("HTML helper configuration completed")
+
+        except Exception as e:
+            self.logger.error(f"HTML helper configuration failed: {str(e)}")
+            raise
 
     def escape_html(self, content: str) -> str:
         """

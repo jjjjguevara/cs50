@@ -1,0 +1,268 @@
+2024-12-06 14:01:35,869 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 14:01:35,869 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 14:01:35,870 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 14:01:35,870 - dita - DEBUG - Paths initialized successfully
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 14:01:36,045 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 14:01:36,045 - dita - DEBUG - Paths initialized successfully
+2024-12-06 14:01:44,352 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:01:44,353 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:44,353 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:01:44,357 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:01:44,390 - dita - DEBUG - Processed content length: 11338
+2024-12-06 14:01:51,941 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:01:51,942 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:51,942 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:01:51,943 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:01:51,961 - dita - DEBUG - Processed content length: 11350
+2024-12-06 14:01:54,026 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:01:54,027 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:01:54,027 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:01:54,028 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:01:54,044 - dita - DEBUG - Processed content length: 11358
+2024-12-06 14:01:55,397 - dita - INFO - Looking for topic with ID: roadmap
+2024-12-06 14:01:55,398 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 14:01:55,398 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:01:55,399 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 14:01:55,405 - dita - DEBUG - Processed content length: 1370
+2024-12-06 14:02:09,321 - dita - INFO - Looking for topic with ID: audio-engineering
+2024-12-06 14:02:09,322 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:09,322 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:09,323 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:09,327 - dita - DEBUG - Processed content length: 32
+2024-12-06 14:02:10,641 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:02:10,642 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:02:10,642 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:10,643 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:02:10,661 - dita - DEBUG - Processed content length: 11358
+2024-12-06 14:02:24,904 - dita - INFO - Looking for topic with ID: audio-engineering
+2024-12-06 14:02:24,905 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:24,905 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:24,906 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:24,907 - dita - DEBUG - Processed content length: 32
+2024-12-06 14:02:37,246 - dita - INFO - Looking for topic with ID: audio-engineering
+2024-12-06 14:02:37,246 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:37,247 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:37,248 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:37,248 - dita - DEBUG - Processed content length: 32
+2024-12-06 14:02:44,260 - dita - INFO - Looking for topic with ID: roadmap
+2024-12-06 14:02:44,260 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 14:02:44,260 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:44,262 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 14:02:44,267 - dita - DEBUG - Processed content length: 1370
+2024-12-06 14:02:58,595 - dita - INFO - Looking for topic with ID: audio-engineering
+2024-12-06 14:02:58,596 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/audio-engineering.ditamap
+2024-12-06 14:02:58,596 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:02:58,597 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics/room-acoustics.dita
+2024-12-06 14:02:58,598 - dita - DEBUG - Processed content length: 32
+2024-12-06 14:16:54,857 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:16:54,858 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:16:54,858 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:16:54,859 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:16:54,876 - dita - DEBUG - Processed content length: 11358
+2024-12-06 14:17:04,159 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:17:04,163 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:17:04,167 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:17:04,172 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:17:04,199 - dita - DEBUG - Processed content length: 11358
+2024-12-06 14:19:43,548 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:19:43,549 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:19:43,549 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:19:43,549 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:19:43,559 - dita - DEBUG - Processed content length: 11366
+2024-12-06 14:20:12,310 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:20:12,311 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:20:12,311 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:20:12,312 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:20:12,330 - dita - DEBUG - Processed content length: 11370
+2024-12-06 14:21:02,161 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:21:02,162 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:21:02,162 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:21:02,163 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:21:02,175 - dita - DEBUG - Processed content length: 11382
+2024-12-06 14:21:43,854 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:21:43,854 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:21:43,854 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:21:43,855 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:21:43,865 - dita - DEBUG - Processed content length: 11388
+2024-12-06 14:22:01,959 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:22:01,959 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:22:01,960 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:22:01,960 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:22:01,976 - dita - DEBUG - Processed content length: 11390
+2024-12-06 14:22:11,978 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:22:11,979 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:22:11,979 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:22:11,980 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:22:11,995 - dita - DEBUG - Processed content length: 11392
+2024-12-06 14:23:06,442 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:23:06,442 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:06,443 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:23:06,443 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:23:06,450 - dita - DEBUG - Processed content length: 11399
+2024-12-06 14:23:23,683 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:23:23,684 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:23,684 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:23:23,684 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:23:23,694 - dita - DEBUG - Processed content length: 11415
+2024-12-06 14:23:57,099 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:23:57,100 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:23:57,100 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:23:57,101 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:23:57,114 - dita - DEBUG - Processed content length: 11424
+2024-12-06 14:24:36,003 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:24:36,004 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:24:36,004 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:24:36,005 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:24:36,013 - dita - DEBUG - Processed content length: 11425
+2024-12-06 14:24:54,063 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:24:54,064 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:24:54,064 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:24:54,064 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:24:54,079 - dita - DEBUG - Processed content length: 11426
+2024-12-06 14:25:07,101 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:25:07,102 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:25:07,102 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:25:07,102 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:25:07,120 - dita - DEBUG - Processed content length: 11342
+2024-12-06 14:25:33,313 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:25:33,313 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:25:33,314 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:25:33,314 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:25:33,326 - dita - DEBUG - Processed content length: 11344
+2024-12-06 14:26:01,713 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:26:01,716 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:01,716 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:26:01,719 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:26:01,740 - dita - DEBUG - Processed content length: 11429
+2024-12-06 14:26:15,019 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:26:15,020 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:15,020 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:26:15,020 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:26:15,038 - dita - DEBUG - Processed content length: 11347
+2024-12-06 14:26:51,904 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:26:51,904 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:26:51,904 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:26:51,905 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:26:51,922 - dita - DEBUG - Processed content length: 11359
+2024-12-06 14:27:35,555 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:27:35,556 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:27:35,557 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:27:35,557 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:27:35,576 - dita - DEBUG - Processed content length: 11357
+2024-12-06 14:27:45,848 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:27:45,849 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:27:45,849 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:27:45,850 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:27:45,857 - dita - DEBUG - Processed content length: 11353
+2024-12-06 14:29:59,965 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:29:59,965 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:29:59,965 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:29:59,966 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:29:59,974 - dita - DEBUG - Processed content length: 11339
+2024-12-06 14:30:45,395 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:30:45,396 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:30:45,396 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:30:45,397 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:30:45,412 - dita - DEBUG - Processed content length: 11341
+2024-12-06 14:32:05,915 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:32:05,916 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:32:05,916 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:32:05,917 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:32:05,933 - dita - DEBUG - Processed content length: 11349
+2024-12-06 14:33:44,631 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:33:44,632 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:33:44,632 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:33:44,633 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:33:44,643 - dita - DEBUG - Processed content length: 11352
+2024-12-06 14:34:14,048 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 14:34:14,049 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 14:34:14,049 - dita - DEBUG - Processing ditamap...
+2024-12-06 14:34:14,050 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 14:34:14,071 - dita - DEBUG - Processed content length: 11355
+2024-12-06 15:19:14,705 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 15:19:14,707 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 15:19:14,707 - dita - DEBUG - Processing ditamap...
+2024-12-06 15:19:14,708 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 15:19:14,727 - dita - DEBUG - Processed content length: 11355
+2024-12-06 15:28:00,749 - dita - INFO - Looking for topic with ID: markdown-syntax-reference.md
+2024-12-06 15:28:00,750 - dita - ERROR - No topic found with ID: markdown-syntax-reference.md
+2024-12-06 15:49:55,497 - dita - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 15:49:55,499 - dita - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 15:49:55,499 - dita - DEBUG - Processing ditamap...
+2024-12-06 15:49:55,500 - dita - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles/brownian-motion.md
+2024-12-06 15:49:55,517 - dita - DEBUG - Processed content length: 11357
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:10:25,302 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:10:25,302 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:10:44,836 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:10:44,836 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:11:56,435 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:11:56,435 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:11:56,435 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:11:56,435 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:11:56,436 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:11:56,436 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:11:56,436 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:11:56,436 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:11:56,436 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:12:57,159 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:12:57,160 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:12:57,160 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:13:04,530 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:13:04,530 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:17:24,496 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:17:24,497 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:17:24,497 - dita - DEBUG - Paths initialized successfully
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/abstracts
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/acoustics
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/articles
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/audio
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/journals
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/output
+2024-12-06 17:17:46,131 - dita - DEBUG - Ensured directory exists: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/artifacts
+2024-12-06 17:17:46,131 - dita - DEBUG - Paths initialized successfully
