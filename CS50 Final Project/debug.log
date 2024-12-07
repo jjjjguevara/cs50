@@ -28489,3 +28489,389 @@ The contents presented here have been reproduced from Albert Einstein's works du
 2024-12-06 17:17:46,157 - werkzeug - INFO -  * Debugger PIN: 108-305-930
 2024-12-06 17:24:16,007 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/config.py', reloading
 2024-12-06 17:24:16,033 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 22:30:54,150 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 22:30:54,233 - app - INFO - Successfully registered routes blueprint
+2024-12-06 22:30:54,266 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2024-12-06 22:30:54,266 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2024-12-06 22:30:54,266 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 22:30:54,355 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 22:30:54,399 - app - INFO - Successfully registered routes blueprint
+2024-12-06 22:30:54,415 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 22:30:54,421 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 22:31:01,170 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 22:31:01,171 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 22:31:01,171 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 22:31:01,171 - app.dita.utils.heading - DEBUG - Heading handler configuration completed
+2024-12-06 22:31:01,171 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:01,171 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:01,171 - app.dita.utils.html_helpers - DEBUG - Configuring HTML helper
+2024-12-06 22:31:01,171 - app.dita.utils.html_helpers - DEBUG - HTML helper configuration completed
+2024-12-06 22:31:01,171 - app.dita.utils.metadata - DEBUG - Configuring metadata handler
+2024-12-06 22:31:01,171 - app.dita.utils.metadata - DEBUG - Metadata handler configuration completed
+2024-12-06 22:31:01,171 - app.dita.processor - DEBUG - Handlers configuration completed
+2024-12-06 22:31:01,171 - app.dita.processor - DEBUG - Configuring transformers
+2024-12-06 22:31:01,172 - app.dita.utils.dita_transform - DEBUG - Configuring DITA element processor
+2024-12-06 22:31:01,172 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:01,172 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:01,177 - app.dita.utils.dita_transform - DEBUG - DITA element processor configuration completed
+2024-12-06 22:31:01,177 - app.dita.utils.markdown.md_transform - DEBUG - Configuring Markdown element processor
+2024-12-06 22:31:01,177 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:01,177 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:01,177 - app.dita.utils.markdown.md_transform - DEBUG - Markdown element processor configuration completed
+2024-12-06 22:31:01,177 - app.dita.processor - DEBUG - Transformers configuration completed
+2024-12-06 22:31:01,177 - app.dita.processor - INFO - Looking for topic with ID: brownian-motion
+2024-12-06 22:31:01,178 - app.dita.processor - ERROR - Error checking path safety: 'DITAProcessor' object has no attribute 'app_root'
+2024-12-06 22:31:01,178 - app.dita.processor - ERROR - Transformation error: Invalid path: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/brownian-motion.ditamap
+2024-12-06 22:31:01,178 - app.dita.processor - WARNING - Using deprecated _create_error_html method
+2024-12-06 22:31:01,185 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:31:01] "GET /entry/brownian-motion HTTP/1.1" 200 -
+2024-12-06 22:31:01,222 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:31:01] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 22:31:07,555 - app.routes - INFO - Redirecting home to roadmap
+2024-12-06 22:31:07,555 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:31:07] "[32mGET / HTTP/1.1[0m" 302 -
+2024-12-06 22:31:07,561 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 22:31:07,561 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 22:31:07,561 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 22:31:07,561 - app.dita.utils.heading - DEBUG - Heading handler configuration completed
+2024-12-06 22:31:07,561 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:07,562 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:07,562 - app.dita.utils.html_helpers - DEBUG - Configuring HTML helper
+2024-12-06 22:31:07,562 - app.dita.utils.html_helpers - DEBUG - HTML helper configuration completed
+2024-12-06 22:31:07,562 - app.dita.utils.metadata - DEBUG - Configuring metadata handler
+2024-12-06 22:31:07,562 - app.dita.utils.metadata - DEBUG - Metadata handler configuration completed
+2024-12-06 22:31:07,562 - app.dita.processor - DEBUG - Handlers configuration completed
+2024-12-06 22:31:07,562 - app.dita.processor - DEBUG - Configuring transformers
+2024-12-06 22:31:07,562 - app.dita.utils.dita_transform - DEBUG - Configuring DITA element processor
+2024-12-06 22:31:07,562 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:07,562 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:07,562 - app.dita.utils.dita_transform - DEBUG - DITA element processor configuration completed
+2024-12-06 22:31:07,562 - app.dita.utils.markdown.md_transform - DEBUG - Configuring Markdown element processor
+2024-12-06 22:31:07,562 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:07,562 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:07,562 - app.dita.utils.markdown.md_transform - DEBUG - Markdown element processor configuration completed
+2024-12-06 22:31:07,562 - app.dita.processor - DEBUG - Transformers configuration completed
+2024-12-06 22:31:07,562 - app.dita.processor - INFO - Looking for topic with ID: roadmap
+2024-12-06 22:31:07,562 - app.dita.processor - ERROR - Error checking path safety: 'DITAProcessor' object has no attribute 'app_root'
+2024-12-06 22:31:07,562 - app.dita.processor - ERROR - Transformation error: Invalid path: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 22:31:07,562 - app.dita.processor - WARNING - Using deprecated _create_error_html method
+2024-12-06 22:31:07,563 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:31:07] "GET /entry/roadmap HTTP/1.1" 200 -
+2024-12-06 22:31:07,594 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:31:07] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 22:31:37,321 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 22:31:37,322 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 22:31:37,322 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 22:31:37,322 - app.dita.utils.heading - DEBUG - Heading handler configuration completed
+2024-12-06 22:31:37,322 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:37,323 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:37,323 - app.dita.utils.html_helpers - DEBUG - Configuring HTML helper
+2024-12-06 22:31:37,323 - app.dita.utils.html_helpers - DEBUG - HTML helper configuration completed
+2024-12-06 22:31:37,323 - app.dita.utils.metadata - DEBUG - Configuring metadata handler
+2024-12-06 22:31:37,323 - app.dita.utils.metadata - DEBUG - Metadata handler configuration completed
+2024-12-06 22:31:37,323 - app.dita.processor - DEBUG - Handlers configuration completed
+2024-12-06 22:31:37,323 - app.dita.processor - DEBUG - Configuring transformers
+2024-12-06 22:31:37,323 - app.dita.utils.dita_transform - DEBUG - Configuring DITA element processor
+2024-12-06 22:31:37,323 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:37,323 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:37,323 - app.dita.utils.dita_transform - DEBUG - DITA element processor configuration completed
+2024-12-06 22:31:37,323 - app.dita.utils.markdown.md_transform - DEBUG - Configuring Markdown element processor
+2024-12-06 22:31:37,323 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:37,323 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:37,323 - app.dita.utils.markdown.md_transform - DEBUG - Markdown element processor configuration completed
+2024-12-06 22:31:37,323 - app.dita.processor - DEBUG - Transformers configuration completed
+2024-12-06 22:31:37,323 - app.dita.processor - INFO - Looking for topic with ID: roadmap
+2024-12-06 22:31:37,324 - app.dita.processor - ERROR - Error checking path safety: 'DITAProcessor' object has no attribute 'app_root'
+2024-12-06 22:31:37,324 - app.dita.processor - ERROR - Transformation error: Invalid path: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 22:31:37,324 - app.dita.processor - WARNING - Using deprecated _create_error_html method
+2024-12-06 22:31:37,324 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:31:37] "GET /entry/roadmap HTTP/1.1" 200 -
+2024-12-06 22:31:37,344 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:31:37] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 22:31:55,875 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 22:31:55,876 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 22:31:55,876 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 22:31:55,876 - app.dita.utils.heading - DEBUG - Heading handler configuration completed
+2024-12-06 22:31:55,876 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:55,876 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:55,876 - app.dita.utils.html_helpers - DEBUG - Configuring HTML helper
+2024-12-06 22:31:55,877 - app.dita.utils.html_helpers - DEBUG - HTML helper configuration completed
+2024-12-06 22:31:55,877 - app.dita.utils.metadata - DEBUG - Configuring metadata handler
+2024-12-06 22:31:55,877 - app.dita.utils.metadata - DEBUG - Metadata handler configuration completed
+2024-12-06 22:31:55,877 - app.dita.processor - DEBUG - Handlers configuration completed
+2024-12-06 22:31:55,877 - app.dita.processor - DEBUG - Configuring transformers
+2024-12-06 22:31:55,877 - app.dita.utils.dita_transform - DEBUG - Configuring DITA element processor
+2024-12-06 22:31:55,877 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:55,877 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:55,877 - app.dita.utils.dita_transform - DEBUG - DITA element processor configuration completed
+2024-12-06 22:31:55,877 - app.dita.utils.markdown.md_transform - DEBUG - Configuring Markdown element processor
+2024-12-06 22:31:55,877 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:31:55,877 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:31:55,877 - app.dita.utils.markdown.md_transform - DEBUG - Markdown element processor configuration completed
+2024-12-06 22:31:55,877 - app.dita.processor - DEBUG - Transformers configuration completed
+2024-12-06 22:31:55,877 - app.dita.processor - INFO - Looking for topic with ID: roadmap
+2024-12-06 22:31:55,878 - app.dita.processor - ERROR - Error checking path safety: 'DITAProcessor' object has no attribute 'app_root'
+2024-12-06 22:31:55,878 - app.dita.processor - ERROR - Transformation error: Invalid path: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 22:31:55,878 - app.dita.processor - WARNING - Using deprecated _create_error_html method
+2024-12-06 22:31:55,878 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:31:55] "GET /entry/roadmap HTTP/1.1" 200 -
+2024-12-06 22:31:55,896 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:31:55] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 22:35:53,319 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-06 22:35:53,348 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 22:35:53,480 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 22:35:53,554 - app - INFO - Successfully registered routes blueprint
+2024-12-06 22:35:53,576 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 22:35:53,583 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 22:36:11,414 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 22:36:11,469 - app - INFO - Successfully registered routes blueprint
+2024-12-06 22:36:11,499 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2024-12-06 22:36:11,499 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2024-12-06 22:36:11,500 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 22:36:11,589 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 22:36:11,632 - app - INFO - Successfully registered routes blueprint
+2024-12-06 22:36:11,647 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 22:36:11,652 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 22:36:16,447 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 22:36:16,448 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 22:36:16,448 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 22:36:16,448 - app.dita.utils.heading - DEBUG - Heading handler configuration completed
+2024-12-06 22:36:16,448 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:36:16,448 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:36:16,448 - app.dita.utils.html_helpers - DEBUG - Configuring HTML helper
+2024-12-06 22:36:16,448 - app.dita.utils.html_helpers - DEBUG - HTML helper configuration completed
+2024-12-06 22:36:16,448 - app.dita.utils.metadata - DEBUG - Configuring metadata handler
+2024-12-06 22:36:16,448 - app.dita.utils.metadata - DEBUG - Metadata handler configuration completed
+2024-12-06 22:36:16,448 - app.dita.processor - DEBUG - Handlers configuration completed
+2024-12-06 22:36:16,448 - app.dita.processor - DEBUG - Configuring transformers
+2024-12-06 22:36:16,448 - app.dita.utils.dita_transform - DEBUG - Configuring DITA element processor
+2024-12-06 22:36:16,449 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:36:16,449 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:36:16,449 - app.dita.utils.dita_transform - DEBUG - DITA element processor configuration completed
+2024-12-06 22:36:16,449 - app.dita.utils.markdown.md_transform - DEBUG - Configuring Markdown element processor
+2024-12-06 22:36:16,449 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:36:16,449 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:36:16,449 - app.dita.utils.markdown.md_transform - DEBUG - Markdown element processor configuration completed
+2024-12-06 22:36:16,449 - app.dita.processor - DEBUG - Transformers configuration completed
+2024-12-06 22:36:16,449 - app.dita.processor - INFO - Looking for topic with ID: roadmap
+2024-12-06 22:36:16,450 - app.dita.processor - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 22:36:16,450 - app.dita.processor - DEBUG - Processing ditamap...
+2024-12-06 22:36:16,450 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 22:36:16,451 - app.dita.processor - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 22:36:16,451 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 22:36:16,474 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 22:36:16,475 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 22:36:16,475 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 22:36:16,475 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 22:36:16,476 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 22:36:16,477 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 22:36:16,477 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 22:36:16,477 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 22:36:16,478 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 22:36:16,479 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 22:36:16,483 - app.dita.processor - DEBUG - Processed content length: 1354
+2024-12-06 22:36:16,486 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:36:16] "GET /entry/roadmap HTTP/1.1" 200 -
+2024-12-06 22:36:16,530 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:36:16] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 22:37:24,521 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 22:37:24,522 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 22:37:24,522 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 22:37:24,522 - app.dita.utils.heading - DEBUG - Heading handler configuration completed
+2024-12-06 22:37:24,522 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:37:24,522 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:37:24,522 - app.dita.utils.html_helpers - DEBUG - Configuring HTML helper
+2024-12-06 22:37:24,523 - app.dita.utils.html_helpers - DEBUG - HTML helper configuration completed
+2024-12-06 22:37:24,523 - app.dita.utils.metadata - DEBUG - Configuring metadata handler
+2024-12-06 22:37:24,523 - app.dita.utils.metadata - DEBUG - Metadata handler configuration completed
+2024-12-06 22:37:24,523 - app.dita.processor - DEBUG - Handlers configuration completed
+2024-12-06 22:37:24,523 - app.dita.processor - DEBUG - Configuring transformers
+2024-12-06 22:37:24,523 - app.dita.utils.dita_transform - DEBUG - Configuring DITA element processor
+2024-12-06 22:37:24,523 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:37:24,523 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:37:24,523 - app.dita.utils.dita_transform - DEBUG - DITA element processor configuration completed
+2024-12-06 22:37:24,523 - app.dita.utils.markdown.md_transform - DEBUG - Configuring Markdown element processor
+2024-12-06 22:37:24,524 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:37:24,524 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:37:24,524 - app.dita.utils.markdown.md_transform - DEBUG - Markdown element processor configuration completed
+2024-12-06 22:37:24,524 - app.dita.processor - DEBUG - Transformers configuration completed
+2024-12-06 22:37:24,524 - app.dita.processor - INFO - Looking for topic with ID: roadmap
+2024-12-06 22:37:24,524 - app.dita.processor - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 22:37:24,524 - app.dita.processor - DEBUG - Processing ditamap...
+2024-12-06 22:37:24,524 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 22:37:24,525 - app.dita.processor - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 22:37:24,525 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 22:37:24,526 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 22:37:24,526 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 22:37:24,526 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 22:37:24,526 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 22:37:24,526 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 22:37:24,527 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 22:37:24,527 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 22:37:24,527 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 22:37:24,527 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 22:37:24,527 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 22:37:24,531 - app.dita.processor - DEBUG - Processed content length: 1354
+2024-12-06 22:37:24,534 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:37:24] "GET /entry/roadmap HTTP/1.1" 200 -
+2024-12-06 22:37:24,556 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:37:24] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 22:38:10,410 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 22:38:10,411 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 22:38:10,411 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 22:38:10,412 - app.dita.utils.heading - DEBUG - Heading handler configuration completed
+2024-12-06 22:38:10,412 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:38:10,412 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:38:10,412 - app.dita.utils.html_helpers - DEBUG - Configuring HTML helper
+2024-12-06 22:38:10,412 - app.dita.utils.html_helpers - DEBUG - HTML helper configuration completed
+2024-12-06 22:38:10,412 - app.dita.utils.metadata - DEBUG - Configuring metadata handler
+2024-12-06 22:38:10,412 - app.dita.utils.metadata - DEBUG - Metadata handler configuration completed
+2024-12-06 22:38:10,412 - app.dita.processor - DEBUG - Handlers configuration completed
+2024-12-06 22:38:10,412 - app.dita.processor - DEBUG - Configuring transformers
+2024-12-06 22:38:10,412 - app.dita.utils.dita_transform - DEBUG - Configuring DITA element processor
+2024-12-06 22:38:10,412 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:38:10,412 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:38:10,412 - app.dita.utils.dita_transform - DEBUG - DITA element processor configuration completed
+2024-12-06 22:38:10,412 - app.dita.utils.markdown.md_transform - DEBUG - Configuring Markdown element processor
+2024-12-06 22:38:10,412 - app.dita.utils.id_handler - DEBUG - Configuring ID handler
+2024-12-06 22:38:10,412 - app.dita.utils.id_handler - DEBUG - ID handler configuration completed
+2024-12-06 22:38:10,412 - app.dita.utils.markdown.md_transform - DEBUG - Markdown element processor configuration completed
+2024-12-06 22:38:10,412 - app.dita.processor - DEBUG - Transformers configuration completed
+2024-12-06 22:38:10,413 - app.dita.processor - INFO - Looking for topic with ID: roadmap
+2024-12-06 22:38:10,413 - app.dita.processor - DEBUG - Processing file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 22:38:10,413 - app.dita.processor - DEBUG - Processing ditamap...
+2024-12-06 22:38:10,413 - app.dita.utils.dita_parser - DEBUG - Parsing DITA file: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/maps/roadmap.ditamap
+2024-12-06 22:38:10,414 - app.dita.processor - DEBUG - Found content file in map: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 22:38:10,414 - app.dita.utils.markdown.md_transform - DEBUG - Transforming Markdown topic: /Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/topics/cs50/final-project-presentation.md
+2024-12-06 22:38:10,415 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.fenced_code.FencedCodeExtension".
+2024-12-06 22:38:10,415 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.footnotes.FootnoteExtension".
+2024-12-06 22:38:10,415 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.attr_list.AttrListExtension".
+2024-12-06 22:38:10,415 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.def_list.DefListExtension".
+2024-12-06 22:38:10,415 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 22:38:10,415 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.abbr.AbbrExtension".
+2024-12-06 22:38:10,415 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.md_in_html.MarkdownInHtmlExtension".
+2024-12-06 22:38:10,415 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.extra.ExtraExtension".
+2024-12-06 22:38:10,415 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.tables.TableExtension".
+2024-12-06 22:38:10,416 - MARKDOWN - DEBUG - Successfully loaded extension "markdown.extensions.sane_lists.SaneListExtension".
+2024-12-06 22:38:10,421 - app.dita.processor - DEBUG - Processed content length: 1354
+2024-12-06 22:38:10,424 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:38:10] "GET /entry/roadmap HTTP/1.1" 200 -
+2024-12-06 22:38:10,445 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:38:10] "[36mGET /static/css/global.css HTTP/1.1[0m" 304 -
+2024-12-06 22:38:10,445 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:38:10] "[36mGET /static/css/nav.css HTTP/1.1[0m" 304 -
+2024-12-06 22:38:10,445 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:38:10] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 22:38:10,446 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:38:10] "[36mGET /static/css/content.css HTTP/1.1[0m" 304 -
+2024-12-06 22:38:10,465 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:38:10] "[36mGET /static/fonts/AusteraText-DemiBold.ttf HTTP/1.1[0m" 304 -
+2024-12-06 22:38:10,466 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:38:10] "[36mGET /static/fonts/AusteraText-Bold.ttf HTTP/1.1[0m" 304 -
+2024-12-06 22:38:10,466 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 22:38:10] "[36mGET /static/fonts/AusteraText-Regular.ttf HTTP/1.1[0m" 304 -
+2024-12-06 22:46:12,737 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-06 22:46:12,765 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 22:46:12,886 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 22:46:12,957 - app - INFO - Successfully registered routes blueprint
+2024-12-06 22:46:12,976 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 22:46:12,982 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 22:46:45,541 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/dita_parser.py', reloading
+2024-12-06 22:46:45,565 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 22:46:45,682 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 22:46:45,753 - app - INFO - Successfully registered routes blueprint
+2024-12-06 22:46:45,772 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 22:46:45,777 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 22:49:42,299 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/heading.py', reloading
+2024-12-06 22:49:42,328 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 22:49:42,449 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 22:49:42,511 - app - INFO - Successfully registered routes blueprint
+2024-12-06 22:49:42,527 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 22:49:42,533 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 22:50:10,117 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/heading.py', reloading
+2024-12-06 22:50:10,142 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 22:50:10,265 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 22:50:10,326 - app - INFO - Successfully registered routes blueprint
+2024-12-06 22:50:10,345 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 22:50:10,350 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 22:54:09,466 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/processor.py', reloading
+2024-12-06 22:54:09,491 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 22:54:09,615 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 22:54:09,684 - app - INFO - Successfully registered routes blueprint
+2024-12-06 22:54:09,703 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 22:54:09,708 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 23:00:52,781 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/app/dita/utils/dita_parser.py', reloading
+2024-12-06 23:00:52,820 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 23:00:52,964 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 23:00:53,034 - app - INFO - Successfully registered routes blueprint
+2024-12-06 23:00:53,055 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 23:00:53,062 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 23:02:20,766 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/config.py', reloading
+2024-12-06 23:02:20,792 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 23:02:20,979 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 23:02:21,071 - app - INFO - Successfully registered routes blueprint
+2024-12-06 23:02:21,095 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 23:02:21,101 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 23:02:39,469 - werkzeug - INFO -  * Detected change in '/Users/josueguevara/Documents/GitHub/cs50/CS50 Final Project/config.py', reloading
+2024-12-06 23:02:39,493 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 23:02:39,606 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 23:02:39,662 - app - INFO - Successfully registered routes blueprint
+2024-12-06 23:02:39,679 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 23:02:39,684 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 23:02:46,488 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 23:02:46,532 - app - INFO - Successfully registered routes blueprint
+2024-12-06 23:02:46,554 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2024-12-06 23:02:46,554 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2024-12-06 23:02:46,555 - werkzeug - INFO -  * Restarting with stat
+2024-12-06 23:02:46,644 - app.dita.config_manager - DEBUG - Loading DITA config for environment: development
+2024-12-06 23:02:46,691 - app - INFO - Successfully registered routes blueprint
+2024-12-06 23:02:46,708 - werkzeug - WARNING -  * Debugger is active!
+2024-12-06 23:02:46,715 - werkzeug - INFO -  * Debugger PIN: 108-305-930
+2024-12-06 23:02:54,184 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 23:02:54,184 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 23:02:54,185 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 23:02:54,185 - app.dita.utils.heading - ERROR - Heading handler configuration failed: 'Field' object has no attribute 'get'
+2024-12-06 23:02:54,185 - app.dita.processor - ERROR - Handlers configuration failed: 'Field' object has no attribute 'get'
+2024-12-06 23:02:54,185 - app.dita.processor - ERROR - Handler initialization failed: 'Field' object has no attribute 'get'
+2024-12-06 23:02:54,185 - app.dita.processor - ERROR - Processor initialization failed: 'Field' object has no attribute 'get'
+2024-12-06 23:02:54,185 - app.routes - ERROR - Error viewing entry: 'Field' object has no attribute 'get'
+2024-12-06 23:02:54,194 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:02:54] "[35m[1mGET /entry/roadmap HTTP/1.1[0m" 500 -
+2024-12-06 23:02:54,229 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:02:54] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 23:02:54,230 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:02:54] "[36mGET /static/css/global.css HTTP/1.1[0m" 304 -
+2024-12-06 23:02:54,232 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:02:54] "[36mGET /static/css/nav.css HTTP/1.1[0m" 304 -
+2024-12-06 23:02:54,232 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:02:54] "[36mGET /static/css/content.css HTTP/1.1[0m" 304 -
+2024-12-06 23:03:02,464 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:02] "[33mGET /markdown-syntax-reference.md HTTP/1.1[0m" 404 -
+2024-12-06 23:03:06,474 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 23:03:06,474 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 23:03:06,474 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 23:03:06,475 - app.dita.utils.heading - ERROR - Heading handler configuration failed: 'Field' object has no attribute 'get'
+2024-12-06 23:03:06,475 - app.dita.processor - ERROR - Handlers configuration failed: 'Field' object has no attribute 'get'
+2024-12-06 23:03:06,475 - app.dita.processor - ERROR - Handler initialization failed: 'Field' object has no attribute 'get'
+2024-12-06 23:03:06,475 - app.dita.processor - ERROR - Processor initialization failed: 'Field' object has no attribute 'get'
+2024-12-06 23:03:06,475 - app.routes - ERROR - Error viewing entry: 'Field' object has no attribute 'get'
+2024-12-06 23:03:06,475 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:06] "[35m[1mGET /entry/audio-engineering HTTP/1.1[0m" 500 -
+2024-12-06 23:03:06,493 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:06] "[36mGET /static/css/global.css HTTP/1.1[0m" 304 -
+2024-12-06 23:03:06,493 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:06] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 23:03:06,494 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:06] "[36mGET /static/css/nav.css HTTP/1.1[0m" 304 -
+2024-12-06 23:03:06,496 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:06] "[36mGET /static/css/content.css HTTP/1.1[0m" 304 -
+2024-12-06 23:03:22,279 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 23:03:22,280 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 23:03:22,280 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 23:03:22,280 - app.dita.utils.heading - ERROR - Heading handler configuration failed: 'Field' object has no attribute 'get'
+2024-12-06 23:03:22,280 - app.dita.processor - ERROR - Handlers configuration failed: 'Field' object has no attribute 'get'
+2024-12-06 23:03:22,280 - app.dita.processor - ERROR - Handler initialization failed: 'Field' object has no attribute 'get'
+2024-12-06 23:03:22,281 - app.dita.processor - ERROR - Processor initialization failed: 'Field' object has no attribute 'get'
+2024-12-06 23:03:22,281 - app.routes - ERROR - Error viewing entry: 'Field' object has no attribute 'get'
+2024-12-06 23:03:22,282 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:22] "[35m[1mGET /entry/audio-engineering HTTP/1.1[0m" 500 -
+2024-12-06 23:03:22,302 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:22] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 23:03:22,304 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:22] "[36mGET /static/css/content.css HTTP/1.1[0m" 304 -
+2024-12-06 23:03:22,304 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:22] "[36mGET /static/css/global.css HTTP/1.1[0m" 304 -
+2024-12-06 23:03:22,306 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:03:22] "[36mGET /static/css/nav.css HTTP/1.1[0m" 304 -
+2024-12-06 23:06:40,792 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 23:06:40,792 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 23:06:40,793 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 23:06:40,793 - app.dita.utils.heading - ERROR - Heading handler configuration failed: 'Field' object has no attribute 'get'
+2024-12-06 23:06:40,793 - app.dita.processor - ERROR - Handlers configuration failed: 'Field' object has no attribute 'get'
+2024-12-06 23:06:40,793 - app.dita.processor - ERROR - Handler initialization failed: 'Field' object has no attribute 'get'
+2024-12-06 23:06:40,793 - app.dita.processor - ERROR - Processor initialization failed: 'Field' object has no attribute 'get'
+2024-12-06 23:06:40,793 - app.routes - ERROR - Error viewing entry: 'Field' object has no attribute 'get'
+2024-12-06 23:06:40,793 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:06:40] "[35m[1mGET /entry/audio-engineering HTTP/1.1[0m" 500 -
+2024-12-06 23:06:40,824 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:06:40] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 23:06:40,824 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:06:40] "[36mGET /static/css/global.css HTTP/1.1[0m" 304 -
+2024-12-06 23:06:40,826 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:06:40] "[36mGET /static/css/nav.css HTTP/1.1[0m" 304 -
+2024-12-06 23:06:40,827 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:06:40] "[36mGET /static/css/content.css HTTP/1.1[0m" 304 -
+2024-12-06 23:06:45,403 - app.dita.processor - DEBUG - Initializing processor with config
+2024-12-06 23:06:45,403 - app.dita.processor - DEBUG - Configuring handlers
+2024-12-06 23:06:45,403 - app.dita.utils.heading - DEBUG - Configuring heading handler
+2024-12-06 23:06:45,404 - app.dita.utils.heading - ERROR - Heading handler configuration failed: 'Field' object has no attribute 'get'
+2024-12-06 23:06:45,404 - app.dita.processor - ERROR - Handlers configuration failed: 'Field' object has no attribute 'get'
+2024-12-06 23:06:45,404 - app.dita.processor - ERROR - Handler initialization failed: 'Field' object has no attribute 'get'
+2024-12-06 23:06:45,404 - app.dita.processor - ERROR - Processor initialization failed: 'Field' object has no attribute 'get'
+2024-12-06 23:06:45,404 - app.routes - ERROR - Error viewing entry: 'Field' object has no attribute 'get'
+2024-12-06 23:06:45,405 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:06:45] "[35m[1mGET /entry/audio-engineering HTTP/1.1[0m" 500 -
+2024-12-06 23:06:45,419 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:06:45] "[36mGET /static/css/academic.css HTTP/1.1[0m" 304 -
+2024-12-06 23:06:45,419 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:06:45] "[36mGET /static/css/global.css HTTP/1.1[0m" 304 -
+2024-12-06 23:06:45,423 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:06:45] "[36mGET /static/css/nav.css HTTP/1.1[0m" 304 -
+2024-12-06 23:06:45,424 - werkzeug - INFO - 127.0.0.1 - - [06/Dec/2024 23:06:45] "[36mGET /static/css/content.css HTTP/1.1[0m" 304 -

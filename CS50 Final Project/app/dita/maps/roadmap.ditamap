@@ -2,7 +2,9 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map id="CS50 Roadmap">
     <title>Final Project Development Roadmap</title>
-
+    <metadata>
+    <othermeta name="index-numbers" content="true" />
+    </metadata>
     <!-- Introduction -->
     <topicgroup>
         <topicmeta>

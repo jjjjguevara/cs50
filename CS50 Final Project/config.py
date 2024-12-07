@@ -1,7 +1,8 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-from dataclasses import dataclass
+from typing import Dict, Any
+from dataclasses import dataclass, field
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, ".env"))
@@ -40,6 +41,7 @@ class DITAProcessingConfig:
 
 class DITAConfig:
     """DITA-specific configuration."""
+    metadata: Dict[str, Any] = field(default_factory=dict)
     def __init__(self):
         self.paths = DITAPathConfig()
         self.parser = DITAParserConfig()
@@ -178,7 +180,12 @@ config = {
     'default': DevelopmentConfig
 }
 
-# Helper function to get current config
+# Helper functions to get current config
+
+def get_environment() -> str:
+    """Get current environment."""
+    return os.environ.get('FLASK_ENV', 'development')
+
 def get_config():
     env = os.environ.get('FLASK_ENV', 'development')
     return config.get(env, config['default'])
@@ -192,3 +199,24 @@ def init_dita_config():
         return True
     except Exception:
         return False
+
+def load_dita_config() -> DITAConfig:
+    """Load DITA configuration based on environment."""
+    env = get_environment()
+    config_class = config.get(env, config['default'])
+    return config_class.DITA
+
+def validate_dita_config(config: DITAConfig) -> bool:
+    """Validate DITA configuration."""
+    return config.validate_paths()
+
+def get_dita_config() -> DITAConfig:
+    """Get current DITA configuration."""
+    return get_config().DITA
+
+def update_dita_config(updates: Dict[str, Any]) -> None:
+    """Update DITA configuration."""
+    current_config = get_dita_config()
+    for key, value in updates.items():
+        if hasattr(current_config, key):
+            setattr(current_config, key, value)

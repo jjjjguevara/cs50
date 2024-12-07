@@ -16,6 +16,7 @@ class HeadingHandler:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self._state = HeadingState()
+        self.index_numbers_enabled = True
         self._saved_states: List[HeadingState] = []
         self.used_ids: Set[str] = set()
 
@@ -29,14 +30,15 @@ class HeadingHandler:
             raise
 
     def configure(self, config: DITAConfig) -> None:
-        """Configure heading handler."""
-        try:
-            self.logger.debug("Configuring heading handler")
-            # Add any configuration-specific settings here
-            self.logger.debug("Heading handler configuration completed")
-        except Exception as e:
-            self.logger.error(f"Heading handler configuration failed: {str(e)}")
-            raise
+            """Configure heading handler."""
+            try:
+                self.logger.debug("Configuring heading handler")
+                # Check if index numbers are enabled in metadata
+                self.index_numbers_enabled = config.metadata.get('index-numbers', True)
+                self.logger.debug(f"Index numbers enabled: {self.index_numbers_enabled}")
+            except Exception as e:
+                self.logger.error(f"Heading handler configuration failed: {str(e)}")
+                raise
 
     def save_state(self) -> None:
         """Save current heading state for later restoration."""
@@ -124,45 +126,37 @@ class HeadingHandler:
             return False
 
     def process_heading(self,
-                       text: str,
-                       level: int,
-                       context: Optional[HeadingContext] = None,
-                       is_map_title: bool = False) -> Tuple[str, str]:
-        """
-        Process heading with improved state management.
+                           text: str,
+                           level: int,
+                           is_map_title: bool = False) -> Tuple[str, str]:
+            """Process heading with optional numbering."""
+            try:
+                heading_id = self._generate_id(text)
 
-        Args:
-            text: Heading text
-            level: Heading level (1-6)
-            context: Optional heading context
-            is_map_title: Whether this is a map title
+                if not self.index_numbers_enabled or is_map_title:
+                    return heading_id, text
 
-        Returns:
-            Tuple of (heading_id, formatted_text)
-        """
-        try:
-            # Use provided context or create default
-            ctx = context or HeadingContext(level=level)
-
-            # Validate hierarchy unless map title
-            if not is_map_title and not self.validate_hierarchy(level, ctx):
-                self.logger.warning(f"Invalid heading hierarchy at level {level}")
-
-            # Generate ID
-            heading_id = self._generate_id(text)
-
-            # Update counters
-            if not is_map_title:
+                # Update counters
                 self._update_counters(level)
 
-            # Format text with number
-            formatted_text = self._format_heading(text, level, is_map_title)
+                # Generate number string
+                numbers = []
+                for l in range(1, level + 1):
+                    count = self._state.counters[f'h{l}']
+                    if count > 0:
+                        numbers.append(str(count))
 
-            return heading_id, formatted_text
+                # Format with numbers
+                if numbers:
+                    formatted_text = f"{'.'.join(numbers)}. {text}"
+                else:
+                    formatted_text = text
 
-        except Exception as e:
-            self.logger.error(f"Error processing heading: {str(e)}")
-            raise
+                return heading_id, formatted_text
+
+            except Exception as e:
+                self.logger.error(f"Error processing heading: {str(e)}")
+                return self._generate_id(text), text
 
     def _update_counters(self, level: int) -> None:
         """Update heading counters for given level."""

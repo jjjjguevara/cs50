@@ -20,6 +20,7 @@ XMLElement = Any
 
 # Global config
 from config import DITAConfig
+from .config_manager import config_manager
 
 # Global types
 from .utils.types import (
@@ -96,12 +97,19 @@ class DITAProcessor:
     def __init__(self, config: Optional[DITAConfig] = None):
         """Initialize processor with optional configuration."""
         self.logger = logging.getLogger(__name__)
+        self._cache: Dict[str, Any] = {}
+
+        # Set app root - Add this
+        self.app_root = Path(__file__).parent.parent
 
         # Initialize with config if provided
         if config:
             self._init_with_config(config)
         else:
             self._init_default()
+
+        if config is None:
+                    config = config_manager.get_config()
 
     def _init_with_config(self, config: DITAConfig) -> None:
         """Initialize processor with provided configuration."""
@@ -117,6 +125,11 @@ class DITAProcessor:
 
             # Initialize handlers with config
             self._init_handlers(config)
+
+            # Initialize heading handler with metadata
+            self.heading_handler = HeadingHandler()
+            if 'index-numbers' in config.metadata:
+                self.heading_handler.index_numbers_enabled = config.metadata['index-numbers']
 
             # Initialize processors with config
             self._init_processors(config)
@@ -182,7 +195,6 @@ class DITAProcessor:
         """Initialize critical paths with defaults."""
         try:
             # Set up root paths
-            self.app_root = Path(__file__).parent.parent
             self.dita_root = self.app_root / 'dita'
 
             # Set up content directories
@@ -957,60 +969,82 @@ class DITAProcessor:
                 self.logger.error(f"Error processing topic {topic.id}: {str(e)}")
                 return None
 
-    def transform(self, path: Union[str, Path]) -> str:
-        content_path: Optional[Path] = None
+
+    def transform(self, map_path: Path) -> str:
+        """Transform DITA map and all referenced content."""
         try:
-            content_path = Path(path) if isinstance(path, str) else path
+            # Get all topics from map
+            discovered_map = self.run_discovery_phase(map_path)
 
-            if not self._is_safe_path(content_path):
-                raise ValueError(f"Invalid path: {content_path}")
+            # Create tracked elements
+            tracked_elements = self._track_elements(discovered_map)
 
-            self.logger.debug(f"Processing file: {content_path}")
+            # Process each element based on its type
+            processed_content = self.run_transformation_phase(tracked_elements)
 
-            # For ditamaps, we need to process their referenced content
-            if content_path.suffix == '.ditamap':
-                self.logger.debug("Processing ditamap...")
-                # Parse the map to get the actual content file
-                tree = self.dita_parser.parse_file(content_path)
-                if tree is None:
-                    raise ValueError(f"Failed to parse map file: {content_path}")
+            # Assemble final HTML
+            final_html = self.run_assembly_phase(processed_content)
 
-                # Find the first topicref
-                topicref = tree.find(".//topicref")
-                if topicref is not None and (href := topicref.get('href')):
-                    # Get the content file path
-                    content_file = (content_path.parent / href).resolve()
-                    self.logger.debug(f"Found content file in map: {content_file}")
-
-                    # Process based on content file type
-                    if content_file.suffix == '.md':
-                        content = self.md_transformer.transform_topic(content_file)
-                    elif content_file.suffix == '.dita':
-                        content = self.dita_transformer.transform_topic(content_file)
-                    else:
-                        raise ValueError(f"Unsupported content file type: {content_file.suffix}")
-
-                    self.logger.debug(f"Processed content length: {len(content)}")
-                    return content
-                else:
-                    raise ValueError("No content reference found in map")
-
-            # Direct file processing
-            elif content_path.suffix == '.md':
-                content = self.md_transformer.transform_topic(content_path)
-                self.logger.debug(f"Markdown transformed content length: {len(content)}")
-                return content
-            elif content_path.suffix == '.dita':
-                content = self.dita_transformer.transform_topic(content_path)
-                self.logger.debug(f"DITA transformed content length: {len(content)}")
-                return content
-            else:
-                raise ValueError(f"Unsupported file type: {content_path.suffix}")
+            return final_html
 
         except Exception as e:
-            self.logger.error(f"Transformation error: {str(e)}")
-            error_path = content_path if content_path else Path(str(path))
-            return self._create_error_html(str(e), error_path)
+            self.logger.error(f"Error transforming map {map_path}: {str(e)}")
+            return self._create_error_html(str(e), map_path)
+
+    # def transform(self, path: Union[str, Path]) -> str:
+    #     content_path: Optional[Path] = None
+    #     try:
+    #         content_path = Path(path) if isinstance(path, str) else path
+
+    #         if not self._is_safe_path(content_path):
+    #             raise ValueError(f"Invalid path: {content_path}")
+
+    #         self.logger.debug(f"Processing file: {content_path}")
+
+    #         # For ditamaps, we need to process their referenced content
+    #         if content_path.suffix == '.ditamap':
+    #             self.logger.debug("Processing ditamap...")
+    #             # Parse the map to get the actual content file
+    #             tree = self.dita_parser.parse_file(content_path)
+    #             if tree is None:
+    #                 raise ValueError(f"Failed to parse map file: {content_path}")
+
+    #             # Find the first topicref
+    #             topicref = tree.find(".//topicref")
+    #             if topicref is not None and (href := topicref.get('href')):
+    #                 # Get the content file path
+    #                 content_file = (content_path.parent / href).resolve()
+    #                 self.logger.debug(f"Found content file in map: {content_file}")
+
+    #                 # Process based on content file type
+    #                 if content_file.suffix == '.md':
+    #                     content = self.md_transformer.transform_topic(content_file)
+    #                 elif content_file.suffix == '.dita':
+    #                     content = self.dita_transformer.transform_topic(content_file)
+    #                 else:
+    #                     raise ValueError(f"Unsupported content file type: {content_file.suffix}")
+
+    #                 self.logger.debug(f"Processed content length: {len(content)}")
+    #                 return content
+    #             else:
+    #                 raise ValueError("No content reference found in map")
+
+    #         # Direct file processing
+    #         elif content_path.suffix == '.md':
+    #             content = self.md_transformer.transform_topic(content_path)
+    #             self.logger.debug(f"Markdown transformed content length: {len(content)}")
+    #             return content
+    #         elif content_path.suffix == '.dita':
+    #             content = self.dita_transformer.transform_topic(content_path)
+    #             self.logger.debug(f"DITA transformed content length: {len(content)}")
+    #             return content
+    #         else:
+    #             raise ValueError(f"Unsupported file type: {content_path.suffix}")
+
+    #     except Exception as e:
+    #         self.logger.error(f"Transformation error: {str(e)}")
+    #         error_path = content_path if content_path else Path(str(path))
+    #         return self._create_error_html(str(e), error_path)
 
     def _is_safe_path(self, path: Path) -> bool:
         """
@@ -2230,7 +2264,7 @@ class DITAProcessor:
     ################################
 
     def cleanup(self) -> None:
-        """Perform comprehensive cleanup of processor resources and state."""
+        """Perform comprehensive cleanup of processor resources and states."""
         try:
             self.logger.info("Starting processor cleanup")
 
