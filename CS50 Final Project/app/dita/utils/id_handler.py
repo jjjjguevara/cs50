@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 import re
 import logging
 
@@ -28,6 +28,19 @@ class DITAIDHandler:
             self.logger.error(f"ID handler configuration failed: {str(e)}")
             raise
 
+    def generate_id(self, text: str) -> str:
+            """Generate a unique ID for any text."""
+            base_id = re.sub(r'[^\w\- ]', '', text.lower()).strip().replace(' ', '-')
+            unique_id = base_id
+            counter = 1
+            while unique_id in self.used_ids:
+                unique_id = f"{base_id}-{counter}"
+                counter += 1
+            self.used_ids[unique_id] = 1
+            return unique_id
+
+
+
     def generate_content_id(self, path: Path) -> str:
         """Generate clean ID for content file"""
         base_id = path.stem
@@ -51,17 +64,15 @@ class DITAIDHandler:
         base_id = f"artifact-{name}-{target_heading}"
         return self._sanitize_id(base_id)
 
-    def _sanitize_id(self, id_str: str) -> str:
-        """Sanitize and ensure uniqueness of IDs"""
-        clean_id = re.sub(r'[^\w\-]', '-', id_str.lower())
-        clean_id = re.sub(r'-+', '-', clean_id).strip('-')
-
-        if clean_id in self.used_ids:
-            self.used_ids[clean_id] += 1
-            return f"{clean_id}-{self.used_ids[clean_id]}"
-
-        self.used_ids[clean_id] = 1
-        return clean_id
+    def _sanitize_id(self, raw_id: str) -> str:
+            """Sanitize and ensure the ID is unique."""
+            sanitized_id = re.sub(r'[^\w\-]', '', raw_id.lower().strip())
+            if sanitized_id in self.used_ids:
+                self.used_ids[sanitized_id] += 1
+                sanitized_id = f"{sanitized_id}-{self.used_ids[sanitized_id]}"
+            else:
+                self.used_ids[sanitized_id] = 1
+            return sanitized_id
 
     def resolve_xref(self, source_id: str, target_ref: str) -> str:
         """Resolve cross-references between topics"""

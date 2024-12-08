@@ -1,6 +1,8 @@
 # app/routes.py
+from datetime import datetime
 from pathlib import Path
 import logging
+import html
 from typing import Union, Optional
 from flask import (
     Blueprint,
@@ -16,6 +18,10 @@ from flask.typing import ResponseReturnValue
 from .dita.processor import DITAProcessor
 from .dita.config_manager import config_manager
 from .models import Topic, Map, ProcessedContent, ContentType
+from app.dita.utils.types import ProcessedContent, ParsedElement, ElementType
+from .dita.utils.dita_parser import DITAParser
+from .dita.utils.types import ParsedMap
+
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -41,33 +47,79 @@ def index() -> ResponseReturnValue:
 
 @bp.route('/entry/<topic_id>')
 def view_entry(topic_id: str) -> ResponseReturnValue:
-    """View a topic or map entry."""
+    """
+    View a topic or map entry.
+
+    Args:
+        topic_id (str): The ID of the topic or map to render.
+
+    Returns:
+        ResponseReturnValue: Rendered HTML page or error response.
+    """
     try:
         # Get DITA configuration and initialize processor
         dita_config = config_manager.get_config()
         processor = DITAProcessor(dita_config)
 
-        # Get map or topic path
-        content_path = processor.get_topic(topic_id)
-        if not content_path:
-            logger.error(f"Content not found: {topic_id}")
+        # Retrieve the topic or map path
+        topic_path = processor.get_topic(topic_id)
+        if not topic_path or not isinstance(topic_path, Path):
+            logger.error(f"Invalid topic path for: {topic_id}")
             return render_template('academic.html', error="Entry not found"), 404
 
-        # Transform content
-        content = processor.transform(content_path)
-        if not content:
-            logger.error(f"No content generated for: {topic_id}")
-            return render_template('academic.html', error="No content available"), 404
+        # Check if processing a DITA map
+        if topic_path.suffix == '.ditamap':
+            transformed_contents, metadata = processor.process_ditamap(topic_path)
+            if isinstance(transformed_contents, list):
+                # Handle the case of ProcessedContent objects in the list
+                transformed_html = "\n".join(
+                    content.html if isinstance(content, ProcessedContent) else content
+                    for content in transformed_contents
+                )
+            else:
+                transformed_html = transformed_contents  # Single string case
+        else:
+            # Process a single topic file into ParsedElement
+            parsed_topic = ParsedElement(
+                id=topic_id,
+                topic_id=topic_id,
+                type=ElementType.DITA if topic_path.suffix == '.dita' else ElementType.MARKDOWN,
+                content=topic_path.read_text(encoding='utf-8'),
+                topic_path=topic_path,
+                source_path=topic_path.parent,
+                metadata={}
+            )
+            logger.debug(f"ParsedElement: {parsed_topic}")
 
+            # Run transformation phase
+            transformed_contents = processor.run_transformation_phase([parsed_topic])
+            transformed_html = "\n".join(
+                content.html if isinstance(content, ProcessedContent) else content
+                for content in transformed_contents
+            )
+            metadata = {
+                'content_type': 'topic',
+                'content_id': topic_id,
+                'processed_at': datetime.now().isoformat()
+            }
+
+        # Debug the processed content and metadata
+        logger.debug(f"ProcessedContent: {transformed_contents}, Metadata: {metadata}")
+
+        # Render the HTML using processed content
         return render_template(
             'academic.html',
-            content=content,
+            content=transformed_html,
+            metadata=metadata,
             topic_id=topic_id
         )
 
     except Exception as e:
         logger.error(f"Error viewing entry: {str(e)}")
         return render_template('academic.html', error=str(e)), 500
+
+
+
 
 @bp.route('/static/topics/<path:filename>')
 def serve_topic_files(filename: str) -> ResponseReturnValue:

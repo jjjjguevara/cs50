@@ -32,10 +32,11 @@ class ConfigManager:
             DITAConfig instance
         """
         try:
+            # Determine environment
             env = get_environment()
             self.logger.debug(f"Loading DITA config for environment: {env}")
 
-            # Load config based on environment
+            # Load environment-specific configuration
             if env == 'development':
                 config = self._load_development_config()
             elif env == 'production':
@@ -43,7 +44,14 @@ class ConfigManager:
             else:
                 config = self._load_default_config()
 
-            # Validate config
+            # Extract additional settings, like 'number_headings'
+            number_headings = bool(os.getenv('DITA_NUMBER_HEADINGS', False))
+            self.logger.debug(f"Number headings enabled: {number_headings}")
+
+            # Update DITAConfig with additional settings
+            config.number_headings = number_headings
+
+            # Validate and return the configuration
             if self.validate_config(config):
                 self._config = config
                 return config
@@ -51,8 +59,9 @@ class ConfigManager:
                 raise ValueError("Invalid DITA configuration")
 
         except Exception as e:
-            self.logger.error(f"Failed to load DITA config: {str(e)}")
+            self.logger.error(f"Failed to load DITA config: {str(e)}", exc_info=True)
             raise
+
 
     def validate_config(self, config: 'DITAConfig') -> bool:
         """

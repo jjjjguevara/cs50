@@ -24,6 +24,61 @@ class HTMLHelper:
         self.dita_root: Optional[Path] = dita_root
         self._cache: Dict[str, Any] = {}
 
+
+    def render(self, content: str) -> str:
+        """
+        Transform raw XML content into styled HTML.
+
+        Args:
+            content: The raw XML or intermediate HTML content.
+
+        Returns:
+            Styled HTML as a string.
+        """
+        try:
+            # Parse content with BeautifulSoup
+            soup = BeautifulSoup(content, "lxml-xml")  # Use XML parser for DITA content
+
+            # Convert <title> tags to <h1> for HTML display
+            for title in soup.find_all("title"):
+                h1 = soup.new_tag("h1")
+                h1.string = title.text
+                title.replace_with(h1)
+
+            # Replace <topicgroup> with styled sections
+            for group in soup.find_all("topicgroup"):
+                div = soup.new_tag("div", **{"class": "topic-group"})
+                navtitle = group.find("navtitle")
+                if navtitle:
+                    h2 = soup.new_tag("h2")
+                    h2.string = navtitle.text
+                    div.append(h2)
+                ul = soup.new_tag("ul")
+                for ref in group.find_all("topicref"):
+                    li = soup.new_tag("li")
+                    a = soup.new_tag("a", href=ref.get("href", "#"))
+                    a.string = ref.get("href", "Unnamed Topic")
+                    li.append(a)
+                    ul.append(li)
+                div.append(ul)
+                group.replace_with(div)
+
+            # Safely handle optional <metadata>
+            metadata = soup.find("metadata")
+            if metadata and metadata.name == "metadata":
+                metadata.decompose()
+
+            return str(soup)
+        except Exception as e:
+            self.logger.error(f"Error rendering content: {str(e)}")
+            raise
+
+
+
+
+
+
+
     def configure_helper(self, config: DITAConfig) -> None:
         """Configure HTML helper with provided settings."""
         try:
@@ -55,30 +110,20 @@ class HTMLHelper:
             return ""
 
     def process_final_content(self, content: str) -> str:
-        """
-        Process final HTML content before output.
-
-        Args:
-            content: HTML content to process
-
-        Returns:
-            Processed HTML content
-        """
         try:
-            # Parse HTML
             soup = BeautifulSoup(content, 'html.parser')
-
-            # Clean whitespace
             output = self._clean_whitespace(str(soup))
-
-            # Ensure proper nesting
             output = self._ensure_proper_nesting(output)
 
-            return output
+            # Remove duplicate tags or improper nesting
+            output = re.sub(r'(<p>\s*</p>)+', '', output)
 
+            self.logger.debug(f"Processed final HTML content.")
+            return output
         except Exception as e:
             self.logger.error(f"Error processing final content: {str(e)}")
             return content
+
 
     def find_target_element(self, soup: BeautifulSoup, target_id: str) -> Optional[Tag]:
         """
@@ -203,6 +248,29 @@ class HTMLHelper:
         except Exception as e:
             self.logger.error(f"Error removing classes: {str(e)}")
 
+
+    def render_headings(self, content: str, toc_enabled: bool) -> str:
+        """
+        Enhance content with heading links or numbering.
+        """
+        soup = BeautifulSoup(content, 'html.parser')
+
+        # Handle cases where soup.body is None
+        if soup.body is None:
+            self.logger.warning("Content does not have a <body> tag")
+            return content
+
+        if toc_enabled:
+            toc = soup.new_tag('div', id='table-of-contents')
+            toc.append(soup.new_tag('h2', string='Table of Contents'))
+
+            for heading in soup.find_all(['h1', 'h2', 'h3']):
+                toc.append(soup.new_tag('a', href=f"#{heading['id']}", string=heading.text))
+            soup.body.insert(0, toc)
+
+        return str(soup)
+
+
     def wrap_content(self, content: str, wrapper_tag: str, classes: Optional[List[str]] = None) -> str:
         """
         Wrap content in HTML tag.
@@ -223,45 +291,30 @@ class HTMLHelper:
             return content
 
     def resolve_image_path(self, src: str, topic_path: Path) -> str:
-        """
-        Resolve image path relative to topic file.
-
-        Args:
-            src: Original image source path
-            topic_path: Path to topic file
-
-        Returns:
-            Resolved image URL
-        """
+        """Resolve image path relative to topic file."""
         try:
             if not self.dita_root:
                 self.logger.error("DITA root not set")
                 return src
 
-            # Clean the source path
-            src = src.strip('/')
-
-            # Get topic directory
+            # Get topic directory and media path
             topic_dir = topic_path.parent
+            media_dir = topic_dir / 'media'
 
-            # Try potential image paths
-            extensions = ['.svg', '.png', '.jpg', '.jpeg']
+            # Clean the source path and construct full path
+            src = src.strip('/')
+            img_path = (media_dir / src).resolve()
 
-            # If extension provided, only try that path
-            if any(src.endswith(ext) for ext in extensions):
-                img_path = topic_dir / src
-                if img_path.exists():
-                    return f'/static/topics/{img_path.relative_to(self.dita_root)}'
+            self.logger.debug(f"Trying to resolve image: {img_path}")
 
-            # Try without extension
-            base_path = src.rsplit('.', 1)[0] if '.' in src else src
-            for ext in extensions:
-                img_path = topic_dir / f"{base_path}{ext}"
-                if img_path.exists():
-                    return f'/static/topics/{img_path.relative_to(self.dita_root)}'
-
-            self.logger.error(f"Image not found: {src} in {topic_path}")
-            return src  # Return original src if not found
+            # Make path relative to DITA root for serving
+            if img_path.exists():
+                relative_path = img_path.relative_to(self.dita_root)
+                self.logger.debug(f"Image found, serving from: {relative_path}")
+                return f'/static/topics/{relative_path}'
+            else:
+                self.logger.warning(f"Image not found at: {img_path}")
+                return src
 
         except Exception as e:
             self.logger.error(f"Error resolving image path: {str(e)}")

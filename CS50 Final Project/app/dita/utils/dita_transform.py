@@ -2,7 +2,8 @@
 
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict
+from bs4 import BeautifulSoup
 from lxml import etree
 
 # Global config
@@ -13,23 +14,25 @@ from .types import (
     DITAElementInfo,
     DITAElementContext,
     ElementAttributes,
+    ProcessedContent,
     ProcessingError,
     ProcessingState
 )
-from .dita_elements import DITAContentProcessor
-from .html_helpers import HTMLHelper
+from .metadata import MetadataHandler
 from .id_handler import DITAIDHandler
+from .heading import HeadingHandler
+from .html_helpers import HTMLHelper
 
 class DITATransformer:
     """Transforms DITA content to HTML using element definitions."""
 
     def __init__(self, dita_root: Path):
         self.logger = logging.getLogger(__name__)
-        self.dita_root = dita_root
         self.id_handler = DITAIDHandler()
-        self.html = HTMLHelper()
+        self.metadata_handler = MetadataHandler()
+        self.heading_handler = HeadingHandler()
         self.html = HTMLHelper(dita_root)
-        self.element_processor = DITAContentProcessor()
+        self.dita_root = dita_root
 
     def configure(self, config: DITAConfig) -> None:
         """Configure element processor with provided settings."""
@@ -49,60 +52,6 @@ class DITATransformer:
         except Exception as e:
             self.logger.error(f"DITA element processor configuration failed: {str(e)}")
             raise
-
-    def transform_topic(self, topic_path: Path) -> str:
-        """Transform DITA topic to HTML."""
-        try:
-            self.logger.debug(f"Transforming DITA topic: {topic_path}")
-
-            # Parse DITA XML
-            parser = etree.XMLParser(
-                remove_blank_text=True,
-                resolve_entities=False,
-                dtd_validation=False,
-                load_dtd=False,
-                no_network=True
-            )
-
-            tree = etree.parse(str(topic_path), parser)
-            if tree is None:
-                raise ProcessingError(
-                    error_type="dita_transformation",
-                    message="Failed to parse DITA file",
-                    context=str(topic_path)
-                )
-
-            root = tree.getroot()
-
-            # Process root element
-            root_info = self.element_processor.process_element(root)
-            transformed_content = self._transform_element(root_info)
-
-            return transformed_content
-
-        except Exception as e:
-            self.logger.error(f"Error transforming topic {topic_path}: {str(e)}")
-            raise ProcessingError(
-                error_type="dita_transformation",
-                message=f"Failed to transform DITA: {str(e)}",
-                context=str(topic_path)
-            )
-
-    def _transform_element(self, element_info: DITAElementInfo) -> str:
-        """Transform element info to HTML."""
-        try:
-            # Get transformation method based on element type
-            transform_method = self._get_transform_method(element_info.type)
-
-            if transform_method:
-                return transform_method(element_info)
-
-            # Default transformation
-            return self._transform_default(element_info)
-
-        except Exception as e:
-            self.logger.error(f"Error transforming element: {str(e)}")
-            return ""
 
     def _get_transform_method(self, element_type: DITAElementType):
         """Get appropriate transformation method for element type."""
@@ -136,6 +85,72 @@ class DITATransformer:
             DITAElementType.QUOTE: self._transform_quote
         }
         return transform_methods.get(element_type)
+
+
+    def transform_topic(self, topic_path: Path) -> ProcessedContent:
+        """
+        Transforms a DITA topic into HTML.
+
+        Args:
+            topic_path (Path): Path to the DITA topic file.
+
+        Returns:
+            ProcessedContent: The transformed HTML content with metadata.
+        """
+        try:
+            # Read the DITA file
+            with open(topic_path, 'r', encoding='utf-8') as file:
+                dita_content = file.read()
+
+            # Extract metadata
+            metadata = self.metadata_handler.extract_metadata(
+                file_path=topic_path,
+                content_id=topic_path.stem
+            )
+
+            # Parse the DITA content to XML
+            soup = BeautifulSoup(dita_content, 'xml')
+
+            # Process headings
+            for heading in soup.find_all(['title', 'topic']):
+                is_map_title = heading.name == "title"
+                heading_id, processed_heading = self.heading_handler.process_heading(
+                    text=heading.string or '',
+                    level=1 if is_map_title else 2,  # Map title = H1; topics = H2 by default
+                    is_map_title=is_map_title
+                )
+                heading['id'] = heading_id
+
+            # Finalize HTML transformation
+            html_content = self.html.process_final_content(str(soup))
+
+            return ProcessedContent(
+                html=html_content,
+                element_id=self.id_handler.generate_id(topic_path.name),
+                metadata=metadata
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error transforming DITA topic {topic_path}: {str(e)}", exc_info=True)
+            raise
+
+
+    def _transform_element(self, element_info: DITAElementInfo) -> str:
+        """Transform element info to HTML."""
+        try:
+            # Get transformation method based on element type
+            transform_method = self._get_transform_method(element_info.type)
+
+            if transform_method:
+                return transform_method(element_info)
+
+            # Default transformation
+            return self._transform_default(element_info)
+
+        except Exception as e:
+            self.logger.error(f"Error transforming element: {str(e)}")
+            return ""
+
 
     # Topic-level transformations
     def _transform_concept(self, element_info: DITAElementInfo) -> str:
@@ -424,12 +439,21 @@ class DITATransformer:
             self.logger.debug("Resetting DITA transformer")
 
             # Reset element processor
-            self.element_processor = DITAContentProcessor()
+            self.element_processor = self.__class__(self.dita_root)
 
             # Reset HTML helper
             self.html = HTMLHelper(self.dita_root)
 
-            self.logger.debug("DITA transformer reset completed")
+            # Reset ID handler
+            self.id_handler = DITAIDHandler()
+
+            # Reset Metadata handler
+            self.metadata_handler = MetadataHandler()
+
+            # Reset Heading handler
+            self.heading_handler = HeadingHandler()
+
+            self.logger.debug("DITA transformer reset completed successfully")
 
         except Exception as e:
             self.logger.error(f"DITA transformer reset failed: {str(e)}")

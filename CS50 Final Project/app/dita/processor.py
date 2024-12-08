@@ -1,7 +1,7 @@
 # Standard library imports
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Union, Any, Tuple
 import logging
 import html
 import traceback
@@ -89,27 +89,48 @@ from .utils.markdown.md_transform import MarkdownTransformer
 from .utils.logger import DITALogger
 
 
+
+
 class DITAProcessor:
     """
     Main orchestrator class for DITA content processing.
     Talks to parsing, element tracking, and conditional processing pipelines.
     """
     def __init__(self, config: Optional[DITAConfig] = None):
-        """Initialize processor with optional configuration."""
+        """
+        Initialize processor with optional configuration.
+
+        Args:
+            config: Optional configuration object for processor.
+        """
         self.logger = logging.getLogger(__name__)
         self._cache: Dict[str, Any] = {}
+        self.current_phase = ProcessingPhase.DISCOVERY
 
-        # Set app root - Add this
+        # Debug initialization
+        self.logger.debug("Initializing DITAProcessor.")
+
+        # Set application root
         self.app_root = Path(__file__).parent.parent
 
-        # Initialize with config if provided
+        # Initialize parser and HTML helper
+        self.dita_parser = DITAParser()
+        self.html_helper = HTMLHelper(self.app_root / 'dita')
+
+        # Initialize with config if provided, otherwise use default settings
         if config:
+            self.logger.debug("Configuring processor with provided config.")
             self._init_with_config(config)
         else:
+            self.logger.debug("No config provided, initializing with defaults.")
             self._init_default()
 
-        if config is None:
-                    config = config_manager.get_config()
+        # Log final configuration state
+        self.logger.debug(f"Final configuration: index_numbers_enabled={getattr(self, 'index_numbers_enabled', None)}")
+
+        # Final log
+        self.logger.debug("DITAProcessor fully initialized.")
+
 
     def _init_with_config(self, config: DITAConfig) -> None:
         """Initialize processor with provided configuration."""
@@ -125,11 +146,6 @@ class DITAProcessor:
 
             # Initialize handlers with config
             self._init_handlers(config)
-
-            # Initialize heading handler with metadata
-            self.heading_handler = HeadingHandler()
-            if 'index-numbers' in config.metadata:
-                self.heading_handler.index_numbers_enabled = config.metadata['index-numbers']
 
             # Initialize processors with config
             self._init_processors(config)
@@ -162,34 +178,52 @@ class DITAProcessor:
         self.processing_options = ProcessingOptions()
 
     def _init_handlers(self, config: Optional[DITAConfig] = None) -> None:
-        """Initialize handlers with optional configuration."""
+        """
+        Initialize handlers with optional configuration.
+        """
         try:
             self.heading_handler = HeadingHandler()
+
+            # Ensure heading numbering is enabled or disabled based on the configuration
+            if config and hasattr(config.processing, 'number_headings'):
+                self.heading_handler.set_numbering_enabled(config.processing.number_headings)
+            else:
+                self.heading_handler.set_numbering_enabled(False)
+
+            # Initialize other handlers
             self.id_handler = DITAIDHandler()
-            self.html = HTMLHelper(self.dita_root)
             self.metadata_handler = MetadataHandler()
 
+            # Configure handlers with config if available
             if config:
-                self._configure_handlers(config)
+                if hasattr(self.id_handler, 'configure'):
+                    self.id_handler.configure(config)
+                if hasattr(self.metadata_handler, 'configure'):
+                    self.metadata_handler.configure(config)
 
         except Exception as e:
             self.logger.error(f"Handler initialization failed: {str(e)}")
             raise
 
+
     def _init_processors(self, config: Optional[DITAConfig] = None) -> None:
         """Initialize processors with optional configuration."""
         try:
+            self.logger.debug("Initializing processors.")
+
             # Initialize transformers
-            self.dita_parser = DITAParser()
             self.dita_transformer = DITATransformer(self.dita_root)
             self.md_transformer = MarkdownTransformer(self.dita_root)
 
             if config:
                 self._configure_transformers(config)
 
+            self.logger.debug("Processors initialized successfully.")
+
         except Exception as e:
             self.logger.error(f"Processor initialization failed: {str(e)}")
             raise
+
 
     def _init_paths(self) -> None:
         """Initialize critical paths with defaults."""
@@ -237,28 +271,53 @@ class DITAProcessor:
                 raise
 
 
-    def _init_map_context(self, map_path: Path) -> MapContext:
-            """Initialize context for map processing"""
-            map_id = self.id_handler.generate_map_id(map_path)
-            metadata = self.metadata_handler.extract_metadata(map_path, map_id)
+    def _init_map_context(self, discovered_map: DiscoveredMap) -> MapContext:
+        """
+        Initialize the map context based on the discovered map.
 
+        Args:
+            discovered_map (DiscoveredMap): The discovered map.
+
+        Returns:
+            MapContext: The initialized map context.
+        """
+        try:
+            # Extract map features, including heading numbering
+            map_features = self._get_map_features(discovered_map.metadata)
+
+            # Add heading numbering feature to map features
+            if hasattr(self.processing_options, 'number_headings'):
+                map_features['number_headings'] = self.processing_options.number_headings
+                self.logger.debug(f"Map heading numbering set to: {self.processing_options.number_headings}")
+            else:
+                map_features['number_headings'] = False  # Default if undefined
+                self.logger.debug("Map heading numbering defaulted to disabled.")
+
+            # Create the MapContext
             return MapContext(
-                map_id=map_id,
-                map_path=map_path,
-                metadata=metadata,
-                topic_order=[],
-                features=self._get_map_features(metadata)
+                map_id=discovered_map.id,
+                map_path=discovered_map.path,
+                metadata=discovered_map.metadata,
+                topic_order=[topic.id for topic in discovered_map.topics],
+                features=map_features,
+                type=ElementType.DITAMAP
             )
+        except Exception as e:
+            self.logger.error(f"Error initializing map context: {str(e)}")
+            raise
+
+
+
 
     def _get_map_features(self, metadata: Dict[str, Any]) -> Dict[str, bool]:
-            """Get map-level processing features"""
-            return {
-                'process_latex': metadata.get('process_latex', True),
-                'number_headings': metadata.get('number_headings', True),
-                'show_toc': metadata.get('show_toc', True),
-                'enable_cross_refs': metadata.get('enable_cross_refs', True),
-                # More map-level features are added as needed
-            }
+        """Get map-level processing features"""
+        return {
+            'process_latex': bool(metadata.get('process-latex', True)),
+            'number_headings': bool(metadata.get('index-numbers', True)),
+            'show_toc': bool(metadata.get('append-toc', True)),
+            'enable_cross_refs': bool(metadata.get('enable-xrefs', True)),
+            # More map-level features are added as needed
+        }
 
     def _get_topic_features(self, metadata: Dict[str, Any]) -> Dict[str, bool]:
         """Get topic-level processing features"""
@@ -331,51 +390,70 @@ class DITAProcessor:
     # Context processing #
     ######################
 
-    def _initialize_context(self, discovered_map: DiscoveredMap) -> None:
+    def initialize_context(self, discovered_map: DiscoveredMap, reset: bool = False) -> None:
         """
-        Initialize processing context from discovered content.
+        Initialize or reinitialize the processing context.
 
         Args:
-            discovered_map: Discovered content to create context from
-
-        Raises:
-            ValueError: If discovered map is invalid
+            discovered_map (DiscoveredMap): The discovered map for which the context is being initialized.
+            reset (bool): Whether this is a reinitialization (default: False).
         """
         try:
-            # Create map context
+            self.logger.debug(f"{'Resetting' if reset else 'Initializing'} processing context")
+
+            # Create MapContext
             map_context = MapContext(
                 map_id=discovered_map.id,
                 map_path=discovered_map.path,
                 metadata=discovered_map.metadata,
                 topic_order=[topic.id for topic in discovered_map.topics],
-                features=self._get_map_features(discovered_map.metadata)
+                features=self._get_map_features(discovered_map.metadata),
+                type=ElementType.DITAMAP  # Type is now valid
             )
 
-            # Create topic contexts
-            topics: Dict[str, TopicContext] = {}
-            for topic in discovered_map.topics:
-                topics[topic.id] = TopicContext(
+            # Create TopicContext objects
+            topics = {
+                topic.id: TopicContext(
                     topic_id=topic.id,
                     topic_path=topic.path,
                     parent_map_id=discovered_map.id,
                     metadata=topic.metadata,
-                    features=self._get_topic_features(topic.metadata)
+                    features=self._get_topic_features(topic.metadata),
+                    type=topic.type  # Ensure the type is passed here
                 )
+                for topic in discovered_map.topics
+            }
 
-            # Create processing context
+            # Assign to current context
             self.current_context = ProcessingContext(
                 map_context=map_context,
                 topics=topics
             )
 
-            self.logger.debug(f"Initialized context for map {discovered_map.id}")
-
+            self.logger.debug(f"Processing context {'reset' if reset else 'initialized'} successfully")
         except Exception as e:
-            self.logger.error(f"Failed to initialize context: {str(e)}")
-            raise ValueError(f"Context initialization failed: {str(e)}")
+            self.logger.error(f"Failed to {'reset' if reset else 'initialize'} context: {str(e)}")
+            raise
+
+
+
+
+    def _determine_content_type(self, path: Path) -> ElementType:
+        """
+        Determine the type of content based on the file extension.
+        """
+        if path.suffix == '.md':
+            return ElementType.MARKDOWN
+        elif path.suffix == '.dita':
+            return ElementType.DITA
+        else:
+            self.logger.warning(f"Unknown content type for file: {path}")
+            return ElementType.UNKNOWN
+
 
 
     def _update_transformation_context(self) -> None:
+        self.logger.debug(f"Updating transformation context for phase: {self.current_phase}")
         """Update context for transformation phase."""
         try:
             if not self.current_context:
@@ -490,6 +568,21 @@ class DITAProcessor:
         Process discovered content with context management.
         """
         try:
+
+            if not self.current_context:
+                        raise ValueError("No processing context available")
+
+            processed_content = []
+
+            # Check map metadata for heading numbering
+            metadata = self.metadata_handler.extract_metadata(
+                        discovered_map.path,  # Using path instead of source_path
+                        content_id=discovered_map.id
+                    )
+            index_numbers = metadata.get('index-numbers', 'true').lower() == 'true'
+            self.heading_handler.set_numbering_enabled(index_numbers)
+
+
             if not self._validate_context():
                 raise ProcessingError(
                     error_type="processing",
@@ -512,56 +605,13 @@ class DITAProcessor:
             raise
 
 
-    def _init_context(self, discovered_map: DiscoveredMap) -> None:
-        """
-        Initialize processing context.
-
-        Args:
-            discovered_map: Discovered content information
-        """
-        try:
-            self.current_context = ProcessingContext(
-                map_context=MapContext(
-                    map_id=discovered_map.id,
-                    map_path=discovered_map.path,
-                    metadata=discovered_map.metadata,
-                    topic_order=[topic.id for topic in discovered_map.topics],
-                    features=self._get_map_features(discovered_map.metadata)
-                ),
-                topics={}
-            )
-
-            # Initialize topic contexts
-            for topic in discovered_map.topics:
-                self.current_context.topics[topic.id] = TopicContext(
-                    topic_id=topic.id,
-                    topic_path=topic.path,
-                    parent_map_id=discovered_map.id,
-                    metadata=topic.metadata,
-                    features=self._get_topic_features(topic.metadata),
-                    state=ProcessingState.PENDING
-                )
-
-            self.logger.debug(f"Initialized context for map {discovered_map.id}")
-
-        except Exception as e:
-            self.logger.error(f"Context initialization failed: {str(e)}")
-            raise
 
     def _update_context(self, phase: ProcessingPhase) -> None:
-        """
-        Update context for processing phase.
-
-        Args:
-            phase: Current processing phase
-        """
+        """Update context for processing phase."""
         try:
             if not self.current_context:
-                raise ProcessingError(
-                    error_type="context",
-                    message="No context available for update",
-                    context=phase.value
-                )
+                self.logger.debug("No context available, initializing new context")
+                return  # Skip update if no context yet
 
             # Update phase-specific context
             if phase == ProcessingPhase.TRANSFORMATION:
@@ -670,86 +720,98 @@ class DITAProcessor:
             self.logger.error(f"Error during content discovery: {str(e)}")
             raise
 
+    def process_ditamap(self, ditamap_path: Path) -> Tuple[List[str], Dict[str, Any]]:
+        """
+        Process a DITA map file through the pipeline.
 
-    def process_ditamap(self, map_path: Path) -> str:
-        """Main entry point for ditamap processing."""
+        Args:
+            ditamap_path: Path to the .ditamap file.
+
+        Returns:
+            Tuple[List[str], Dict[str, Any]]: The transformed HTML content for all topics in the map
+                                              and the metadata containing the `.ditamap` title.
+        """
+        self.logger.debug(f"Processing DITA map: {ditamap_path}")
+
         try:
-            self.logger.info(f"\n{'='*50}")
-            self.logger.info(f"Starting map processing for {map_path}")
+            # Parse the map
+            parsed_map = self.dita_parser.parse_map(ditamap_path)
+            if not parsed_map or not isinstance(parsed_map, ParsedMap):
+                raise ValueError(f"Failed to parse map: {ditamap_path}")
+            self.logger.debug(f"Parsed map: {parsed_map}")
 
-            # Reset state for new processing
-            self.reset_processor_state()
+            # Set heading numbering based on metadata
+            self.heading_handler.set_numbering_enabled(
+                parsed_map.metadata.get("index-numbers", "false").lower() == "true"
+            )
+            self.logger.debug(f"Heading numbering enabled: {self.heading_handler.numbering_enabled}")
 
-            try:
-                # Discovery Phase
-                discovered_map = self.run_discovery_phase(map_path)
+            # Extract title and metadata for the map
+            map_title = parsed_map.title or "Untitled Map"
+            combined_metadata = {
+                'content_type': 'ditamap',
+                'content_id': parsed_map.metadata.get('id', "unknown_map"),
+                'processed_at': datetime.now().isoformat(),
+                'page_title': map_title,
+                **parsed_map.metadata
+            }
+            self.logger.debug(f"Combined metadata: {combined_metadata}")
 
-                # Initialize processing context
-                self._initialize_context(discovered_map)
-
-                # Validate context is properly set up
-                if not self._validate_context():
-                    raise ProcessingError(
-                        error_type="context",
-                        message="Failed to validate processing context",
-                        context=map_path
+            # Convert ParsedMap to DiscoveredMap
+            discovered_map = DiscoveredMap(
+                id=combined_metadata['content_id'],
+                path=parsed_map.source_path,
+                title=map_title,
+                topics=[
+                    DiscoveredTopic(
+                        id=topic.id,
+                        path=topic.topic_path,
+                        type=topic.type,
+                        href=str(topic.topic_path.relative_to(self.dita_root)) if self.dita_root in topic.topic_path.parents else str(topic.topic_path),
+                        metadata=topic.metadata
                     )
+                    for topic in parsed_map.topics
+                ],
+                metadata=parsed_map.metadata
+            )
+            self.logger.debug(f"Converted to DiscoveredMap: {discovered_map}")
 
-                # Execute pipeline
-                return self.execute_pipeline(discovered_map)
+            # Execute the pipeline
+            transformed_contents = self.execute_pipeline(discovered_map)
+            self.logger.debug(f"Processed DITA map with {len(transformed_contents)} topics.")
 
-            except ProcessingError as pe:
-                self.logger.error(
-                    f"Processing error in {pe.error_type} phase: {pe.message}\n"
-                    f"Context: {pe.context}"
-                )
-                if pe.stacktrace:
-                    self.logger.debug(f"Stack trace:\n{pe.stacktrace}")
-                return self._create_error_html(pe.message, pe.context)
+            return transformed_contents, combined_metadata
 
         except Exception as e:
-            self.logger.error(f"Error processing map {map_path}: {str(e)}")
-            return self._create_error_html(str(e), map_path)
+            self.logger.error(f"Error processing DITA map {ditamap_path}: {str(e)}", exc_info=True)
+            raise
 
 
-    def _process_map_content(self, parsed_map: ParsedMap) -> str:
-            """Process content discovered in map."""
+
+    def _process_map_content(self, parsed_elements: List[ParsedElement]) -> List[str]:
+        """
+        Process map content by transforming each parsed element.
+
+        Args:
+            parsed_elements (List[ParsedElement]): List of parsed map elements.
+
+        Returns:
+            List[str]: List of transformed HTML content for each topic.
+        """
+        transformed_content = []
+        for parsed in parsed_elements:
             try:
-                # Initialize contexts before using them
-                self.current_context = ProcessingContext(
-                    map_context=MapContext(
-                        map_id=self.id_handler.generate_map_id(parsed_map.source_path),
-                        map_path=parsed_map.source_path,
-                        metadata=parsed_map.metadata,
-                        topic_order=[],
-                        features=self._get_map_features(parsed_map.metadata)
-                    ),
-                    topics={}
-                )
-
-                # Process title if exists
-                html_parts = []
-                if parsed_map.title:
-                    html_parts.append(self._process_map_title(parsed_map.title))
-
-                # Process each topic
-                for topic in parsed_map.topics:
-                    if processed_topic := self._process_topic(topic):
-                        html_parts.append(processed_topic)
-                        if self.current_context and self.current_context.map_context:
-                            self.current_context.map_context.topic_order.append(topic.id)
-
-                # Store processed map
-                if self.current_context and self.current_context.map_context:
-                    self.processed_maps[self.current_context.map_context.map_id] = \
-                        self.current_context.map_context
-
-                # Return combined content
-                return self._assemble_html_with_context(html_parts)
-
+                self.logger.debug(f"Processing parsed element: {parsed.topic_id}")
+                # Directly process the ParsedElement
+                html_content = self._process_topic(parsed)
+                if html_content:
+                    transformed_content.append(html_content)
             except Exception as e:
-                self.logger.error(f"Error processing map content: {str(e)}")
-                return self._create_error_html(str(e), parsed_map.source_path)
+                self.logger.error(f"Error processing parsed element {parsed.topic_id}: {str(e)}")
+
+        return transformed_content
+
+
 
 
     def _assemble_final_html(self, content_list: List[ProcessedContent],
@@ -790,13 +852,16 @@ class DITAProcessor:
 
 
     def _process_map_title(self, title: str) -> str:
-        """Process map title."""
-        title_id = self.id_handler.generate_content_id(Path(title))
-        return (
-            f'<div id="{title_id}" class="map-title">'
-            f'<div class="title display-4 mb-4">{title}</div>'
-            f'</div>'
-        )
+        """Process map title element."""
+        try:
+            return (
+                f'<div class="map-title">'
+                f'<h1 class="title display-4 mb-4">{title}</h1>'
+                f'</div>'
+            )
+        except Exception as e:
+            self.logger.error(f"Error processing map title: {str(e)}")
+            return ""
 
     def reset_processor_state(self) -> None:
             """Reset all stateful components for new processing."""
@@ -937,114 +1002,62 @@ class DITAProcessor:
         # Remove any leading/trailing separators
         return topic_id.strip('/')
 
-    def _process_topic(self, topic: ParsedElement) -> Optional[str]:
-            """Process individual topic based on its type."""
-            try:
-                if not self.current_context:
-                    raise ValueError("No processing context available")
+    def _process_topic(self, topic: ParsedElement) -> str | None:
+        """
+        Process a single topic and return its transformed HTML content.
 
-                # Create topic context
-                topic_context = TopicContext(
-                    topic_id=topic.id,
-                    topic_path=topic.source_path,
-                    parent_map_id=self.current_context.map_context.map_id,
-                    metadata=topic.metadata,
-                    features=self._get_topic_features(topic.metadata),
-                    state=ProcessingState.PENDING
-                )
+        Args:
+            topic (ParsedElement): The parsed element to process.
 
-                # Store topic context
-                self.current_context.topics[topic.id] = topic_context
-                self.current_context.current_topic_id = topic.id
+        Returns:
+            str | None: The transformed HTML content, or None if processing fails.
+        """
+        try:
+            self.logger.debug(f"Processing topic: {topic.topic_id}")
 
-                # Route to appropriate processor based on type
-                if topic.type == ElementType.DITA:
-                    return self.dita_transformer.transform_topic(topic.source_path)
-                elif topic.type == ElementType.MARKDOWN:
-                    return self.md_transformer.transform_topic(topic.source_path)
-                else:
-                    raise ValueError(f"Unsupported topic type: {topic.type}")
-
-            except Exception as e:
-                self.logger.error(f"Error processing topic {topic.id}: {str(e)}")
+            if topic.type == ElementType.MARKDOWN:
+                processed = self.md_transformer.transform_topic(topic.topic_path)
+            elif topic.type == ElementType.DITA:
+                processed = self.dita_transformer.transform_topic(topic.topic_path)
+            else:
+                self.logger.warning(f"Unsupported topic type: {topic.type}")
                 return None
 
+            # Extract the HTML content from ProcessedContent
+            if isinstance(processed, ProcessedContent):
+                return processed.html
+            return processed
 
-    def transform(self, map_path: Path) -> str:
-        """Transform DITA map and all referenced content."""
+        except Exception as e:
+            self.logger.error(f"Error processing topic {topic.topic_id}: {str(e)}")
+            return None
+
+
+
+    def transform(self, content: ProcessedContent) -> str:
+        """
+        Transform processed content into its final HTML representation.
+
+        Args:
+            content (ProcessedContent): The content object containing HTML, metadata, and element ID.
+
+        Returns:
+            str: The fully transformed HTML string.
+        """
         try:
-            # Get all topics from map
-            discovered_map = self.run_discovery_phase(map_path)
+            self.logger.debug("Starting transformation of processed content.")
 
-            # Create tracked elements
-            tracked_elements = self._track_elements(discovered_map)
+            # Use HTMLHelper to render the HTML
+            final_html = self.html_helper.render(content.html)
 
-            # Process each element based on its type
-            processed_content = self.run_transformation_phase(tracked_elements)
-
-            # Assemble final HTML
-            final_html = self.run_assembly_phase(processed_content)
-
+            self.logger.debug("Content transformation completed successfully.")
             return final_html
 
         except Exception as e:
-            self.logger.error(f"Error transforming map {map_path}: {str(e)}")
-            return self._create_error_html(str(e), map_path)
+            self.logger.error(f"Error transforming content: {str(e)}")
+            raise
 
-    # def transform(self, path: Union[str, Path]) -> str:
-    #     content_path: Optional[Path] = None
-    #     try:
-    #         content_path = Path(path) if isinstance(path, str) else path
 
-    #         if not self._is_safe_path(content_path):
-    #             raise ValueError(f"Invalid path: {content_path}")
-
-    #         self.logger.debug(f"Processing file: {content_path}")
-
-    #         # For ditamaps, we need to process their referenced content
-    #         if content_path.suffix == '.ditamap':
-    #             self.logger.debug("Processing ditamap...")
-    #             # Parse the map to get the actual content file
-    #             tree = self.dita_parser.parse_file(content_path)
-    #             if tree is None:
-    #                 raise ValueError(f"Failed to parse map file: {content_path}")
-
-    #             # Find the first topicref
-    #             topicref = tree.find(".//topicref")
-    #             if topicref is not None and (href := topicref.get('href')):
-    #                 # Get the content file path
-    #                 content_file = (content_path.parent / href).resolve()
-    #                 self.logger.debug(f"Found content file in map: {content_file}")
-
-    #                 # Process based on content file type
-    #                 if content_file.suffix == '.md':
-    #                     content = self.md_transformer.transform_topic(content_file)
-    #                 elif content_file.suffix == '.dita':
-    #                     content = self.dita_transformer.transform_topic(content_file)
-    #                 else:
-    #                     raise ValueError(f"Unsupported content file type: {content_file.suffix}")
-
-    #                 self.logger.debug(f"Processed content length: {len(content)}")
-    #                 return content
-    #             else:
-    #                 raise ValueError("No content reference found in map")
-
-    #         # Direct file processing
-    #         elif content_path.suffix == '.md':
-    #             content = self.md_transformer.transform_topic(content_path)
-    #             self.logger.debug(f"Markdown transformed content length: {len(content)}")
-    #             return content
-    #         elif content_path.suffix == '.dita':
-    #             content = self.dita_transformer.transform_topic(content_path)
-    #             self.logger.debug(f"DITA transformed content length: {len(content)}")
-    #             return content
-    #         else:
-    #             raise ValueError(f"Unsupported file type: {content_path.suffix}")
-
-    #     except Exception as e:
-    #         self.logger.error(f"Transformation error: {str(e)}")
-    #         error_path = content_path if content_path else Path(str(path))
-    #         return self._create_error_html(str(e), error_path)
 
     def _is_safe_path(self, path: Path) -> bool:
         """
@@ -1235,6 +1248,20 @@ class DITAProcessor:
     #################################################
     # Conditionally processed elements and features #
     #################################################
+
+    def _filter_processed_content(self, content: List[ProcessedContent]) -> List[ProcessedContent]:
+        """Filter out duplicate content."""
+        seen = set()
+        filtered = []
+
+        for item in content:
+            # Create a unique key for the content
+            content_key = f"{item.element_id}:{item.html}"
+            if content_key not in seen:
+                seen.add(content_key)
+                filtered.append(item)
+
+        return filtered
 
     def _generate_topic_title(self, topic_context: TopicContext) -> str:
         """Generate topic title HTML"""
@@ -1462,15 +1489,19 @@ class DITAProcessor:
 
             # Generate map ID
             map_id = self.id_handler.generate_map_id(map_path)
+            self.logger.debug(f"Generated map ID: {map_id}")
 
             # Parse map file
+            self.logger.debug("Calling dita_parser.parse_map")
             tree = self.dita_parser.parse_file(map_path)
             if tree is None:
+                self.logger.error("parse_file returned None")
                 raise ProcessingError(
                     error_type="discovery",
                     message="Failed to parse map file",
                     context=map_path
                 )
+            self.logger.debug("Successfully parsed map file")
 
             # Extract map metadata
             map_metadata = self.metadata_handler.extract_metadata(map_path, map_id)
@@ -1504,48 +1535,55 @@ class DITAProcessor:
             self.logger.error(f"Discovery phase failed: {str(e)}")
             raise
 
-    def execute_pipeline(self, discovered_map: DiscoveredMap) -> str:
+
+    def execute_pipeline(self, discovered_map: DiscoveredMap) -> List[str]:
+        """
+        Execute the processing pipeline for a discovered map.
+
+        Args:
+            discovered_map: The DiscoveredMap object containing parsed topics.
+
+        Returns:
+            List[str]: The transformed HTML content for all topics in the map.
+        """
+        self.logger.debug("Executing pipeline.")
+
         try:
-            self.logger.info("Starting pipeline execution")
+            # Initialize the map context
+            map_context = self._init_map_context(discovered_map)
+            self.logger.debug(f"Initialized map context: {map_context}")
 
-            # Initialize state
-            self._init_state()
-
-            # Validation phase
-            if not self.run_validation_phase(discovered_map):
-                raise ProcessingError(
-                    error_type="validation",
-                    message="Content validation failed",
-                    context=discovered_map.path
+            # Parse topics into ParsedElement objects
+            parsed_elements = [
+                ParsedElement(
+                    id=topic.id,
+                    topic_id=topic.id,
+                    type=topic.type,
+                    content=str(topic.path),  # Placeholder for content
+                    topic_path=topic.path,
+                    source_path=discovered_map.path,
+                    metadata=topic.metadata
                 )
+                for topic in discovered_map.topics
+            ]
+            self.logger.debug(f"Parsed elements: {parsed_elements}")
 
-            # Create tracked elements
-            tracked_elements = self._track_elements(discovered_map)
+            # Run the transformation phase
+            transformed_contents = self.run_transformation_phase(parsed_elements)
+            self.logger.debug(f"Transformed contents: {transformed_contents}")
 
-            # Transform content
-            processed_content = self.run_transformation_phase(tracked_elements)
-            if not processed_content:
-                raise ProcessingError(
-                    error_type="transformation",
-                    message="No content was processed",
-                    context=discovered_map.path
-                )
+            # Collect and return transformed HTML content
+            html_outputs = [content.html for content in transformed_contents if content.html]
+            self.logger.debug(f"Pipeline completed with {len(html_outputs)} outputs.")
 
-            # Detect features in processed content
-            features = self._detect_features('\n'.join(c.html for c in processed_content))
-
-            # Update processing options based on features
-            self._update_processing_options(features)
-
-            # Final assembly with features
-            final_html = self.run_assembly_phase(processed_content)
-
-            self.logger.info("Pipeline execution completed successfully")
-            return final_html
+            return html_outputs
 
         except Exception as e:
-            self.logger.error(f"Pipeline execution failed: {str(e)}")
+            self.logger.error(f"Error executing pipeline: {str(e)}", exc_info=True)
             raise
+
+
+
 
     # Phase handlers
 
@@ -1555,7 +1593,7 @@ class DITAProcessor:
             self.transition_phase(ProcessingPhase.VALIDATION)
 
             # Initialize context
-            self._init_context(discovered_map)
+            self.initialize_context(discovered_map)
 
             # Validate context
             if not self._validate_context():
@@ -1578,33 +1616,29 @@ class DITAProcessor:
             self.logger.error(f"Validation phase failed: {str(e)}")
             return False
 
-    def run_transformation_phase(self, elements: List[TrackedElement]) -> List[ProcessedContent]:
-        """Transform tracked elements to processed content."""
-        try:
-            self.logger.info("Starting transformation phase")
-            self.transition_phase(ProcessingPhase.TRANSFORMATION)
+    def run_transformation_phase(self, elements: List[ParsedElement]) -> List[ProcessedContent]:
+        """Run the transformation phase for a list of parsed elements."""
+        self.logger.debug("Starting transformation phase.")
 
-            processed_content = []
+        transformed_content = []
+        for element in elements:
+            self.logger.debug(f"Processing element: {element}")
 
-            for element in elements:
-                self.logger.debug(f"Processing element: {element.id}")
+            transformer = (
+                self.md_transformer if element.type == ElementType.MARKDOWN else self.dita_transformer
+            )
 
-                # Update context
-                self._update_context(ProcessingPhase.TRANSFORMATION)
+            try:
+                processed = transformer.transform_topic(element.topic_path)
+                transformed_content.append(processed)
+                self.logger.debug(f"Successfully transformed element: {element.id}")
 
-                try:
-                    # Route content through new routing system
-                    processed = self._route_content(element)
-                    processed_content.append(processed)
+            except Exception as e:
+                self.logger.error(f"Error transforming element {element.id}: {e}")
 
-                except ProcessingError:
-                    raise
+        self.logger.debug(f"Transformation phase completed for {len(transformed_content)} elements.")
+        return transformed_content
 
-            return processed_content
-
-        except Exception as e:
-            self.logger.error(f"Transformation phase failed: {str(e)}")
-            raise
 
 
     def run_enrichment_phase(self, content: List[ProcessedContent]) -> List[ProcessedContent]:
@@ -1636,58 +1670,25 @@ class DITAProcessor:
            self.logger.error(f"Enrichment phase failed: {str(e)}")
            raise
 
-    def run_assembly_phase(self, content: List[ProcessedContent]) -> str:
+    def run_assembly_phase(self, processed_content):
         try:
-            self.logger.info("Starting assembly phase")
-            self.transition_phase(ProcessingPhase.ASSEMBLY)
+            self.logger.debug("Starting assembly phase")
+            seen_ids = set()
+            unique_content = []
 
-            if not self.current_context:
-                raise ProcessingError(
-                    error_type="assembly",
-                    message="No context available",
-                    context="assembly_phase"
-                )
+            for content in processed_content:
+                if content.element_id not in seen_ids:
+                    seen_ids.add(content.element_id)
+                    unique_content.append(content)
 
-            # Initialize assembly
-            self._initialize_assembly()
-
-            # Update context
-            self._update_context(ProcessingPhase.ASSEMBLY)
-
-            html_parts = ['<div class="dita-content">']
-
-            # Add ToC if enabled
-            if self.current_context.map_context.features.get('show_toc', True):
-                html_parts.append(self._generate_toc())
-
-            # Process content in order with features
-            for topic_id in self.current_context.map_context.topic_order:
-                topic_content = next(
-                    (c for c in content if c.element_id == topic_id),
-                    None
-                )
-
-                if topic_content:
-                    # Apply features to topic content
-                    processed_content = topic_content.html
-
-                    # Process artifacts if enabled
-                    if self.current_context.map_context.features.get('process_artifacts', False):
-                        processed_content = self._process_artifacts(processed_content)
-
-                    html_parts.append(
-                        f'<div class="topic-section" data-topic-id="{topic_id}">'
-                        f'{processed_content}'
-                        f'</div>'
-                    )
-
-            html_parts.append('</div>')
-
-            return self.html.process_final_content('\n'.join(html_parts))
-
+            final_html = ''.join([content.html for content in unique_content])
+            self.logger.debug(f"Assembly completed with {len(unique_content)} unique topics")
+            return final_html
         except Exception as e:
             self.logger.error(f"Assembly phase failed: {str(e)}")
             raise
+
+
 
 
     def _initialize_assembly(self) -> None:
@@ -1713,10 +1714,10 @@ class DITAProcessor:
         Assemble all processed content into final HTML structure.
 
         Args:
-            content_list: List of processed content to assemble
+            content_list: List of processed content to assemble.
 
         Returns:
-            Assembled HTML content
+            Assembled HTML content.
         """
         try:
             if not self.current_context:
@@ -1726,10 +1727,13 @@ class DITAProcessor:
                     context="content_assembly"
                 )
 
+            self.logger.debug("Starting content assembly.")
             html_parts = ['<div class="dita-content">']
 
             # Process content in topic order
             for topic_id in self.current_context.map_context.topic_order:
+                self.logger.debug(f"Assembling content for topic ID: {topic_id}")
+
                 topic_content = next(
                     (c for c in content_list if c.element_id == topic_id),
                     None
@@ -1738,15 +1742,20 @@ class DITAProcessor:
                 if topic_content:
                     assembled_topic = self._assemble_topic_content(topic_content)
                     html_parts.append(assembled_topic)
+                else:
+                    self.logger.warning(f"No content found for topic ID: {topic_id}")
 
             html_parts.append('</div>')
 
             # Process final HTML
-            return self.html.process_final_content('\n'.join(html_parts))
+            final_html = self.html_helper.process_final_content('\n'.join(html_parts))
+            self.logger.debug("Content assembly completed successfully.")
+            return final_html
 
         except Exception as e:
-            self.logger.error(f"Content assembly failed: {str(e)}")
+            self.logger.error(f"Content assembly failed: {str(e)}", exc_info=True)
             raise
+
 
     def _assemble_topic_content(self, topic_content: ProcessedContent) -> str:
         """
@@ -1798,49 +1807,56 @@ class DITAProcessor:
 
     # Pipeline orchestration
     def validate_phase(self, phase: ProcessingPhase) -> bool:
-       """
-       Validate if pipeline can transition to phase.
+        """
+        Validate if pipeline can transition to phase.
 
-       Args:
-           phase: Phase to validate
+        Args:
+            phase: Phase to validate
 
-       Returns:
-           True if phase transition is valid
-       """
-       try:
-           if not hasattr(self, 'current_phase'):
-               return phase == ProcessingPhase.DISCOVERY
+        Returns:
+            True if phase transition is valid
+        """
+        try:
+            if not hasattr(self, 'current_phase'):
+                self.current_phase = ProcessingPhase.DISCOVERY
+                return True
 
-           # Define valid phase transitions
-           valid_transitions = {
-               ProcessingPhase.DISCOVERY: [ProcessingPhase.VALIDATION],
-               ProcessingPhase.VALIDATION: [ProcessingPhase.TRANSFORMATION],
-               ProcessingPhase.TRANSFORMATION: [ProcessingPhase.ENRICHMENT],
-               ProcessingPhase.ENRICHMENT: [ProcessingPhase.ASSEMBLY],
-               ProcessingPhase.ASSEMBLY: []  # Final phase
-           }
+            # Define valid phase transitions
+            valid_transitions = {
+                ProcessingPhase.DISCOVERY: [ProcessingPhase.VALIDATION, ProcessingPhase.TRANSFORMATION],
+                ProcessingPhase.VALIDATION: [ProcessingPhase.TRANSFORMATION],
+                ProcessingPhase.TRANSFORMATION: [ProcessingPhase.ENRICHMENT, ProcessingPhase.ASSEMBLY],
+                ProcessingPhase.ENRICHMENT: [ProcessingPhase.ASSEMBLY],
+                ProcessingPhase.ASSEMBLY: []  # Terminal phase
+            }
 
-           return phase in valid_transitions.get(self.current_phase, [])
+            return phase in valid_transitions.get(self.current_phase, [])
 
-       except Exception as e:
-           self.logger.error(f"Phase validation failed: {str(e)}")
-           return False
+        except Exception as e:
+            self.logger.error(f"Phase validation failed: {str(e)}")
+            return False
 
     def transition_phase(self, new_phase: ProcessingPhase) -> None:
-       """
-       Transition pipeline to new phase.
+        """
+        Transition pipeline to new phase.
 
-       Args:
-           new_phase: Phase to transition to
+        Args:
+            new_phase: Phase to transition to
+        """
+        try:
+            if not self.validate_phase(new_phase):
+                self.logger.warning(
+                    f"Invalid phase transition from {self.current_phase.value if hasattr(self, 'current_phase') else 'None'} "
+                    f"to {new_phase.value}"
+                )
+                # Instead of raising an error, we'll set the phase and continue
 
-       Raises:
-           ValueError: If transition is invalid
-       """
-       if not self.validate_phase(new_phase):
-           raise ValueError(f"Invalid phase transition to {new_phase.value}")
+            self.current_phase = new_phase
+            self.logger.info(f"Pipeline transitioned to {new_phase.value} phase")
 
-       self.current_phase = new_phase
-       self.logger.info(f"Pipeline transitioned to {new_phase.value} phase")
+        except Exception as e:
+            self.logger.error(f"Phase transition failed: {str(e)}")
+            raise
 
 
 
@@ -2019,16 +2035,18 @@ class DITAProcessor:
 
 
     def _route_content(self, element: TrackedElement) -> ProcessedContent:
-        """
-        Route content to appropriate transformer.
-
-        Args:
-            element: Element to transform
-
-        Returns:
-            Processed content
-        """
+        """Route content to appropriate transformer."""
         try:
+            if element.type == ElementType.MAP_TITLE:
+                # Handle map title directly
+                content = self._process_map_title(element.content)
+                return ProcessedContent(
+                    html=content,
+                    element_id=element.id,
+                    metadata=element.metadata
+                )
+
+            # Get transformer for other content types
             transformer = self._get_transformer(element.type)
             if not transformer:
                 raise ProcessingError(
@@ -2038,7 +2056,22 @@ class DITAProcessor:
                     context=element.path
                 )
 
-            return transformer.transform_topic(element.path)
+            # Transform content
+            if element.type in [ElementType.DITA, ElementType.MARKDOWN]:
+                content = transformer.transform_topic(element.path)
+            else:
+                raise ProcessingError(
+                    error_type="routing",
+                    message=f"Unsupported content type: {element.type.value}",
+                    element_id=element.id,
+                    context=element.path
+                )
+
+            return ProcessedContent(
+                html=content,
+                element_id=element.id,
+                metadata=element.metadata
+            )
 
         except Exception as e:
             self.logger.error(f"Content routing failed: {str(e)}")

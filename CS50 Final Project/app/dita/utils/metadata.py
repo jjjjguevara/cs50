@@ -128,43 +128,16 @@ class MetadataHandler:
                 'processed_at': datetime.now().isoformat()
             }
 
-            # Process prolog metadata
-            prolog = tree.find('.//prolog')
-            if prolog is not None:
-                # Authors
-                authors = [author.text for author in prolog.findall('.//author') if author.text]
-                if authors:
-                    metadata['authors'] = authors
-
-                # Institution
-                institution = prolog.find('.//institution')
-                if institution is not None and institution.text:
-                    metadata['institution'] = institution.text
-
-                # Categories
-                categories = [cat.text for cat in prolog.findall('.//category') if cat.text]
-                if categories:
-                    metadata['categories'] = categories
-
-                # Keywords
-                keywords = [kw.text for kw in prolog.findall('.//keyword') if kw.text]
-                if keywords:
-                    metadata['keywords'] = keywords
-
-                # Other metadata
-                for othermeta in prolog.findall('.//othermeta'):
-                    name = othermeta.get('name')
-                    content = othermeta.get('content')
-                    if name and content:
+            # Process othermeta elements
+            for othermeta in tree.xpath('.//othermeta'):
+                name = othermeta.get('name')
+                content = othermeta.get('content')
+                if name and content:
+                    # Convert specific flags to booleans
+                    if name in ['index-numbers', 'append-toc']:
+                        metadata[name] = content.lower() == 'true'
+                    else:
                         metadata[name] = content
-
-                # Special flags - add here, inside the prolog check
-                metadata['is_journal_entry'] = self._check_metadata_flag(prolog, 'journal-entry')
-
-            # Abstract
-            abstract = tree.find('.//abstract/shortdesc')
-            if abstract is not None and abstract.text:
-                metadata['abstract'] = abstract.text
 
             return metadata
 

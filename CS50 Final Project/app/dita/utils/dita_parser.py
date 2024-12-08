@@ -1,5 +1,7 @@
+from packaging.metadata import Metadata
 # app/dita/utils/dita_parser.py
 
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Union, Tuple
 import re
@@ -10,17 +12,23 @@ from bs4 import BeautifulSoup
 from .types import (
     ElementType,
     ParsedElement,
+    DiscoveredTopic,
     ParsedMap,
     LaTeXEquation,
     PathLike,
-    MetadataDict
+    MetadataDict,
+    ParsedElement,
 )
+
+from app.dita.utils.metadata import MetadataHandler
+
 
 class DITAParser:
     """Comprehensive parser for DITA, Markdown, and LaTeX content."""
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.heading_tracker = HeadingTracker()
         self.parser = etree.XMLParser(
             recover=True,
             remove_blank_text=True,
@@ -30,169 +38,182 @@ class DITAParser:
             no_network=True
         )
 
+        self.metadata_handler = MetadataHandler()
+
     ### MAP PARSING ###
 
-    def parse_map(self, map_path: Path) -> Optional[ParsedMap]:
-        try:
-            tree = self.parse_file(map_path)
-            if tree is None:
-                return None
+    def _process_metadata_value(self, name: str, value: str) -> Union[bool, str]:
+        """Process metadata value based on name."""
+        if name in ['index-numbers', 'append-toc']:
+            return value.lower() == 'true'
+        return value
 
-            # Extract metadata including index-numbers setting
-            metadata = {}
-            metadata_elem = tree.find(".//metadata")
-            if metadata_elem is not None:
-                for othermeta in metadata_elem.findall(".//othermeta"):
-                    name = othermeta.get('name')
-                    content = othermeta.get('content')
-                    if name and content:
-                        metadata[name] = content.lower() == 'true'
+    def parse_map(self, map_path: Path) -> ParsedMap:
+            """Parse a .ditamap file and return a ParsedMap."""
+            try:
+                # Read the file content
+                if not map_path.exists():
+                    raise FileNotFoundError(f"Map file not found: {map_path}")
+                with open(map_path, 'r', encoding='utf-8') as file:
+                    content = file.read()
 
-            # Get topics
-            topics = []
-            for topicref in tree.xpath(".//topicref"):
+                # Parse as XML using BeautifulSoup
+                soup = BeautifulSoup(content, 'xml')
+
+                # Extract the map title (if available)
+                title_element = soup.find('title')
+                title = title_element.text.strip() if title_element else None
+
+                # Collect topics
+                topics: List[ParsedElement] = []
+                for topicref in soup.find_all('topicref'):
+                    href = topicref.get('href')
+                    if not href:
+                        continue  # Skip topicrefs without hrefs
+
+                    topic_path = map_path.parent / href
+                    if not topic_path.exists():
+                        self.logger.warning(f"Referenced topic not found: {topic_path}")
+                        continue
+
+                    element_type = (
+                        ElementType.DITA if topic_path.suffix == '.dita' else ElementType.MARKDOWN
+                    )
+                    topics.append(
+                        ParsedElement(
+                            id=topic_path.stem,
+                            topic_id=topic_path.stem,
+                            type=element_type,
+                            content=topic_path.read_text(encoding='utf-8'),
+                            topic_path=topic_path,
+                            source_path=map_path.parent,
+                            metadata={},  # Add metadata extraction if needed
+                        )
+                    )
+
+                # Return a ParsedMap object
+                return ParsedMap(
+                    title=title,
+                    topics=topics,
+                    metadata={"id": map_path.stem},
+                    source_path=map_path,
+                )
+
+            except Exception as e:
+                self.logger.error(f"Error parsing map {map_path}: {str(e)}", exc_info=True)
+                raise
+
+    def _discover_topics(self, soup: BeautifulSoup, base_path: Path) -> List[ParsedElement]:
+            """Discover topics from the .ditamap."""
+            topicrefs = soup.find_all('topicref')
+            parsed_elements = []
+
+            for topicref in topicrefs:
                 href = topicref.get('href')
-                if href:
-                    topic = self._discover_topic(topicref, map_path)
-                    if topic:
-                        topics.append(topic)
+                if not href:
+                    self.logger.warning("Skipping topicref with no href.")
+                    continue
 
-            return ParsedMap(
-                title=None,
-                topics=topics,
-                metadata=metadata,
-                source_path=map_path
-            )
+                topic_path = base_path / href
+                if not topic_path.exists():
+                    self.logger.warning(f"Referenced topic not found: {href}")
+                    continue
 
-        except Exception as e:
-            self.logger.error(f"Error parsing map {map_path}: {str(e)}")
-            return None
+                element_type = ElementType.DITA if topic_path.suffix == '.dita' else ElementType.MARKDOWN
+                with open(topic_path, 'r', encoding='utf-8') as topic_file:
+                    content = topic_file.read()
 
-    # def parse_map(self, map_path: Path) -> Optional[ParsedMap]:
-    #     """Initial parse of ditamap for content discovery."""
-    #     try:
-    #         self.logger.info(f"Parsing map: {map_path}")
+                parsed_element = ParsedElement(
+                    id=topic_path.stem,
+                    topic_id=topic_path.stem,
+                    type=element_type,
+                    content=content,
+                    topic_path=topic_path,
+                    source_path=topic_path.parent,
+                    metadata={}
+                )
+                parsed_elements.append(parsed_element)
 
-    #         tree = self.parse_file(map_path)
-    #         if tree is None:
-    #             return None
+            return parsed_elements
 
-    #         # Get topics
-    #         topics = []
-    #         for topicref in tree.xpath(".//topicref"):
-    #             href = topicref.get('href')
-    #             if href:
-    #                 topic_path = Path(href)
-    #                 # Log the topic path being processed
-    #                 self.logger.debug(f"Processing topicref href: {href}")
 
-    #                 # Get absolute path
-    #                 full_path = (map_path.parent / topic_path).resolve()
-    #                 self.logger.debug(f"Resolved topic path: {full_path}")
-
-    #                 if full_path.exists():
-    #                     element_type = ElementType.MARKDOWN if topic_path.suffix == '.md' else ElementType.DITA
-
-    #                     # For markdown files, try to read content
-    #                     if element_type == ElementType.MARKDOWN:
-    #                         with open(full_path, 'r', encoding='utf-8') as f:
-    #                             content = f.read()
-    #                             self.logger.debug(f"Markdown content length: {len(content)}")
-
-    #                     topics.append(ParsedElement(
-    #                         id=topic_path.stem,
-    #                         type=element_type,
-    #                         content=str(full_path),
-    #                         source_path=full_path,
-    #                         metadata={}
-    #                     ))
-    #                     self.logger.debug(f"Added topic: {topic_path.stem} ({element_type})")
-    #                 else:
-    #                     self.logger.warning(f"Topic file not found: {full_path}")
-
-    #         return ParsedMap(
-    #             title=None,
-    #             topics=topics,
-    #             metadata={},
-    #             source_path=map_path
-    #         )
-
-    #     except Exception as e:
-    #         self.logger.error(f"Error parsing map {map_path}: {str(e)}")
-    #         return None
-
-    def _discover_topic(self, topicref: etree._Element, map_path: Path) -> Optional[ParsedElement]:
+    def _discover_topic(self, topic_path: Path, map_path: Path) -> Optional[ParsedElement]:
         """
-        Discover and parse topic reference.
+        Discover and parse a single topic into a ParsedElement.
 
         Args:
-            topicref: XML element containing topic reference
-            map_path: Path to parent map
+            topic_path: Path to the topic file.
+            map_path: Path to the parent map file.
 
         Returns:
-            ParsedElement if valid, None otherwise
+            ParsedElement object or None if discovery fails.
+        """
+        try:
+            if not topic_path.exists():
+                self.logger.warning(f"Topic file not found: {topic_path}")
+                return None
+
+            element_type = (
+                ElementType.MARKDOWN if topic_path.suffix == '.md' else ElementType.DITA
+            )
+
+            topic_metadata = self.metadata_handler.extract_metadata(topic_path, topic_path.stem)
+
+            return ParsedElement(
+                id=f"{map_path.stem}-{topic_path.stem}",  # Unique ID combining map and topic
+                topic_id=topic_path.stem,  # Topic's identifier
+                type=element_type,
+                content=str(topic_path),  # Path as placeholder for content
+                topic_path=topic_path,  # Path to the topic file
+                source_path=map_path,  # Parent map file path
+                metadata=topic_metadata
+            )
+        except Exception as e:
+            self.logger.error(f"Error discovering topic: {str(e)}")
+            return None
+
+
+    def _parse_topicref(self, topicref: etree._Element, map_path: Path) -> Optional[ParsedElement]:
+        """
+        Parse a single topicref element into a ParsedElement.
+
+        Args:
+            topicref: XML element for the topic reference.
+            map_path: Path to the parent map file.
+
+        Returns:
+            ParsedElement object or None if parsing fails.
         """
         try:
             href = topicref.get('href')
             if not href:
                 return None
 
-            # Resolve topic path
             topic_path = (map_path.parent / href).resolve()
             if not topic_path.exists():
                 self.logger.warning(f"Topic file not found: {topic_path}")
                 return None
 
-            # Determine content type
             element_type = (
-                ElementType.MARKDOWN if topic_path.suffix == '.md'
-                else ElementType.DITA
+                ElementType.MARKDOWN if topic_path.suffix == '.md' else ElementType.DITA
             )
+
+            topic_metadata = self.metadata_handler.extract_metadata(topic_path, topic_path.stem)
 
             return ParsedElement(
-                id=topic_path.stem,
+                id=f"{map_path.stem}-{topic_path.stem}",  # Unique ID combining map and topic
+                topic_id=topic_path.stem,  # Topic's identifier
                 type=element_type,
-                content=str(topic_path),
-                source_path=topic_path,
-                metadata={}  # Will be populated later during processing
+                content=str(topic_path),  # Path as placeholder for content
+                topic_path=topic_path,  # Path to the topic file
+                source_path=map_path,  # Parent map file path
+                metadata=topic_metadata
             )
-
-        except Exception as e:
-            self.logger.error(f"Error discovering topic: {str(e)}")
-            return None
-
-    def _parse_topicref(self, topicref: etree._Element, map_path: Path) -> Optional[ParsedElement]:
-        """Parse individual topicref element."""
-        try:
-            href = topicref.get('href')
-            if not href:
-                return None
-
-            topic_path = self._resolve_topic_path(Path(href), map_path)
-            if not topic_path or not topic_path.exists():
-                self.logger.warning(f"Topic not found: {href}")
-                return None
-
-            # Generate ID for topic
-            topic_id = f"topic-{href.replace('/', '-').replace('.', '-')}"
-
-            # Determine content type
-            element_type = self._determine_element_type(topic_path)
-
-            # Get basic metadata from topicref
-            metadata = self._extract_topicref_metadata(topicref)
-
-            return ParsedElement(
-                id=topic_id,  # Add ID
-                type=element_type,
-                content=str(topic_path),
-                source_path=topic_path,
-                metadata=metadata
-            )
-
         except Exception as e:
             self.logger.error(f"Error parsing topicref: {str(e)}")
             return None
+
+
 
     ### DITA/XML PARSING ###
     def parse_file(self, path: Path) -> Optional[etree._Element]:
@@ -201,7 +222,23 @@ class DITAParser:
             self.logger.debug(f"Parsing DITA file: {path}")
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            return self.parse_content(content)
+                self.logger.debug(f"Read file content, length: {len(content)}")
+
+            tree = etree.fromstring(content.encode('utf-8'), self.parser)
+
+            # Check for metadata specifically
+            metadata = tree.find(".//metadata")
+            if metadata is not None:
+                self.logger.debug("Found metadata element")
+                for othermeta in metadata.findall(".//othermeta"):
+                    name = othermeta.get('name')
+                    content = othermeta.get('content')
+                    self.logger.debug(f"Metadata found: {name}={content}")
+            else:
+                self.logger.debug("No metadata element found")
+
+            return tree
+
         except Exception as e:
             self.logger.error(f"Error parsing DITA file {path}: {str(e)}")
             return None

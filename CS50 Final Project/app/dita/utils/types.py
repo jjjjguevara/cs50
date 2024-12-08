@@ -11,17 +11,15 @@ PathLike = Union[str, Path]
 HTMLString = str
 IDType = str
 
-
-
-
-
 class ElementType(Enum):
     """Types of elements that can be parsed"""
     DITA = "dita"
+    DITAMAP = "ditamap"
     MARKDOWN = "markdown"
     LATEX = "latex"
     ARTIFACT = "artifact"
     MAP_TITLE = "map_title"
+    UNKNOWN = "unknown"
 
 class ProcessingPhase(Enum):
     """Phases of the processing pipeline"""
@@ -42,8 +40,10 @@ class ProcessingState(Enum):
 class ParsedElement:
     """Element returned by parser"""
     id: str
+    topic_id: str
     type: ElementType
     content: str
+    topic_path: Path
     source_path: Path
     metadata: Dict[str, Any]
 
@@ -92,12 +92,14 @@ class MapContext:
     metadata: Dict[str, Any]
     topic_order: List[str]  # List of topic IDs in order
     features: Dict[str, bool]  # Map-level features/conditions
+    type: ElementType
 
 @dataclass
 class TopicContext:
     """Tracking context for topic processing"""
     topic_id: str
     topic_path: Path
+    type: ElementType
     parent_map_id: str
     metadata: Dict[str, Any]
     features: Dict[str, bool]  # Topic-level features/conditions
@@ -146,12 +148,27 @@ class ProcessingFeatures:
 # Heading tracking types
 @dataclass
 class HeadingState:
-    """State for heading tracking"""
+    """State for heading tracking."""
     current_h1: int = 0
     counters: Dict[str, int] = field(default_factory=lambda: {
         'h1': 0, 'h2': 0, 'h3': 0, 'h4': 0, 'h5': 0, 'h6': 0
     })
     used_ids: Set[str] = field(default_factory=set)
+
+    def increment(self, level: int) -> None:
+        """Increment counter for a given heading level."""
+        if level == 1:
+            self.current_h1 += 1
+            self.counters['h1'] = self.current_h1
+        else:
+            self.counters[f'h{level}'] += 1
+        # Reset lower-level counters
+        for l in range(level + 1, 7):
+            self.counters[f'h{l}'] = 0
+
+    def current_heading_number(self) -> str:
+        """Return current heading number as a string."""
+        return '.'.join(str(self.counters[f'h{l}']) for l in range(1, 7) if self.counters[f'h{l}'] > 0)
 
 @dataclass
 class HeadingContext:

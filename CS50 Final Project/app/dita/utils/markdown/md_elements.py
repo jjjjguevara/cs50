@@ -3,8 +3,8 @@
 from enum import Enum
 from typing import Dict, Optional, Union, List, Any
 from pathlib import Path
-import logging
-from bs4 import BeautifulSoup, Tag
+import logging, html
+from bs4 import BeautifulSoup, NavigableString, Tag
 import re
 
 
@@ -113,15 +113,129 @@ class MarkdownContentProcessor:
         }
         return tag_mapping.get(elem.name, MDElementType.PARAGRAPH)
 
-    def _get_element_content(self, elem: Tag) -> str:
+    def _get_element_content(self, elem: Union[Tag, NavigableString]) -> str:
         """Get element's raw content."""
         try:
-            if elem.name in ['pre', 'code']:
-                return elem.string or ''
-            return elem.get_text()
+            # Handle NavigableString
+            if isinstance(elem, NavigableString):
+                return str(elem).strip()
+
+            # Handle non-Tag
+            if not isinstance(elem, Tag):
+                return str(elem) if elem is not None else ''
+
+            # Route to specific handlers based on element type
+            handlers = {
+                'a': self._get_link_content,
+                'p': self._get_paragraph_content,
+                'blockquote': self._get_blockquote_content,
+                'ul': self._get_list_content,
+                'ol': self._get_list_content,
+                'li': self._get_list_item_content,
+                'pre': self._get_code_content,
+                'code': self._get_inline_code_content
+            }
+
+            handler = handlers.get(elem.name)
+            if handler:
+                content = handler(elem)
+                # Only process if content was returned
+                return content if content else ''
+
+            # Default text content
+            return elem.get_text(strip=True)
+
         except Exception as e:
             self.logger.error(f"Error getting element content: {str(e)}")
             return ''
+
+    def _get_inline_code_content(self, element: dict) -> str:
+        """
+        Extract and process inline code content from a Markdown element.
+
+        Args:
+            element (dict): Parsed Markdown element.
+
+        Returns:
+            str: HTML representation of the inline code.
+        """
+        try:
+            code_content = element.get('text', '')
+            return f'<code>{html.escape(code_content)}</code>'
+        except Exception as e:
+            self.logger.error(f"Error processing inline code content: {str(e)}")
+            return ''
+
+
+
+    def _get_link_content(self, elem: Tag) -> str:
+        """Process link content."""
+        # Skip processing if this link is part of a li or p
+        if elem.find_parent(['li', 'p', 'blockquote']):
+            return ''
+        href = elem.get('href', '')
+        text = elem.get_text(strip=True)
+        return text  # Just return text, href is handled in metadata
+
+    def _get_paragraph_content(self, elem: Tag) -> str:
+        """Process paragraph content with potential links."""
+        parts = []
+        for child in elem.children:
+            if isinstance(child, Tag) and child.name == 'a':
+                href = child.get('href', '')
+                text = child.get_text(strip=True)
+                parts.append(f"LINK:{href}:{text}")
+            else:
+                parts.append(str(child).strip())
+        return ' '.join(filter(None, parts))
+
+    def _get_blockquote_content(self, elem: Tag) -> str:
+        """Process blockquote content."""
+        parts = []
+        for child in elem.children:
+            if isinstance(child, Tag) and child.name == 'a':
+                href = child.get('href', '')
+                text = child.get_text(strip=True)
+                parts.append(f"LINK:{href}:{text}")
+            else:
+                parts.append(str(child).strip())
+        return f"QUOTE:{' '.join(filter(None, parts))}"
+
+    def _get_list_content(self, elem: Tag) -> str:
+        """Process list content (ul/ol)."""
+        items = []
+        for li in elem.find_all('li', recursive=False):
+            items.append(self._get_list_item_content(li))
+        return f"LIST:{elem.name}:{','.join(items)}"
+
+    def _get_list_item_content(self, elem: Tag) -> str:
+        """Process list item content."""
+        content = []
+        for child in elem.children:
+            if isinstance(child, Tag) and child.name == 'a':
+                href = child.get('href', '')
+                text = child.get_text(strip=True)
+                content.append(f"LINK:{href}:{text}")
+            else:
+                content.append(str(child).strip())
+        return ' '.join(filter(None, content))
+
+    def _get_code_content(self, elem: Tag) -> str:
+        """Process code block content."""
+        code = elem.find('code')
+        if code and isinstance(code, Tag):
+            classes = code.get('class', [])
+            if 'language-mermaid' in classes:
+                return f"MERMAID:{code.get_text(strip=True)}"
+            lang = next((c.replace('language-', '') for c in classes if c.startswith('language-')), '')
+            return f"CODE:{lang}:{code.get_text()}"
+        return f"CODE::{elem.get_text()}"
+
+    def _get_image_content(self, elem: Tag) -> str:
+        """Process image content."""
+        src = elem.get('src', '')
+        alt = elem.get('alt', '')
+        return f"IMAGE:{src}:{alt}"
 
     def _get_element_classes(self, elem: Tag) -> List[str]:
         """Get element classes."""
@@ -151,29 +265,31 @@ class MarkdownContentProcessor:
         try:
             metadata = {}
 
-            # Heading specific
-            if elem.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+            if elem.name == 'a':
+                metadata.update({
+                    'href': elem.get('href', ''),
+                    'title': elem.get('title', '')
+                })
+
+            elif elem.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
                 metadata['level'] = int(elem.name[1])
 
-            # Link specific
-            if elem.name == 'a':
-                metadata['href'] = elem.get('href', '')
-                metadata['title'] = elem.get('title', '')
-
-            # Image specific
-            if elem.name == 'img':
-                metadata['src'] = elem.get('src', '')
-                metadata['alt'] = elem.get('alt', '')
-
-            # Code specific
-            if elem.name in ['pre', 'code']:
-                metadata['language'] = self._get_code_language(elem)
+            elif elem.name == 'code':
+                if elem.parent and elem.parent.name == 'pre':
+                    classes = elem.get('class', [])
+                    if isinstance(classes, str):
+                        classes = classes.split()
+                    # Extract language from class
+                    for cls in classes:
+                        if cls.startswith('language-'):
+                            metadata['language'] = cls.replace('language-', '')
+                            break
 
             return metadata
 
         except Exception as e:
-            self.logger.error(f"Error getting element metadata: {str(e)}")
-            return {}
+                self.logger.error(f"Error getting element metadata: {str(e)}")
+                return {}
 
     def _get_code_language(self, elem: Tag) -> Optional[str]:
         """Get code block language."""

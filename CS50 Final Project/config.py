@@ -41,7 +41,9 @@ class DITAProcessingConfig:
 
 class DITAConfig:
     """DITA-specific configuration."""
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    dita_root: Path
+    number_headings: bool = False
+
     def __init__(self):
         self.paths = DITAPathConfig()
         self.parser = DITAParserConfig()

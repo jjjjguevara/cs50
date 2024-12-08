@@ -1,14 +1,9 @@
-# app/dita/utils/heading.py
-from typing import Dict, Set, Tuple, Optional, List
+from typing import Dict, Set, List, Optional, Tuple
 import logging
 import re
 from dataclasses import dataclass, field
+from .types import HeadingState, HeadingContext, HeadingReference, ProcessingError
 
-
-# Global config
-from config import DITAConfig
-
-from .types import HeadingState, HeadingContext
 
 class HeadingHandler:
     """Manages heading state and hierarchy across content types."""
@@ -22,227 +17,90 @@ class HeadingHandler:
 
     def init_state(self) -> None:
         """Initialize fresh heading state."""
-        try:
-            self._state = HeadingState()
-            self.logger.debug("Initialized fresh heading state")
-        except Exception as e:
-            self.logger.error(f"Error initializing heading state: {str(e)}")
-            raise
-
-    def configure(self, config: DITAConfig) -> None:
-            """Configure heading handler."""
-            try:
-                self.logger.debug("Configuring heading handler")
-                # Check if index numbers are enabled in metadata
-                self.index_numbers_enabled = config.metadata.get('index-numbers', True)
-                self.logger.debug(f"Index numbers enabled: {self.index_numbers_enabled}")
-            except Exception as e:
-                self.logger.error(f"Heading handler configuration failed: {str(e)}")
-                raise
+        self._state = HeadingState()
+        self.logger.debug("Initialized fresh heading state")
 
     def save_state(self) -> None:
-        """Save current heading state for later restoration."""
-        try:
-            self._saved_states.append(HeadingState(
-                current_h1=self._state.current_h1,
-                counters=self._state.counters.copy(),
-                used_ids=self._state.used_ids.copy()
-            ))
-            self.logger.debug(f"Saved heading state - H1: {self._state.current_h1}")
-        except Exception as e:
-            self.logger.error(f"Error saving heading state: {str(e)}")
-            raise
+        """Save the current heading state for restoration later."""
+        self._saved_states.append(HeadingState(
+            current_h1=self._state.current_h1,
+            counters=self._state.counters.copy(),
+            used_ids=self._state.used_ids.copy()
+        ))
+        self.logger.debug("Saved heading state.")
 
     def restore_state(self) -> None:
-        """Restore previously saved heading state."""
-        try:
-            if not self._saved_states:
-                raise ValueError("No saved state available to restore")
-
-            self._state = self._saved_states.pop()
-            self.logger.debug(f"Restored heading state - H1: {self._state.current_h1}")
-        except Exception as e:
-            self.logger.error(f"Error restoring heading state: {str(e)}")
-            raise
+        """Restore the last saved heading state."""
+        if not self._saved_states:
+            self.logger.warning("No saved states available for restoration.")
+            return
+        self._state = self._saved_states.pop()
+        self.logger.debug("Restored a saved heading state.")
 
     def reset_section(self) -> None:
-        """Reset counters for a new section while maintaining H1."""
-        try:
-            current_h1 = self._state.current_h1
-            self._state.counters = {
-                'h1': current_h1,
-                'h2': 0,
-                'h3': 0,
-                'h4': 0,
-                'h5': 0,
-                'h6': 0
-            }
-            self.logger.debug(f"Reset section counters, maintaining H1: {current_h1}")
-        except Exception as e:
-            self.logger.error(f"Error resetting section: {str(e)}")
-            raise
+        """Reset counters for a new section while maintaining the current H1."""
+        current_h1 = self._state.current_h1
+        self._state = HeadingState(current_h1=current_h1)
+        self.logger.debug(f"Reset heading counters while maintaining H1={current_h1}")
 
     def validate_hierarchy(self, level: int, context: HeadingContext) -> bool:
         """
-        Validate heading hierarchy at given level.
+        Validate the hierarchy of a heading.
 
         Args:
-            level: Heading level to validate
-            context: Current heading context
+            level: The level of the heading (1-6).
+            context: The current heading context.
 
         Returns:
-            True if hierarchy is valid
+            True if the hierarchy is valid; otherwise, False.
         """
-        try:
-            # Validate level range
-            if not 1 <= level <= 6:
-                self.logger.error(f"Invalid heading level: {level}")
-                return False
-
-            # Topic titles are always valid
-            if context.is_topic_title:
-                return True
-
-            # Check parent exists if not H1
-            if level > 1:
-                parent_level = level - 1
-                parent_count = self._state.counters[f'h{parent_level}']
-                if parent_count == 0:
-                    self.logger.error(
-                        f"Invalid hierarchy: H{level} without H{parent_level}"
-                    )
-                    return False
-
-            # Validate no skipped levels
-            for l in range(1, level):
-                if self._state.counters[f'h{l}'] == 0:
-                    self.logger.error(f"Invalid hierarchy: Skipped H{l}")
-                    return False
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error validating hierarchy: {str(e)}")
+        if not 1 <= level <= 6:
+            self.logger.error(f"Invalid heading level: {level}")
             return False
+        if context.is_topic_title:
+            return True
+        if level > 1 and self._state.counters[f'h{level - 1}'] == 0:
+            self.logger.error(f"H{level} is invalid without a preceding H{level - 1}.")
+            return False
+        return True
 
-    def process_heading(self,
-                           text: str,
-                           level: int,
-                           is_map_title: bool = False) -> Tuple[str, str]:
-            """Process heading with optional numbering."""
-            try:
-                heading_id = self._generate_id(text)
+    def process_heading(self, text: str, level: int, is_topic_title: bool = False) -> HeadingReference:
+        """
+        Process a heading, assigning it a unique ID and optionally numbering it.
 
-                if not self.index_numbers_enabled or is_map_title:
-                    return heading_id, text
+        Args:
+            text: The heading text.
+            level: The heading level (1-6).
+            is_topic_title: Whether this heading is the topic title.
 
-                # Update counters
-                self._update_counters(level)
+        Returns:
+            A HeadingReference object with ID, text, and level.
+        """
+        heading_id = self._generate_id(text)
 
-                # Generate number string
-                numbers = []
-                for l in range(1, level + 1):
-                    count = self._state.counters[f'h{l}']
-                    if count > 0:
-                        numbers.append(str(count))
+        if not is_topic_title and self.index_numbers_enabled:
+            self._state.increment(level)
+            number = self._state.current_heading_number()
+            text = f"{number} {text}"
 
-                # Format with numbers
-                if numbers:
-                    formatted_text = f"{'.'.join(numbers)}. {text}"
-                else:
-                    formatted_text = text
-
-                return heading_id, formatted_text
-
-            except Exception as e:
-                self.logger.error(f"Error processing heading: {str(e)}")
-                return self._generate_id(text), text
-
-    def _update_counters(self, level: int) -> None:
-        """Update heading counters for given level."""
-        try:
-            # Update H1 counter specially
-            if level == 1:
-                self._state.current_h1 += 1
-                self._state.counters['h1'] = self._state.current_h1
-            else:
-                self._state.counters[f'h{level}'] += 1
-
-            # Reset lower levels
-            for l in range(level + 1, 7):
-                self._state.counters[f'h{l}'] = 0
-
-        except Exception as e:
-            self.logger.error(f"Error updating counters: {str(e)}")
-            raise
+        self.logger.debug(f"Processed heading: {text} (ID: {heading_id}) at level {level}")
+        return HeadingReference(id=heading_id, text=text, level=level)
 
     def _generate_id(self, text: str) -> str:
-        """Generate unique ID for heading."""
-        try:
-            # Clean text for ID
-            base_id = re.sub(r'[^\w\- ]', '', text.lower())
-            base_id = re.sub(r'[-\s]+', '-', base_id).strip('-')
-
-            # Ensure uniqueness
-            heading_id = base_id
-            counter = 1
-            while heading_id in self._state.used_ids:
-                heading_id = f"{base_id}-{counter}"
-                counter += 1
-
-            self._state.used_ids.add(heading_id)
-            return heading_id
-
-        except Exception as e:
-            self.logger.error(f"Error generating heading ID: {str(e)}")
-            raise
-
-    def _format_heading(self, text: str, level: int, is_map_title: bool) -> str:
-        """Format heading text with number."""
-        try:
-            if is_map_title:
-                return text
-
-            # Get number components
-            numbers = []
-            for l in range(1, level + 1):
-                count = self._state.counters[f'h{l}']
-                if count > 0:
-                    numbers.append(str(count))
-
-            # Format with numbers
-            if numbers:
-                return f"{'.'.join(numbers)}. {text}"
-            return text
-
-        except Exception as e:
-            self.logger.error(f"Error formatting heading: {str(e)}")
-            raise
-
-    def reset(self) -> None:
-        """Reset all heading state."""
-        self.init_state()
-        self._saved_states.clear()
+        """Generate a unique ID for a heading."""
+        base_id = re.sub(r'[^\w\- ]', '', text.lower())
+        base_id = re.sub(r'[-\s]+', '-', base_id).strip('-')
+        unique_id = base_id
+        counter = 1
+        while unique_id in self._state.used_ids:
+            unique_id = f"{base_id}-{counter}"
+            counter += 1
+        self._state.used_ids.add(unique_id)
+        self.logger.debug(f"Generated unique ID: {unique_id}")
+        return unique_id
 
     def cleanup(self) -> None:
-            """Clean up heading handler resources and state."""
-            try:
-                self.logger.debug("Starting heading handler cleanup")
-
-                # Reset counters and state
-                self._state.counters = {
-                    'h1': 0,
-                    'h2': 0,
-                    'h3': 0,
-                    'h4': 0,
-                    'h5': 0,
-                    'h6': 0
-                }
-                self._state.current_h1 = 0
-                self._state.used_ids.clear()
-
-                self.logger.debug("Heading handler cleanup completed")
-
-            except Exception as e:
-                self.logger.error(f"Heading handler cleanup failed: {str(e)}")
-                raise
+        """Clean up the handler by resetting the state."""
+        self.init_state()
+        self._saved_states.clear()
+        self.logger.debug("Cleaned up HeadingHandler state.")

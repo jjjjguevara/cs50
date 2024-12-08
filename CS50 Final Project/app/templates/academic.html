@@ -1,17 +1,14 @@
 <!doctype html>
-<html>
+<html lang="en">
     <head>
-        <title>Academic Layout</title>
-        <link
-            href="{{ url_for('static', filename='css/academic.css') }}"
-            rel="stylesheet"
-        />
-        <!-- Add KaTeX CSS -->
-        <link
-            rel="stylesheet"
-            href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
-        />
-        <!-- Bootstrap and other CSS -->
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>
+            {{ metadata.page_title if metadata.page_title else "Academic Layout"
+            }}
+        </title>
+
+        <!-- Load Bootstrap and Fonts -->
         <link
             href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
             rel="stylesheet"
@@ -20,23 +17,26 @@
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
         />
+        <link href="/static/css/global.css" rel="stylesheet" />
+        <link href="/static/css/academic.css" rel="stylesheet" />
+        <link href="/static/css/nav.css" rel="stylesheet" />
+        <link href="/static/css/content.css" rel="stylesheet" />
+
+        <!-- KaTeX for Math Rendering -->
         <link
             rel="stylesheet"
-            href="{{ url_for('static', filename='css/global.css') }}"
+            href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
         />
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='css/academic.css') }}"
-        />
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='css/nav.css') }}"
-        />
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='css/content.css') }}"
-        />
+        <script
+            src="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.js"
+            defer
+        ></script>
+        <script
+            src="https://cdn.jsdelivr.net/npm/katex/dist/contrib/auto-render.min.js"
+            defer
+        ></script>
     </head>
+
     <body>
         <div class="d-flex flex-column flex-lg-row">
             <!-- Left Sidebar -->
@@ -51,14 +51,17 @@
                         <!-- Article Content -->
                         <div class="col-lg-9">
                             <div class="article-wrapper">
+                                <h1 class="page-title">
+                                    {{ metadata.page_title if
+                                    metadata.page_title else "Untitled Page" }}
+                                </h1>
                                 <div id="article-wrapper">
-                                    {% if content %} {{ content | safe }} {%
-                                    endif %}
+                                    {{ content|safe }}
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Right Sidebar -->
+                        <!-- Right Sidebar (TOC) -->
                         <div class="col-md-3">
                             <div class="right-sidebar">
                                 <div id="toc-root"></div>
@@ -69,22 +72,68 @@
             </main>
         </div>
 
-        <!-- KaTeX JavaScript -->
-        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+        <!-- Load Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-        <!-- Initialize KaTeX auto-render -->
+        <!-- Initialize JavaScript Features -->
         <script>
             document.addEventListener("DOMContentLoaded", function () {
-                renderMathInElement(
-                    document.getElementById("article-wrapper"),
-                    {
-                        delimiters: [
-                            { left: "$$", right: "$$", display: true },
-                            { left: "$", right: "$", display: false },
-                        ],
-                    },
-                );
+                // Extract metadata from server-side rendering
+                const metadata = JSON.parse("{{ metadata | tojson | safe }}");
+
+                const shouldNumber = metadata["index-numbers"] || true;
+                const appendToc = metadata["append-toc"] || true;
+
+                // Add heading numbering
+                if (shouldNumber) {
+                    const headings = document.querySelectorAll(
+                        "h1, h2, h3, h4, h5, h6",
+                    );
+                    let numbering = [0, 0, 0, 0, 0, 0];
+
+                    headings.forEach((heading) => {
+                        const level =
+                            parseInt(heading.tagName.substring(1)) - 1;
+                        numbering[level]++;
+                        numbering = numbering
+                            .slice(0, level + 1)
+                            .concat(Array(6 - level - 1).fill(0));
+
+                        const index = numbering.slice(0, level + 1).join(".");
+                        heading.textContent = `${index} ${heading.textContent.trim()}`;
+                        if (!heading.id) {
+                            heading.id = `heading-${index.replace(/\./g, "-")}`;
+                        }
+                    });
+                }
+
+                // Build Table of Contents (TOC)
+                if (appendToc) {
+                    const tocRoot = document.getElementById("toc-root");
+                    const tocList = document.createElement("ul");
+
+                    document
+                        .querySelectorAll("h1, h2, h3, h4, h5, h6")
+                        .forEach((heading) => {
+                            const tocItem = document.createElement("li");
+                            const anchor = document.createElement("a");
+                            anchor.href = `#${heading.id}`;
+                            anchor.textContent = heading.textContent;
+                            tocItem.appendChild(anchor);
+                            tocList.appendChild(tocItem);
+                        });
+
+                    tocRoot.appendChild(tocList);
+                }
+
+                // KaTeX Math Rendering
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: "$$", right: "$$", display: true },
+                        { left: "$", right: "$", display: false },
+                    ],
+                    throwOnError: false,
+                });
             });
         </script>
     </body>
