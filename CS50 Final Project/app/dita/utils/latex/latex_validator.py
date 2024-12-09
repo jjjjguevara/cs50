@@ -4,7 +4,7 @@ import re
 import logging
 from typing import List, Set
 
-from ..types import LaTeXEquation
+from app.dita.models.types import LaTeXEquation
 
 class LaTeXValidator:
     """Validates LaTeX equations for safety and correctness."""

@@ -4,7 +4,7 @@ import re
 import logging
 
 # Global config
-from config import DITAConfig
+from app_config import DITAConfig
 
 class DITAIDHandler:
     def __init__(self):

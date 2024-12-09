@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 from pathlib import Path
 import logging
 
-from ..types import (
+from app.dita.models.types import (
     LaTeXEquation,
     ProcessedEquation,
     ProcessingError,

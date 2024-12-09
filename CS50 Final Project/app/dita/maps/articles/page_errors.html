@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>The Theory of Brownian Movement</title>
+
+        <!-- Load Bootstrap and Fonts -->
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
+            rel="stylesheet"
+        />
+        <link href="/static/css/global.css" rel="stylesheet" />
+        <link href="/static/css/academic.css" rel="stylesheet" />
+        <link href="/static/css/nav.css" rel="stylesheet" />
+        <link href="/static/css/content.css" rel="stylesheet" />
+
+        <!-- KaTeX Setup -->
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+        />
+        <script
+            defer
+            src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
+        ></script>
+        <script
+            defer
+            src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        ></script>
+
+        <!-- KaTeX Custom Styling -->
+        <style>
+            .katex-display {
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding: 1em 0;
+            }
+            .katex-inline {
+                padding: 0 0.2em;
+            }
+            .equation {
+                margin: 1em 0;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="d-flex flex-column flex-lg-row">
+            <!-- Left Sidebar -->
+            <aside id="left-sidebar" class="sidebar left-sidebar">
+                <div id="root"></div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content container-fluid">
+                <div class="row">
+                    <!-- Article Content -->
+                    <article class="col-lg-9">
+                        <section class="article-wrapper">
+                            <header>
+                                <h1 class="page-title">
+                                    The Theory of Brownian Movement
+                                </h1>
+                            </header>
+                            <div id="article-wrapper">
+                                <div class="markdown-content">
+                                    <blockquote>
+                                        <p>
+                                            <em
+                                                >The contents presented here
+                                                have been reproduced from Albert
+                                                Einstein's works during his
+                                                Annus Mirabilis. The source can
+                                                be found
+                                                <a
+                                                    href="https://ia601603.us.archive.org/14/items/investigationont0000albe/investigationont0000albe.pdf"
+                                                    >here</a
+                                                >.</em
+                                            >
+                                        </p>
+                                    </blockquote>
+                                    <h1
+                                        id="1-investigations-on-the-theory-of-the-brownian-movement"
+                                    >
+                                        1. INVESTIGATIONS ON THE THEORY OF THE
+                                        BROWNIAN MOVEMENT<a
+                                            class="pilcrow"
+                                            href="#1-investigations-on-the-theory-of-the-brownian-movement"
+                                            >¶</a
+                                        >
+                                    </h1>
+                                    <h2
+                                        id="11-on-the-movement-of-small-particles-suspended-in-a-stationary-liquid-demanded-by-the-molecular-kinetic-theory-of-heat"
+                                    >
+                                        1.1. ON THE MOVEMENT OF SMALL PARTICLES
+                                        SUSPENDED IN A STATIONARY LIQUID
+                                        DEMANDED BY THE MOLECULAR-KINETIC THEORY
+                                        OF HEAT<a
+                                            class="pilcrow"
+                                            href="#11-on-the-movement-of-small-particles-suspended-in-a-stationary-liquid-demanded-by-the-molecular-kinetic-theory-of-heat"
+                                            >¶</a
+                                        >
+                                    </h2>
+                                    <p>
+                                        In this paper it will be shown that
+                                        according to the molecular-kinetic
+                                        theory of heat, bodies of
+                                        microscopically-visible size suspended
+                                        in a liquid will perform movements of
+                                        such magnitude that they can be easily
+                                        observed in a microscope, on account of
+                                        the molecular motions of heat. It is
+                                        possible that the movements to be
+                                        discussed here are identical with the
+                                        so-called "Brownian molecular motion";
+                                        however, the information available to me
+                                        regarding the latter is so lacking in
+                                        precision, that I can form no judgment
+                                        in the matter (1).
+                                    </p>
+                                    <p>
+                                        If the movement discussed here can
+                                        actually be observed (together with the
+                                        laws relating to it that one would
+                                        expect to find), then classical
+                                        thermodynamics can no longer be looked
+                                        upon as applicable with precision to
+                                        bodies even of dimensions
+                                        distinguishable in a microscope: an
+                                        exact determination of actual atomic
+                                        dimensions is then possible. On the
+                                        other hand, had the prediction of this
+                                        movement proved to be incorrect, a
+                                        weighty argument would be provided
+                                        against the molecular-kinetic conception
+                                        of heat.
+                                    </p>
+                                    <h3
+                                        id="111-on-the-osmotic-pressure-to-be-ascribed-to-the-suspended-particles"
+                                    >
+                                        1.1.1. § ON THE OSMOTIC PRESSURE TO BE
+                                        ASCRIBED TO THE SUSPENDED PARTICLES<a
+                                            class="pilcrow"
+                                            href="#111-on-the-osmotic-pressure-to-be-ascribed-to-the-suspended-particles"
+                                            >¶</a
+                                        >
+                                    </h3>
+                                    <p>
+                                        Let
+                                        <span class="katex-inline" id="eq-23"
+                                            >$z$</span
+                                        >
+                                        gram-molecules of a non-electrolyte be
+                                        dissolved in a volume
+                                        <span class="katex-inline" id="eq-24"
+                                            >$V$</span
+                                        >
+                                        * forming part of a quantity of liquid
+                                        of total volume
+                                        <span class="katex-inline" id="eq-25"
+                                            >$V$</span
+                                        >. If the volume
+                                        <span class="katex-inline" id="eq-26"
+                                            >$V$</span
+                                        >
+                                        * is separated from the pure solvent by
+                                        a partition permeable for the solvent
+                                        but impermeable for the solute, a
+                                        so-called "osmotic pressure,"
+                                        <span class="katex-inline" id="eq-27"
+                                            >$p$</span
+                                        >, is exerted on this partition, which
+                                        satisfies the equation
+                                    </p>
+                                    <div class="katex-display" id="eq-1">
+                                        $$pV* = RTz$$
+                                    </div>
+                                    <p>
+                                        when
+                                        <span class="katex-inline" id="eq-28"
+                                            >$V*/z$</span
+                                        >
+                                        is sufficiently great.
+                                    </p>
+                                    <p>
+                                        On the other hand, if small suspended
+                                        particles are present in the fractional
+                                        volume
+                                        <span class="katex-inline" id="eq-29"
+                                            >$V$</span
+                                        >
+                                        * in place of the dissolved substance,
+                                        which particles are also unable to pass
+                                        through the partition permeable to the
+                                        solvent: according to the classical
+                                        theory of thermodynamics—at least when
+                                        the force of gravity (which does not
+                                        interest us here) is ignored—we would
+                                        not expect to find any force acting on
+                                        the partition.
+                                    </p>
+                                    <p>
+                                        But a different conception is reached
+                                        from the standpoint of the
+                                        molecular-kinetic theory of heat.
+                                        According to this theory a dissolved
+                                        molecule is differentiated from a
+                                        suspended body solely by its dimensions,
+                                        and it is not apparent why a number of
+                                        suspended particles should not produce
+                                        the same osmotic pressure as the same
+                                        number of molecules. We must assume that
+                                        the suspended particles perform an
+                                        irregular movement—even if a very slow
+                                        one—in the liquid, on account of the
+                                        molecular movement of the liquid; if
+                                        they are prevented from leaving the
+                                        volume V<em>
+                                            by the partition, they will exert a
+                                            pressure on the partition just like
+                                            molecules in solution. Then, if
+                                            there are n suspended particles
+                                            present in the volume
+                                            <span
+                                                class="katex-inline"
+                                                id="eq-30"
+                                                >$V$</span
+                                            > </em
+                                        >, and therefore
+                                        <span class="katex-inline" id="eq-31"
+                                            >$n/V* = v$</span
+                                        >
+                                        in a unit of volume, and if neighboring
+                                        particles are sufficiently far
+                                        separated, there will be a corresponding
+                                        osmotic pressure p of magnitude given by
+                                    </p>
+                                    <div class="katex-display" id="eq-2">
+                                        $$p = \frac{RT}{V*N} n = \frac{RT}{N}
+                                        v$$
+                                    </div>
+                                    <p>
+                                        where N signifies the actual number of
+                                        molecules contained in a gram-molecule.
+                                    </p>
+                                    <h3
+                                        id="112-osmotic-pressure-from-the-standpoint-of-the-molecular-kinetic-theory-of-heat"
+                                    >
+                                        1.1.2. § OSMOTIC PRESSURE FROM THE
+                                        STANDPOINT OF THE MOLECULAR-KINETIC
+                                        THEORY OF HEAT<a
+                                            class="pilcrow"
+                                            href="#112-osmotic-pressure-from-the-standpoint-of-the-molecular-kinetic-theory-of-heat"
+                                            >¶</a
+                                        >
+                                    </h3>
+                                    <p>
+                                        If
+                                        <span class="katex-inline" id="eq-32"
+                                            >$p₁, p₂, ... pₗ$</span
+                                        >
+                                        are the variables of state of a physical
+                                        system which completely define the
+                                        instantaneous condition of the system,
+                                        and if the complete system of the
+                                        equations of change of these variables
+                                        of state is given in the form
+                                    </p>
+                                    <div class="katex-display" id="eq-3">
+                                        $$\frac{\partial p_v}{\partial t} =
+                                        \phi_v(p_1 ... p_l) \quad (v = 1, 2, ...
+                                        l)$$
+                                    </div>
+                                    <p>whence</p>
+                                    <div class="katex-display" id="eq-4">
+                                        $$\sum\frac{\partial\phi_v}{\partial
+                                        p_v} = 0$$
+                                    </div>
+                                    <p>
+                                        then the entropy of the system is given
+                                        by the expression
+                                    </p>
+                                    <div class="katex-display" id="eq-5">
+                                        $$S = \frac{\bar{E}}{T} + 2x \lg\int
+                                        e^{-\frac{E}{2xT}}dp_1 ... dp_l$$
+                                    </div>
+                                    <p>
+                                        where
+                                        <span class="katex-inline" id="eq-33"
+                                            >$T$</span
+                                        >
+                                        is the absolute temperature, Ē the
+                                        energy of the system, E the energy as a
+                                        function of p_v. The integral is
+                                        extended over all possible values of p
+                                        consistent with the conditions of the
+                                        problem.
+                                        <span class="katex-inline" id="eq-34"
+                                            >$x$</span
+                                        >
+                                        is connected with the constant
+                                        <span class="katex-inline" id="eq-35"
+                                            >$N$</span
+                                        >
+                                        referred to before by the relation
+                                        <span class="katex-inline" id="eq-36"
+                                            >$2xN = R$</span
+                                        >. We obtain hence for the free energy
+                                        <span class="katex-inline" id="eq-37"
+                                            >$F$</span
+                                        >,
+                                    </p>
+                                    <div class="katex-display" id="eq-6">
+                                        $$F = -\frac{RT}{N}\lg\int
+                                        e^{-\frac{EN}{RT}}dp_1 ... dp_l =
+                                        -\frac{RT}{N} \lg B$$
+                                    </div>
+                                    <p>
+                                        Now let us consider a quantity of liquid
+                                        enclosed in a volume
+                                        <span class="katex-inline" id="eq-38"
+                                            >$V$</span
+                                        >; let there be n solute molecules (or
+                                        suspended particles respectively) in the
+                                        portion
+                                        <span class="katex-inline" id="eq-39"
+                                            >$V$</span
+                                        >
+                                        * of this volume
+                                        <span class="katex-inline" id="eq-40"
+                                            >$V$</span
+                                        >
+                                        which are retained in the volume
+                                        <span class="katex-inline" id="eq-41"
+                                            >$V$</span
+                                        >
+                                        * by a semi-permeable partition; the
+                                        integration limits of the integral
+                                        <span class="katex-inline" id="eq-42"
+                                            >$B$</span
+                                        >
+                                        obtained in the expressions for
+                                        <span class="katex-inline" id="eq-43"
+                                            >$S$</span
+                                        >
+                                        and
+                                        <span class="katex-inline" id="eq-44"
+                                            >$F$</span
+                                        >
+                                        will be affected accordingly. The
+                                        combined volume of the solute molecules
+                                        (or suspended particles) is taken as
+                                        small compared with
+                                        <span class="katex-inline" id="eq-45"
+                                            >$V$</span
+                                        >
+                                        *.
+                                    </p>
+                                    <p>
+                                        We will call
+                                        <span class="katex-inline" id="eq-46"
+                                            >$x₁, y₁, z₁$</span
+                                        >
+                                        the rectangular coordinates of the
+                                        centre of gravity of the first particle,
+                                        <span class="katex-inline" id="eq-47"
+                                            >$x₂, y₂, z₂$</span
+                                        >
+                                        those of the second, etc.,
+                                        <span class="katex-inline" id="eq-48"
+                                            >$xₙ, yₙ, zₙ$</span
+                                        >
+                                        those of the last particle, and allocate
+                                        for the centres of gravity of the
+                                        particles the indefinitely small domains
+                                        of parallelopiped form
+                                        <span class="katex-inline" id="eq-49"
+                                            >$dx₁, dy₁, dz₁; dx₂, dy₂, dz₂, ...
+                                            dxₙ, dyₙ, dzₙ,$</span
+                                        >
+                                        lying wholly within
+                                        <span class="katex-inline" id="eq-50"
+                                            >$V$</span
+                                        >
+                                        *.
+                                    </p>
+                                    <h3
+                                        id="113-theory-of-the-diffusion-of-small-spheres-in-suspension"
+                                    >
+                                        1.1.3. § THEORY OF THE DIFFUSION OF
+                                        SMALL SPHERES IN SUSPENSION<a
+                                            class="pilcrow"
+                                            href="#113-theory-of-the-diffusion-of-small-spheres-in-suspension"
+                                            >¶</a
+                                        >
+                                    </h3>
+                                    <p>
+                                        Suppose there be suspended particles
+                                        irregularly dispersed in a liquid. We
+                                        will consider their state of dynamic
+                                        equilibrium, on the assumption that a
+                                        force
+                                        <span class="katex-inline" id="eq-51"
+                                            >$K$</span
+                                        >
+                                        acts on the single particles, which
+                                        force depends on the position, but not
+                                        on the time. It will be assumed for the
+                                        sake of simplicity that the force is
+                                        exerted everywhere in the direction of
+                                        the x axis.
+                                    </p>
+                                    <p>
+                                        Let
+                                        <span class="katex-inline" id="eq-52"
+                                            >$v$</span
+                                        >
+                                        be the number of suspended particles per
+                                        unit volume; then in the condition of
+                                        dynamic equilibrium
+                                        <span class="katex-inline" id="eq-53"
+                                            >$v$</span
+                                        >
+                                        is such a function of
+                                        <span class="katex-inline" id="eq-54"
+                                            >$x$</span
+                                        >
+                                        that the variation of the free energy
+                                        vanishes for an arbitrary virtual
+                                        displacement
+                                        <span class="katex-inline" id="eq-55"
+                                            >$δx$</span
+                                        >
+                                        of the suspended substance. We have,
+                                        therefore,
+                                    </p>
+                                    <div class="katex-display" id="eq-7">
+                                        $$δF = δE - TδS = 0$$
+                                    </div>
+                                    <p>
+                                        It will be assumed that the liquid has
+                                        unit area of cross-section perpendicular
+                                        to the x axis and is bounded by the
+                                        planes
+                                        <span class="katex-inline" id="eq-56"
+                                            >$x = 0$</span
+                                        >
+                                        and
+                                        <span class="katex-inline" id="eq-57"
+                                            >$x = l$</span
+                                        >. We have, then,
+                                    </p>
+                                    <div class="katex-display" id="eq-8">
+                                        $$δE = -\int_0^l Kvδxdx$$
+                                    </div>
+                                    <p>and</p>
+                                    <div class="katex-display" id="eq-9">
+                                        $$δS = \int_0^l
+                                        R\frac{v}{N}\frac{δx}{δx}dx =
+                                        -\frac{R}{N}\int_0^l \frac{∂v}{∂x}δxdx$$
+                                    </div>
+                                    <p>
+                                        The required condition of equilibrium is
+                                        therefore
+                                    </p>
+                                    <div class="katex-display" id="eq-10">
+                                        $$-Kv + \frac{RT}{N}\frac{∂v}{∂x} = 0$$
+                                    </div>
+                                    <p>or</p>
+                                    <div class="katex-display" id="eq-11">
+                                        $$Kv - \frac{∂p}{∂x} = 0$$
+                                    </div>
+                                    <p>
+                                        The last equation states that
+                                        equilibrium with the force
+                                        <span class="katex-inline" id="eq-58"
+                                            >$K$</span
+                                        >
+                                        is brought about by osmotic pressure
+                                        forces.
+                                    </p>
+                                    <p>
+                                        If the suspended particles have
+                                        spherical form (radius of the sphere =
+                                        <span class="katex-inline" id="eq-59"
+                                            >$P$</span
+                                        >), and if the liquid has a coefficient
+                                        of viscosity
+                                        <span class="katex-inline" id="eq-60"
+                                            >$k$</span
+                                        >, then the force
+                                        <span class="katex-inline" id="eq-61"
+                                            >$K$</span
+                                        >
+                                        imparts to the single particles a
+                                        velocity
+                                    </p>
+                                    <div class="katex-display" id="eq-12">
+                                        $$\frac{K}{6πkP}$$
+                                    </div>
+                                    <p>
+                                        and there will pass a unit area per unit
+                                        of time
+                                    </p>
+                                    <div class="katex-display" id="eq-13">
+                                        $$\frac{vK}{6πkP}$$
+                                    </div>
+                                    <p>particles.</p>
+                                    <p>
+                                        We can calculate the coefficient of
+                                        diffusion from the two conditions found
+                                        for the dynamic equilibrium. We get
+                                    </p>
+                                    <div class="katex-display" id="eq-14">
+                                        $$D = \frac{RT}{N}\frac{1}{6πkP}$$
+                                    </div>
+                                    <p>
+                                        The coefficient of diffusion of the
+                                        suspended substance therefore depends
+                                        (except for universal constants and the
+                                        absolute temperature) only on the
+                                        coefficient of viscosity of the liquid
+                                        and on the size of the suspended
+                                        particles.
+                                    </p>
+                                    <h3
+                                        id="114-on-the-irregular-movement-of-particles-suspended-in-a-liquid-and-the-relation-of-this-to-diffusion"
+                                    >
+                                        1.1.4. § ON THE IRREGULAR MOVEMENT OF
+                                        PARTICLES SUSPENDED IN A LIQUID AND THE
+                                        RELATION OF THIS TO DIFFUSION<a
+                                            class="pilcrow"
+                                            href="#114-on-the-irregular-movement-of-particles-suspended-in-a-liquid-and-the-relation-of-this-to-diffusion"
+                                            >¶</a
+                                        >
+                                    </h3>
+                                    <p>
+                                        We will turn now to a closer
+                                        consideration of the irregular movements
+                                        which arise from thermal molecular
+                                        movement, and give rise to the diffusion
+                                        investigated in the last paragraph.
+                                    </p>
+                                    <p>
+                                        For the value of
+                                        <span class="katex-inline" id="eq-62"
+                                            >$Δ$</span
+                                        >
+                                        a certain probability-law will hold; the
+                                        number dn of the particles which
+                                        experience in the time-interval
+                                        <span class="katex-inline" id="eq-63"
+                                            >$τ$</span
+                                        >
+                                        a displacement which lies between
+                                        <span class="katex-inline" id="eq-64"
+                                            >$Δ$</span
+                                        >
+                                        and
+                                        <span class="katex-inline" id="eq-65"
+                                            >$Δ + dΔ$</span
+                                        >, will be expressed by an equation of
+                                        the form
+                                    </p>
+                                    <div class="katex-display" id="eq-15">
+                                        $$dn = nφ(Δ)dΔ$$
+                                    </div>
+                                    <p>where</p>
+                                    <div class="katex-display" id="eq-16">
+                                        $$\int_{-\infty}^{+\infty}\phi(Δ)dΔ =
+                                        1$$
+                                    </div>
+                                    <p>
+                                        and
+                                        <span class="katex-inline" id="eq-66"
+                                            >$φ$</span
+                                        >
+                                        only differs from zero for very small
+                                        values of
+                                        <span class="katex-inline" id="eq-67"
+                                            >$Δ$</span
+                                        >
+                                        and fulfils the condition
+                                    </p>
+                                    <div class="katex-display" id="eq-17">
+                                        $$φ(Δ) = φ(-Δ)$$
+                                    </div>
+                                    <p>
+                                        The probable distribution of the
+                                        resulting displacements in a given time
+                                        <span class="katex-inline" id="eq-68"
+                                            >$t$</span
+                                        >
+                                        is therefore the same as that of
+                                        fortuitous error, which was to be
+                                        expected. But it is significant how the
+                                        constants in the exponential term are
+                                        related to the coefficient of diffusion.
+                                        The solution is:
+                                    </p>
+                                    <div class="katex-display" id="eq-18">
+                                        $$f(x, t) =
+                                        \frac{n}{\sqrt{4πD}}\frac{e^{-\frac{x^2}{4Dt}}}{\sqrt{t}}$$
+                                    </div>
+                                    <p>
+                                        We will now calculate the displacement
+                                        <span class="katex-inline" id="eq-69"
+                                            >$λx$</span
+                                        >
+                                        in the direction of the X-axis which a
+                                        particle experiences on an average,
+                                        or—more accurately expressed—the square
+                                        root of the arithmetic mean of the
+                                        squares of displacements in the
+                                        direction of the X-axis; it is:
+                                    </p>
+                                    <div class="katex-display" id="eq-19">
+                                        $$λ_x = \sqrt{x^2} = \sqrt{2Dt}$$
+                                    </div>
+                                    <h3
+                                        id="115-formula-for-the-mean-displacement-of-suspended-particles-a-new-method-of-determining-the-real-size-of-the-atom"
+                                    >
+                                        1.1.5. § FORMULA FOR THE MEAN
+                                        DISPLACEMENT OF SUSPENDED PARTICLES. A
+                                        NEW METHOD OF DETERMINING THE REAL SIZE
+                                        OF THE ATOM<a
+                                            class="pilcrow"
+                                            href="#115-formula-for-the-mean-displacement-of-suspended-particles-a-new-method-of-determining-the-real-size-of-the-atom"
+                                            >¶</a
+                                        >
+                                    </h3>
+                                    <p>
+                                        By eliminating
+                                        <span class="katex-inline" id="eq-70"
+                                            >$D$</span
+                                        >
+                                        we obtain
+                                    </p>
+                                    <div class="katex-display" id="eq-20">
+                                        $$λ_x =
+                                        \sqrt{t}\sqrt{\frac{RT}{N}\frac{1}{3πkP}}$$
+                                    </div>
+                                    <p>
+                                        This equation shows how
+                                        <span class="katex-inline" id="eq-71"
+                                            >$λx$</span
+                                        >
+                                        depends on
+                                        <span class="katex-inline" id="eq-72"
+                                            >$T$</span
+                                        >,
+                                        <span class="katex-inline" id="eq-73"
+                                            >$k$</span
+                                        >, and
+                                        <span class="katex-inline" id="eq-74"
+                                            >$P$</span
+                                        >.
+                                    </p>
+                                    <p>
+                                        We will calculate how great
+                                        <span class="katex-inline" id="eq-75"
+                                            >$λx$</span
+                                        >
+                                        is for one second, if
+                                        <span class="katex-inline" id="eq-76"
+                                            >$N$</span
+                                        >
+                                        is taken equal to 6·10²³ in accordance
+                                        with the kinetic theory of gases, water
+                                        at 17° C. is chosen as the liquid (<span
+                                            class="katex-inline"
+                                            id="eq-77"
+                                            >$k = 1.35·10⁻²$</span
+                                        >), and the diameter of the particles
+                                        .001 mm. We get
+                                    </p>
+                                    <div class="katex-display" id="eq-21">
+                                        $$λ_x = 8·10^{-5} \text{ cm} = 0.8μ$$
+                                    </div>
+                                    <p>
+                                        The mean displacement in one minute
+                                        would be, therefore, about
+                                        <span class="katex-inline" id="eq-78"
+                                            >$6μ$</span
+                                        >.
+                                    </p>
+                                    <p>
+                                        On the other hand, the relation found
+                                        can be used for the determination of
+                                        <span class="katex-inline" id="eq-79"
+                                            >$N$</span
+                                        >. We obtain
+                                    </p>
+                                    <div class="katex-display" id="eq-22">
+                                        $$N = \frac{1}{λ_x^2}\frac{RT}{3πkP}$$
+                                    </div>
+                                    <p>
+                                        It is to be hoped that some enquirer may
+                                        succeed shortly in solving the problem
+                                        suggested here, which is so important in
+                                        connection with the theory of Heat.
+                                    </p>
+                                    <p>
+                                        Berne, May, 1905. (Received, 11 May,
+                                        1905.)
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+                    </article>
+
+                    <!-- Right Sidebar (TOC) -->
+                    <aside class="col-md-3 right-sidebar">
+                        <div id="toc-root">
+                            <!-- TOC will be populated via JavaScript -->
+                        </div>
+                    </aside>
+                </div>
+            </main>
+        </div>
+
+        <!-- Load Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+        <!-- Initialize Features -->
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                // First initialize KaTeX
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: "$$", right: "$$", display: true },
+                        { left: "$", right: "$", display: false },
+                    ],
+                    throwOnError: false,
+                    output: "html",
+                    strict: false,
+                    trust: true,
+                    macros: {
+                        "\\N": "\\mathbb{N}",
+                        "\\R": "\\mathbb{R}",
+                    },
+                    errorCallback: function (msg, err) {
+                        console.log("KaTeX error:", msg, err);
+                    },
+                    ignoredTags: [
+                        "script",
+                        "noscript",
+                        "style",
+                        "textarea",
+                        "pre",
+                        "code",
+                    ],
+                    ignoredClasses: ["no-math"],
+                });
+
+                // Then handle other features
+                const metadata =
+                    JSON.parse("{"content_id": "brownian-motion", "content_type": "ditamap", "id": "brownian-motion", "index-numbers": "true", "page_title": "The Theory of Brownian Movement", "processed_at": "2024-12-08T19:11:37.110889"}") || {};
+                const shouldNumber = metadata["index-numbers"] ?? true;
+                const appendToc = metadata["append-toc"] ?? true;
+
+                // Handle heading numbering
+                if (shouldNumber) {
+                    const headings = document.querySelectorAll(
+                        "h1, h2, h3, h4, h5, h6",
+                    );
+                    let numbering = [0, 0, 0, 0, 0, 0];
+
+                    headings.forEach((heading) => {
+                        const level =
+                            parseInt(heading.tagName.substring(1)) - 1;
+                        numbering[level]++;
+                        numbering = numbering
+                            .slice(0, level + 1)
+                            .concat(Array(6 - level - 1).fill(0));
+
+                        const index = numbering.slice(0, level + 1).join(".");
+                        heading.textContent = `${index} ${heading.textContent.trim()}`;
+                        if (!heading.id) {
+                            heading.id = `heading-${index.replace(/\./g, "-")}`;
+                        }
+                    });
+                }
+
+                // Build TOC
+                if (appendToc) {
+                    const tocRoot = document.getElementById("toc-root");
+                    if (tocRoot) {
+                        const tocList = document.createElement("ul");
+                        document
+                            .querySelectorAll("h1, h2, h3, h4, h5, h6")
+                            .forEach((heading) => {
+                                const tocItem = document.createElement("li");
+                                const anchor = document.createElement("a");
+                                anchor.href = `#${heading.id}`;
+                                anchor.textContent = heading.textContent;
+                                tocItem.appendChild(anchor);
+                                tocList.appendChild(tocItem);
+                            });
+                        tocRoot.appendChild(tocList);
+                    }
+                }
+            });
+        </script>
+    </body>
+</html>

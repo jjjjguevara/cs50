@@ -2,18 +2,38 @@
 
 import html
 import re
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union, Sequence
 from pathlib import Path
 from bs4 import BeautifulSoup, Tag
 import logging
+from app.dita.models.types import ProcessedContent
+
 
 # Global config
-from config import DITAConfig
+from app_config import DITAConfig
+
+def consolidate_transformed_html(transformed_contents: Sequence[Union[str, ProcessedContent]]) -> str:
+    """Consolidate unique transformed HTML contents."""
+    seen = set()
+    unique_html = []
+    for content in transformed_contents:
+        if isinstance(content, ProcessedContent):
+            html_content = content.html
+        elif isinstance(content, str):
+            html_content = content
+        else:
+            raise ValueError(f"Unexpected content type: {type(content)}")
+
+        if html_content not in seen:
+            unique_html.append(html_content)
+            seen.add(html_content)
+    return "\n".join(unique_html)
 
 class HTMLHelper:
     """Utilities for HTML manipulation and validation."""
 
-    def __init__(self, dita_root: Optional[Path] = None) -> None:
+
+    def __init__(self, dita_root: Optional[Path] = None):
         """
         Initialize HTML helper.
 
@@ -21,25 +41,26 @@ class HTMLHelper:
             dita_root: Optional path to DITA root directory
         """
         self.logger = logging.getLogger(__name__)
-        self.dita_root: Optional[Path] = dita_root
+        self.dita_root = dita_root
         self._cache: Dict[str, Any] = {}
 
 
-    def render(self, content: str) -> str:
+    def render(self, content: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         """
-        Transform raw XML content into styled HTML.
+        Transform raw XML content into styled HTML, enriched with metadata.
 
         Args:
             content: The raw XML or intermediate HTML content.
+            metadata: Optional metadata to append to the HTML output.
 
         Returns:
-            Styled HTML as a string.
+            Styled and enriched HTML as a string.
         """
         try:
             # Parse content with BeautifulSoup
             soup = BeautifulSoup(content, "lxml-xml")  # Use XML parser for DITA content
 
-            # Convert <title> tags to <h1> for HTML display
+            # Transform <title> tags to <h1> for HTML display
             for title in soup.find_all("title"):
                 h1 = soup.new_tag("h1")
                 h1.string = title.text
@@ -63,35 +84,52 @@ class HTMLHelper:
                 div.append(ul)
                 group.replace_with(div)
 
-            # Safely handle optional <metadata>
-            metadata = soup.find("metadata")
-            if metadata and metadata.name == "metadata":
-                metadata.decompose()
+            # Handle metadata (if provided and <body> exists)
+            if metadata and soup.body:
+                metadata_div = soup.new_tag("div", **{"class": "metadata-section"})
+                for key, value in metadata.items():
+                    meta_item = soup.new_tag("div", **{"class": "metadata-item"})
+                    meta_item.string = f"{key.capitalize()}: {value}"
+                    metadata_div.append(meta_item)
+                soup.body.insert(0, metadata_div)  # Add metadata at the top of <body>
 
+            # Safely handle optional <metadata>, ensuring the tag exists
+            metadata_tag = soup.find("metadata")
+            if metadata_tag and metadata_tag.name == "metadata":
+                metadata_tag.decompose()
+
+            # Return final sanitized and enriched HTML
             return str(soup)
+
         except Exception as e:
             self.logger.error(f"Error rendering content: {str(e)}")
             raise
 
 
 
-
-
-
-
     def configure_helper(self, config: DITAConfig) -> None:
-        """Configure HTML helper with provided settings."""
+        """
+        Configure HTML helper with provided settings.
+
+        Args:
+            config (DITAConfig): Configuration object containing relevant settings.
+        """
         try:
             self.logger.debug("Configuring HTML helper")
 
-            # Update root path
-            self.dita_root = config.paths.dita_root
+            # Validate that the dita_root attribute exists in the config
+            if not hasattr(config, 'topics_dir') or not config.topics_dir:
+                raise ValueError("DITAConfig must have a valid 'topics_dir' attribute.")
 
-            self.logger.debug("HTML helper configuration completed")
+            # Update root path
+            self.dita_root = config.topics_dir.parent
+
+            self.logger.debug(f"HTML helper configured with DITA root: {self.dita_root}")
 
         except Exception as e:
             self.logger.error(f"HTML helper configuration failed: {str(e)}")
             raise
+
 
     def escape_html(self, content: str) -> str:
         """
@@ -109,20 +147,22 @@ class HTMLHelper:
             self.logger.error(f"Error escaping HTML: {str(e)}")
             return ""
 
-    def process_final_content(self, content: str) -> str:
-        try:
-            soup = BeautifulSoup(content, 'html.parser')
-            output = self._clean_whitespace(str(soup))
-            output = self._ensure_proper_nesting(output)
+    def process_final_content(self, html_content: str) -> str:
+            """Process final HTML content before rendering."""
+            try:
+                # Unescape any previously escaped HTML
+                html_content = html.unescape(html_content)
 
-            # Remove duplicate tags or improper nesting
-            output = re.sub(r'(<p>\s*</p>)+', '', output)
+                # Parse with BeautifulSoup to properly format HTML
+                soup = BeautifulSoup(html_content, 'html.parser')
 
-            self.logger.debug(f"Processed final HTML content.")
-            return output
-        except Exception as e:
-            self.logger.error(f"Error processing final content: {str(e)}")
-            return content
+                # Return properly formatted HTML
+                return str(soup)
+
+            except Exception as e:
+                self.logger.error(f"Error processing HTML content: {str(e)}")
+                return html_content
+
 
 
     def find_target_element(self, soup: BeautifulSoup, target_id: str) -> Optional[Tag]:
@@ -189,22 +229,13 @@ class HTMLHelper:
             self.logger.error(f"Error ensuring proper nesting: {str(e)}")
             return content
 
-    def validate_html(self, content: str) -> bool:
-        """
-        Validate HTML content structure.
-
-        Args:
-            content: HTML content to validate
-
-        Returns:
-            True if valid, False otherwise
-        """
-        try:
-            soup = BeautifulSoup(content, 'html.parser')
-            return True
-        except Exception as e:
-            self.logger.error(f"HTML validation failed: {str(e)}")
-            return False
+    def validate_html(self, html_content: str) -> bool:
+            """Validate HTML content."""
+            try:
+                soup = BeautifulSoup(html_content, 'html.parser')
+                return bool(soup.find())
+            except Exception:
+                return False
 
     def add_classes(self, tag: Tag, classes: List[str]) -> None:
         """

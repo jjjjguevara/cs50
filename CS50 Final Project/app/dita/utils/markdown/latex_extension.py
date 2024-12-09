@@ -1,4 +1,3 @@
-# app/dita/utils/markdown/latex_extension.py
 from typing import Dict, List, Optional, Any
 import re
 import logging
@@ -6,7 +5,7 @@ from markdown.extensions import Extension
 from markdown.preprocessors import Preprocessor
 from markdown.postprocessors import Postprocessor
 
-from ..types import LaTeXEquation, ProcessedEquation
+from app.dita.models.types import LaTeXEquation, ProcessedEquation
 from ..latex.latex_processor import LaTeXProcessor
 
 class LaTeXPreprocessor(Preprocessor):

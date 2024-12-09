@@ -14,77 +14,133 @@
             rel="stylesheet"
         />
         <link
-            rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
+            rel="stylesheet"
         />
         <link href="/static/css/global.css" rel="stylesheet" />
         <link href="/static/css/academic.css" rel="stylesheet" />
         <link href="/static/css/nav.css" rel="stylesheet" />
         <link href="/static/css/content.css" rel="stylesheet" />
 
-        <!-- KaTeX for Math Rendering -->
+        <!-- KaTeX Setup -->
         <link
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
         />
         <script
-            src="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.js"
             defer
+            src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
         ></script>
         <script
-            src="https://cdn.jsdelivr.net/npm/katex/dist/contrib/auto-render.min.js"
             defer
+            src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
         ></script>
+
+        <!-- KaTeX Custom Styling -->
+        <style>
+            .katex-display {
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding: 1em 0;
+            }
+            .katex-inline {
+                padding: 0 0.2em;
+            }
+            .equation {
+                margin: 1em 0;
+            }
+        </style>
     </head>
 
     <body>
         <div class="d-flex flex-column flex-lg-row">
             <!-- Left Sidebar -->
-            <div id="left-sidebar" class="sidebar left-sidebar">
+            <aside id="left-sidebar" class="sidebar left-sidebar">
                 <div id="root"></div>
-            </div>
+            </aside>
 
             <!-- Main Content -->
-            <main class="main-content">
-                <div class="container-fluid">
-                    <div class="row">
-                        <!-- Article Content -->
-                        <div class="col-lg-9">
-                            <div class="article-wrapper">
+            <main class="main-content container-fluid">
+                <div class="row">
+                    <!-- Article Content -->
+                    <article class="col-lg-9">
+                        <section class="article-wrapper">
+                            <header>
                                 <h1 class="page-title">
                                     {{ metadata.page_title if
                                     metadata.page_title else "Untitled Page" }}
                                 </h1>
-                                <div id="article-wrapper">
-                                    {{ content|safe }}
-                                </div>
+                            </header>
+                            <div id="article-wrapper">
+                                {% if content %} {{ content | safe }} {% else %}
+                                <p class="text-muted">
+                                    No content available for this page.
+                                </p>
+                                {% endif %}
                             </div>
-                        </div>
+                        </section>
+                    </article>
 
-                        <!-- Right Sidebar (TOC) -->
-                        <div class="col-md-3">
-                            <div class="right-sidebar">
-                                <div id="toc-root"></div>
-                            </div>
+                    <!-- Right Sidebar (TOC) -->
+                    <aside class="col-md-3 right-sidebar">
+                        <div id="toc-root">
+                            <!-- TOC will be populated via JavaScript -->
                         </div>
-                    </div>
+                    </aside>
                 </div>
             </main>
         </div>
+        <!-- Single root element for React -->
+        <div id="app-root"></div>
 
-        <!-- Load Bootstrap JS -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Content container that React will populate -->
+        <div id="article-content" style="display: none">
+            {% if content %} {{ content | safe }} {% else %}
+            <p class="text-muted">No content available for this page.</p>
+            {% endif %}
+        </div>
 
-        <!-- Initialize JavaScript Features -->
+        <!-- ... existing scripts ... -->
+        <script type="module" src="/static/dist/academic.js"></script>
+
+        <!-- Initialize Features -->
         <script>
             document.addEventListener("DOMContentLoaded", function () {
-                // Extract metadata from server-side rendering
-                const metadata = JSON.parse("{{ metadata | tojson | safe }}");
+                // First initialize KaTeX
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: "$$", right: "$$", display: true },
+                        { left: "$", right: "$", display: false },
+                    ],
+                    throwOnError: false,
+                    output: "html",
+                    strict: false,
+                    trust: true,
+                    macros: {
+                        "\\N": "\\mathbb{N}",
+                        "\\R": "\\mathbb{R}",
+                    },
+                    errorCallback: function (msg, err) {
+                        console.log("KaTeX error:", msg, err);
+                    },
+                    ignoredTags: [
+                        "script",
+                        "noscript",
+                        "style",
+                        "textarea",
+                        "pre",
+                        "code",
+                    ],
+                    ignoredClasses: ["no-math"],
+                });
 
-                const shouldNumber = metadata["index-numbers"] || true;
-                const appendToc = metadata["append-toc"] || true;
+                // Then handle other features
+                const metadata =
+                    JSON.parse("{{ metadata | tojson | safe }}") || {};
+                const shouldNumber = metadata["index-numbers"] ?? true;
+                const appendToc = metadata["append-toc"] ?? true;
 
-                // Add heading numbering
+                // Handle heading numbering
                 if (shouldNumber) {
                     const headings = document.querySelectorAll(
                         "h1, h2, h3, h4, h5, h6",
@@ -107,34 +163,27 @@
                     });
                 }
 
-                // Build Table of Contents (TOC)
+                // Build TOC
                 if (appendToc) {
                     const tocRoot = document.getElementById("toc-root");
-                    const tocList = document.createElement("ul");
-
-                    document
-                        .querySelectorAll("h1, h2, h3, h4, h5, h6")
-                        .forEach((heading) => {
-                            const tocItem = document.createElement("li");
-                            const anchor = document.createElement("a");
-                            anchor.href = `#${heading.id}`;
-                            anchor.textContent = heading.textContent;
-                            tocItem.appendChild(anchor);
-                            tocList.appendChild(tocItem);
-                        });
-
-                    tocRoot.appendChild(tocList);
+                    if (tocRoot) {
+                        const tocList = document.createElement("ul");
+                        document
+                            .querySelectorAll("h1, h2, h3, h4, h5, h6")
+                            .forEach((heading) => {
+                                const tocItem = document.createElement("li");
+                                const anchor = document.createElement("a");
+                                anchor.href = `#${heading.id}`;
+                                anchor.textContent = heading.textContent;
+                                tocItem.appendChild(anchor);
+                                tocList.appendChild(tocItem);
+                            });
+                        tocRoot.appendChild(tocList);
+                    }
                 }
-
-                // KaTeX Math Rendering
-                renderMathInElement(document.body, {
-                    delimiters: [
-                        { left: "$$", right: "$$", display: true },
-                        { left: "$", right: "$", display: false },
-                    ],
-                    throwOnError: false,
-                });
             });
         </script>
+        <!-- Load Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
 </html>

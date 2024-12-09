@@ -1,10 +1,11 @@
-# app/__init__.py
 import os
 from flask import Flask
 from flask_cors import CORS
-from config import config
+from app_config import config
 import logging
 from .dita.config_manager import config_manager
+
+app = Flask(__name__, static_folder='dita')
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -25,6 +26,10 @@ def create_app(config_name=None):
             config_name = os.environ.get('FLASK_ENV', 'development')
 
         app = Flask(__name__)
+        if config_name not in config:
+            logger.error(f"Unknown configuration name: {config_name}")
+            raise ValueError(f"Unknown configuration: {config_name}")
+
         app.config.from_object(config[config_name])
 
         # Initialize DITA configuration
@@ -36,18 +41,18 @@ def create_app(config_name=None):
         # Configure CORS
         CORS(app, resources={
             r"/api/*": {
-                "origins": app.config['CORS_ORIGINS'],
+                "origins": app.config.get('CORS_ORIGINS', '*'),
                 "methods": ["GET", "POST", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
                 "supports_credentials": True
             },
             r"/entry/*": {
-                "origins": app.config['CORS_ORIGINS'],
+                "origins": app.config.get('CORS_ORIGINS', '*'),
                 "methods": ["GET"],
                 "supports_credentials": True
             },
             r"/static/*": {
-                "origins": "*" if app.config['DEVELOPMENT'] else app.config['CORS_ORIGINS'],
+                "origins": "*" if app.config.get('DEVELOPMENT', False) else app.config.get('CORS_ORIGINS', '*'),
                 "methods": ["GET"]
             }
         })

@@ -1,17 +1,19 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Union, Any, Tuple
 import logging
 import yaml
 from lxml import etree
 from lxml.etree import _Element
 import frontmatter
+import yaml
 import json
+import re
 from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
-
+from app.dita.models.types import PathLike, ElementType
 # Global config
-from config import DITAConfig
+from app_config import DITAConfig
 
 class ContentType(Enum):
     DITA = "dita"
@@ -52,16 +54,26 @@ class MetadataHandler:
             raise
 
     def extract_metadata(self,
-                        file_path: Path,
-                        content_id: str,
-                        heading_id: Optional[str] = None) -> Dict[str, Any]:
-        """Extract metadata from any supported content type"""
+                         file_path: PathLike,
+                         content_id: str,
+                         heading_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Extract metadata from any supported content type.
+        """
         try:
+            # Convert file_path to Path object if it's not already
+            if isinstance(file_path, str):
+                file_path = Path(file_path)
+
+            # Ensure file_path is a valid Path
+            assert isinstance(file_path, Path), f"Expected Path, got {type(file_path).__name__}"
+
+            # Determine content type
             content_type = self._determine_content_type(file_path)
 
-            if content_type == ContentType.MARKDOWN:
+            if content_type == ElementType.MARKDOWN:
                 return self._extract_markdown_metadata(file_path, content_id, heading_id)
-            elif content_type in (ContentType.DITA, ContentType.DITAMAP):
+            elif content_type in (ElementType.DITA, ElementType.DITAMAP):
                 return self._extract_dita_metadata(file_path, content_id, heading_id)
             else:
                 self.logger.warning(f"Unsupported content type for {file_path}")
@@ -70,6 +82,27 @@ class MetadataHandler:
         except Exception as e:
             self.logger.error(f"Error extracting metadata from {file_path}: {str(e)}")
             return {}
+
+
+    def extract_yaml_metadata(self, content: str) -> Tuple[Dict[str, Any], str]:
+        """
+        Extract YAML metadata from the beginning of the content if present.
+
+        Args:
+            content: The content string to extract metadata from.
+
+        Returns:
+            A tuple containing the extracted metadata (dict) and the remaining content.
+        """
+        match = re.match(r'^---\n(.*?)\n---\n', content, re.DOTALL)
+        if match:
+            try:
+                metadata = yaml.safe_load(match.group(1))  # Parse YAML block
+                remaining_content = content[len(match.group(0)):]  # Strip YAML block
+                return metadata, remaining_content
+            except yaml.YAMLError as e:
+                raise ValueError(f"Error parsing YAML metadata: {e}")
+        return {}, content
 
     def _determine_content_type(self, file_path: Path) -> ContentType:
         """Determine content type from file extension"""

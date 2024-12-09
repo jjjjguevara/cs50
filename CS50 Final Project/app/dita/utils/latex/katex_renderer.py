@@ -1,7 +1,7 @@
 # app/dita/utils/latex/katex_renderer.py
 import logging
 from typing import Optional
-from ..types import LaTeXEquation
+from app.dita.models.types import LaTeXEquation
 
 class KaTeXRenderer:
     """Renders LaTeX equations to HTML using KaTeX."""
