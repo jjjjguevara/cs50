@@ -17,10 +17,24 @@
             href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
             rel="stylesheet"
         />
-        <link href="/static/css/global.css" rel="stylesheet" />
-        <link href="/static/css/academic.css" rel="stylesheet" />
-        <link href="/static/css/nav.css" rel="stylesheet" />
-        <link href="/static/css/content.css" rel="stylesheet" />
+
+        <!-- Custom CSS -->
+        <link
+            href="{{ url_for('static', filename='css/academic.css') }}"
+            rel="stylesheet"
+        />
+        <link
+            href="{{ url_for('static', filename='css/global.css') }}"
+            rel="stylesheet"
+        />
+        <link
+            href="{{ url_for('static', filename='css/content.css') }}"
+            rel="stylesheet"
+        />
+        <link
+            href="{{ url_for('static', filename='css/nav.css') }}"
+            rel="stylesheet"
+        />
 
         <!-- KaTeX Setup -->
         <link
@@ -36,154 +50,179 @@
             src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
         ></script>
 
+        <!-- Font styles-->
+        <style>
+            @font-face {
+                font-family: "Austera Text";
+                src: url("{{ url_for('static', filename='fonts/AusteraText-Regular.ttf') }}")
+                    format("truetype");
+                font-weight: 400;
+                font-style: normal;
+                font-display: swap;
+            }
+        </style>
+
         <!-- KaTeX Custom Styling -->
         <style>
+            .katex {
+                font-size: 1em;
+            }
             .katex-display {
                 overflow-x: auto;
                 overflow-y: hidden;
                 padding: 1em 0;
+                margin: 1em 0;
+            }
+            .katex-display > .katex {
+                display: inline-block;
+                white-space: nowrap;
+                max-width: 100%;
+            }
+            .katex-display > .katex > .katex-html {
+                display: block;
+                position: relative;
+                overflow-x: auto;
             }
             .katex-inline {
                 padding: 0 0.2em;
-            }
-            .equation {
-                margin: 1em 0;
+                display: inline-block;
             }
         </style>
+
+        <!-- React Setup -->
+        <script
+            crossorigin
+            src="https://unpkg.com/react@18/umd/react.production.min.js"
+        ></script>
+        <script
+            crossorigin
+            src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+        ></script>
+        <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
     </head>
 
     <body>
-        <div class="d-flex flex-column flex-lg-row">
-            <!-- Left Sidebar -->
-            <aside id="left-sidebar" class="sidebar left-sidebar">
-                <div id="root"></div>
-            </aside>
+        <!-- Main container with flexbox layout -->
+        <div class="app-container">
+            <header class="app-header">
+                <div id="top-nav"></div>
+            </header>
 
-            <!-- Main Content -->
-            <main class="main-content container-fluid">
-                <div class="row">
-                    <!-- Article Content -->
-                    <article class="col-lg-9">
-                        <section class="article-wrapper">
-                            <header>
-                                <h1 class="page-title">
-                                    {{ metadata.page_title if
-                                    metadata.page_title else "Untitled Page" }}
-                                </h1>
-                            </header>
-                            <div id="article-wrapper">
-                                {% if content %} {{ content | safe }} {% else %}
-                                <p class="text-muted">
-                                    No content available for this page.
-                                </p>
-                                {% endif %}
-                            </div>
-                        </section>
-                    </article>
+            <div class="app-content">
+                <aside class="left-sidebar">
+                    <div id="root"></div>
+                </aside>
 
-                    <!-- Right Sidebar (TOC) -->
-                    <aside class="col-md-3 right-sidebar">
-                        <div id="toc-root">
-                            <!-- TOC will be populated via JavaScript -->
-                        </div>
-                    </aside>
-                </div>
-            </main>
+                <main class="main-content">
+                    <div class="content-wrapper">
+                        <article class="article-content">
+                            {% if content %} {{ content | safe }} {% else %}
+                            <p class="text-muted">No content available.</p>
+                            {% endif %}
+                        </article>
+
+                        <aside class="right-sidebar">
+                            <div id="toc-root"></div>
+                        </aside>
+                    </div>
+                </main>
+            </div>
         </div>
-        <!-- Single root element for React -->
-        <div id="app-root"></div>
 
-        <!-- Content container that React will populate -->
+        <!-- Hidden content container -->
         <div id="article-content" style="display: none">
-            {% if content %} {{ content | safe }} {% else %}
-            <p class="text-muted">No content available for this page.</p>
-            {% endif %}
+            {% if content %} {{ content | safe }} {% endif %}
         </div>
-
-        <!-- ... existing scripts ... -->
-        <script type="module" src="/static/dist/academic.js"></script>
 
         <!-- Initialize Features -->
         <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                // First initialize KaTeX
-                renderMathInElement(document.body, {
-                    delimiters: [
-                        { left: "$$", right: "$$", display: true },
-                        { left: "$", right: "$", display: false },
-                    ],
-                    throwOnError: false,
-                    output: "html",
-                    strict: false,
-                    trust: true,
-                    macros: {
-                        "\\N": "\\mathbb{N}",
-                        "\\R": "\\mathbb{R}",
-                    },
-                    errorCallback: function (msg, err) {
-                        console.log("KaTeX error:", msg, err);
-                    },
-                    ignoredTags: [
-                        "script",
-                        "noscript",
-                        "style",
-                        "textarea",
-                        "pre",
-                        "code",
-                    ],
-                    ignoredClasses: ["no-math"],
+            document.addEventListener("DOMContentLoaded", function() {
+                // First pass: render block equations
+                document.querySelectorAll('.math.display').forEach(el => {
+                    const tex = el.textContent.replace(/\$\$/g, '').trim();
+                    katex.render(tex, el, {
+                        displayMode: true,
+                        throwOnError: false,
+                        output: 'html'
+                    });
                 });
 
-                // Then handle other features
-                const metadata =
-                    JSON.parse("{{ metadata | tojson | safe }}") || {};
-                const shouldNumber = metadata["index-numbers"] ?? true;
-                const appendToc = metadata["append-toc"] ?? true;
-
-                // Handle heading numbering
-                if (shouldNumber) {
-                    const headings = document.querySelectorAll(
-                        "h1, h2, h3, h4, h5, h6",
-                    );
-                    let numbering = [0, 0, 0, 0, 0, 0];
-
-                    headings.forEach((heading) => {
-                        const level =
-                            parseInt(heading.tagName.substring(1)) - 1;
-                        numbering[level]++;
-                        numbering = numbering
-                            .slice(0, level + 1)
-                            .concat(Array(6 - level - 1).fill(0));
-
-                        const index = numbering.slice(0, level + 1).join(".");
-                        heading.textContent = `${index} ${heading.textContent.trim()}`;
-                        if (!heading.id) {
-                            heading.id = `heading-${index.replace(/\./g, "-")}`;
-                        }
+                // Second pass: render inline equations
+                document.querySelectorAll('.math.inline').forEach(el => {
+                    const tex = el.textContent.replace(/\$/g, '').trim();
+                    katex.render(tex, el, {
+                        displayMode: false,
+                        throwOnError: false,
+                        output: 'html'
                     });
-                }
-
-                // Build TOC
-                if (appendToc) {
-                    const tocRoot = document.getElementById("toc-root");
-                    if (tocRoot) {
-                        const tocList = document.createElement("ul");
-                        document
-                            .querySelectorAll("h1, h2, h3, h4, h5, h6")
-                            .forEach((heading) => {
-                                const tocItem = document.createElement("li");
-                                const anchor = document.createElement("a");
-                                anchor.href = `#${heading.id}`;
-                                anchor.textContent = heading.textContent;
-                                tocItem.appendChild(anchor);
-                                tocList.appendChild(tocItem);
-                            });
-                        tocRoot.appendChild(tocList);
-                    }
-                }
+                });
             });
+
+                    // Initialize other features
+                    function initOtherFeatures() {
+                        const metadata =
+                            JSON.parse("{{ metadata | tojson | safe }}") || {};
+                        const shouldNumber = metadata["index-numbers"] ?? true;
+                        const appendToc = metadata["append-toc"] ?? true;
+
+                        if (shouldNumber) {
+                            // Handle heading numbering
+                            const headings = document.querySelectorAll(
+                                "h1, h2, h3, h4, h5, h6",
+                            );
+                            let numbering = [0, 0, 0, 0, 0, 0];
+
+                            headings.forEach((heading) => {
+                                const level =
+                                    parseInt(heading.tagName.substring(1)) - 1;
+                                numbering[level]++;
+                                numbering = numbering
+                                    .slice(0, level + 1)
+                                    .concat(Array(6 - level - 1).fill(0));
+                                const index = numbering
+                                    .slice(0, level + 1)
+                                    .join(".");
+                                heading.textContent = `${index} ${heading.textContent.trim()}`;
+                                if (!heading.id) {
+                                    heading.id = `heading-${index.replace(/\./g, "-")}`;
+                                }
+                            });
+                        }
+
+                        if (appendToc) {
+                            // Build TOC
+                            const tocRoot = document.getElementById("toc-root");
+                            if (tocRoot) {
+                                const tocList = document.createElement("ul");
+                                document
+                                    .querySelectorAll("h1, h2, h3, h4, h5, h6")
+                                    .forEach((heading) => {
+                                        const tocItem =
+                                            document.createElement("li");
+                                        const anchor = document.createElement("a");
+                                        anchor.href = `#${heading.id}`;
+                                        anchor.textContent = heading.textContent;
+                                        tocItem.appendChild(anchor);
+                                        tocList.appendChild(tocItem);
+                                    });
+                                tocRoot.appendChild(tocList);
+                            }
+                        }
+                    }
+
+                    // Initialize everything in order
+                    initKaTeX();
+                    initOtherFeatures();
+                });
         </script>
-        <!-- Load Bootstrap JS -->
+
+        <!-- Bootstrap Bundle with Popper -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+        <!-- Our JS -->
+        <script
+            type="module"
+            src="{{ url_for('static', filename='dist/academic.js') }}"
+        ></script>
     </body>
 </html>

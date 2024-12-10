@@ -1,8 +1,10 @@
 # app/dita/transformers/md_transform.py
 
 import logging
+from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union, Callable
+from bs4 import NavigableString, Tag
 import html
 import markdown
 from bs4 import BeautifulSoup
@@ -11,19 +13,20 @@ from ..models.types import (
     ProcessedContent,
     MDElementInfo,
     MDElementType,
-    HeadingContext
+    HeadingContext,
+    ProcessingContext
 )
 from app_config import DITAConfig
 from ..utils.html_helpers import HTMLHelper
 from ..utils.heading import HeadingHandler
 from app.dita.processors.md_elements import MarkdownContentProcessor
 from app.dita.utils.latex.latex_processor import LaTeXProcessor
+from app.dita.transformers.base_transformer import BaseTransformer
 
 
-class MarkdownTransformer:
-    """Transforms Markdown content to HTML using element definitions."""
-
+class MarkdownTransformer(BaseTransformer):
     def __init__(self, root_path: Path):
+        super().__init__(root_path)
         self.logger = logging.getLogger(__name__)
         self.root_path = root_path
         self.html_helper = HTMLHelper(root_path)
@@ -38,13 +41,14 @@ class MarkdownTransformer:
             'app.dita.utils.markdown.latex_extension'
         ]
 
+        # Fix extension configs to match LaTeXExtension's expected config
         self.extension_configs = {
             'app.dita.utils.markdown.latex_extension': {
-                'use_dollar_delimiter': True,
-                'process_latex': True
+                'enable_numbering': False,
+                'enable_references': False,
+                'preserve_delimiters': True
             }
         }
-
     def configure(self, config: DITAConfig):
             """
             Apply additional configuration settings.
@@ -53,16 +57,34 @@ class MarkdownTransformer:
             # Example: Add custom configuration logic
             self.some_markdown_setting = getattr(config, 'markdown_setting', None)
 
-    def transform_topic(self, parsed_element: ParsedElement) -> ProcessedContent:
+    def transform_topic(
+            self,
+            parsed_element: ParsedElement,
+            context: ProcessingContext,
+            html_converter: Optional[Callable[[str, ProcessingContext], str]] = None
+        ) -> ProcessedContent:
+        """
+        Transform Markdown topic to HTML with proper context handling.
+
+        Args:
+            parsed_element: The parsed element to transform
+            context: Processing context for transformation
+            to_html_func: Optional custom HTML conversion function
+
+        Returns:
+            ProcessedContent: The transformed content with metadata
+        """
         try:
             self.logger.debug(f"Transforming Markdown topic: {parsed_element.topic_path}")
+
+            # Start new topic for heading tracking
+            self.heading_handler.start_new_topic()
+
+            # Initialize content parts
             content = parsed_element.content
             html_parts = []
 
-            # Start new topic
-            self.heading_handler.start_new_topic()
-
-            # Handle YAML frontmatter
+            # Process frontmatter if present
             if content.startswith('---'):
                 end_index = content.find('---', 3)
                 if end_index != -1:
@@ -71,54 +93,200 @@ class MarkdownTransformer:
                     html_parts.append(
                         f'<div class="code-block-wrapper">'
                         f'<div class="code-label">yaml</div>'
-                        f'<pre class="code-block yaml-frontmatter"><code>{html.escape(frontmatter)}</code></pre>'
+                        f'<pre class="code-block yaml-frontmatter">'
+                        f'<code>{html.escape(frontmatter)}</code></pre>'
                         f'</div>'
                     )
 
-            # Convert Markdown to HTML
-            html_content = markdown.markdown(content, extensions=self.extensions)
-            soup = BeautifulSoup(html_content, "html.parser")
+            # Use markdown-specific converter if none provided
+            converter = html_converter or self._convert_markdown_to_html
 
-            # Process all elements
-            self._process_todo_lists(soup)
-            self._process_images(soup)
-            self._process_code_blocks(soup)
-
-            # Process headings with proper hierarchy
-            first_heading = True
-            for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-                level = int(heading.name[1])
-                heading_id, numbered_heading = self.heading_handler.process_heading(
-                    text=heading.text.strip(),
-                    level=level,
-                    is_topic_title=first_heading
-                )
-                heading['id'] = heading_id
-                heading.string = numbered_heading
-                pilcrow = soup.new_tag('a', href=f"#{heading_id}", **{'class': 'pilcrow'})
-                pilcrow.string = '¶'
-                heading.append(pilcrow)
-                first_heading = False
-
-            # Combine parts and wrap in container
-            final_html = (
-                '<div class="markdown-content">'
-                f'{"".join(html_parts)}{str(soup)}'
-                '</div>'
+            # Call base transformer with our converter
+            return super().transform_topic(
+                parsed_element=parsed_element,
+                context=context,
+                html_converter=converter
             )
 
-            return ProcessedContent(
-                html=final_html,
-                element_id=parsed_element.id,
-                metadata=parsed_element.metadata
-            )
-        except Exception as e:
-                self.logger.error(f"Error transforming Markdown topic: {str(e)}", exc_info=True)
+            try:
+                # Convert content with context
+                html_content = html_converter(content, context)
+
+                # Parse with BeautifulSoup for processing
+                soup = BeautifulSoup(html_content, 'html.parser')
+
+                # Process elements
+                self.process_elements(soup, parsed_element.topic_path)
+
+                # Add frontmatter if present
+                if html_parts:
+                    frontmatter_div = BeautifulSoup('\n'.join(html_parts), 'html.parser')
+                    soup.insert(0, frontmatter_div)
+
+                # Wrap in container with necessary classes
+                wrapper = soup.new_tag('div')
+                wrapper['class'] = 'markdown-content'
+                if parsed_element.metadata.get('has_latex'):
+                    wrapper['class'] += ' katex-content'
+
+                # Move all content to wrapper
+                for child in soup.children:
+                    wrapper.append(child)
+
+                # Create final processed content
                 return ProcessedContent(
-                    html=f"<div class='error'>Error processing topic {parsed_element.id}: {str(e)}</div>",
+                    html=str(wrapper),
                     element_id=parsed_element.id,
-                    metadata={}
+                    metadata={
+                        **parsed_element.metadata,
+                        'content_type': 'markdown',
+                        'processed_at': datetime.now().isoformat(),
+                        'topic_path': str(parsed_element.topic_path)
+                    }
                 )
+
+            except Exception as e:
+                self.logger.error(f"Error in HTML conversion: {str(e)}")
+                raise
+
+        except Exception as e:
+            self.logger.error(f"Error transforming Markdown topic: {str(e)}")
+            return ProcessedContent(
+                html=f"<div class='error'>Error processing topic {parsed_element.id}: {str(e)}</div>",
+                element_id=parsed_element.id,
+                metadata={
+                    'error': str(e),
+                    'error_type': type(e).__name__,
+                    'processed_at': datetime.now().isoformat()
+                }
+            )
+
+
+    def process_elements(
+            self,
+            soup: BeautifulSoup,
+            parsed_element: ParsedElement
+        ) -> None:
+        """
+        Process HTML elements using the Markdown content processor.
+        Delegates actual element processing to MarkdownContentProcessor.
+
+        Args:
+            soup: BeautifulSoup object containing parsed HTML
+            topic_path: Path to the source topic file
+        """
+        try:
+            for element in soup.find_all(True):
+                element_info = self.content_processor.process_element(
+                    element,
+                    parsed_element.topic_path
+                )
+
+                # Apply processed attributes
+                if element_info.attributes.id:
+                    element['id'] = element_info.attributes.id
+                if element_info.attributes.classes:
+                    element['class'] = ' '.join(element_info.attributes.classes)
+                for key, value in element_info.attributes.custom_attrs.items():
+                    element[key] = value
+
+                # Handle specific element types
+                if element_info.type == MDElementType.HEADING:
+                    self._apply_heading_attributes(
+                        element=element,
+                        level=element_info.level or int(element.name[1]),
+                        heading_info=element_info
+                    )
+
+        except Exception as e:
+            self.logger.error(f"Error processing elements: {str(e)}")
+            raise
+
+
+    def _apply_heading_attributes(
+        self,
+        element: Tag,
+        level: int,
+        heading_info: MDElementInfo
+    ) -> None:
+        """
+        Apply heading-specific attributes and numbering.
+
+        Args:
+            element: The heading element
+            level: Heading level (1-6)
+            heading_info: Processed heading information
+        """
+        try:
+            # Get heading ID and numbered text from heading handler
+            heading_id, numbered_heading = self.heading_handler.process_heading(
+                text=element.text.strip(),
+                level=level
+            )
+
+            # Update element
+            element['id'] = heading_id
+            element.string = numbered_heading
+
+            # Add pilcrow (section marker)
+            soup = BeautifulSoup('', 'html.parser')
+            pilcrow = soup.new_tag('a', href=f"#{heading_id}")
+            pilcrow['class'] = 'pilcrow'
+            pilcrow.string = '¶'
+            element.append(pilcrow)
+
+        except Exception as e:
+            self.logger.error(f"Error applying heading attributes: {str(e)}")
+            raise
+
+    def _apply_latex_attributes(self, element: Tag, element_info: MDElementInfo) -> None:
+        """Apply LaTeX-specific attributes."""
+        try:
+            is_block = element_info.context.element_type == 'block'
+            element['class'] = 'katex-display' if is_block else 'katex-inline'
+            content = element.string or ''
+            if is_block and not content.startswith('$$'):
+                element.string = f'$${content}$$'
+            elif not is_block and not content.startswith('$'):
+                element.string = f'${content}$'
+        except Exception as e:
+            self.logger.error(f"Error applying LaTeX attributes: {str(e)}")
+
+
+    def _process_latex_equations(self, soup: BeautifulSoup) -> None:
+        """Process LaTeX equations for KaTeX rendering."""
+        try:
+            # Process block equations (already wrapped by LaTeX extension)
+            for equation in soup.find_all('div', class_='math-block'):
+                # Ensure proper KaTeX display mode class
+                equation['class'] = 'katex-display'
+                # Preserve original LaTeX content
+                content = equation.string.strip()
+                if not content.startswith('$$'):
+                    equation.string = f'$${content}$$'
+
+            # Process inline equations (already wrapped by LaTeX extension)
+            for equation in soup.find_all('span', class_='math-inline'):
+                # Ensure proper KaTeX inline class
+                equation['class'] = 'katex-inline'
+                # Preserve original LaTeX content
+                content = equation.string.strip()
+                if not content.startswith('$'):
+                    equation.string = f'${content}$'
+
+            # Add data attributes for debugging if needed
+            for eq in soup.find_all(['div', 'span'], class_=['katex-display', 'katex-inline']):
+                eq['data-latex-original'] = eq.string.strip()
+                eq['data-processed'] = 'true'
+
+            self.logger.debug(
+                f"Processed {len(soup.find_all('div', class_='katex-display'))} display equations and "
+                f"{len(soup.find_all('span', class_='katex-inline'))} inline equations"
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error processing LaTeX equations: {str(e)}")
+            raise
 
     def _process_todo_lists(self, soup: BeautifulSoup) -> None:
         """Process markdown todo lists into HTML checkboxes."""
@@ -214,3 +382,64 @@ class MarkdownTransformer:
             if language:
                 pre['data-language'] = language
                 code['class'] = code.get('class', []) + [f'language-{language}']
+
+
+    def _convert_markdown_to_html(
+            self,
+            content: str,
+            context: ProcessingContext
+        ) -> str:
+            """Convert Markdown content to HTML."""
+            return markdown.markdown(
+                content,
+                extensions=self.extensions,
+                extension_configs=self.extension_configs
+            )
+
+    def _convert_to_html(self, content: str) -> str:
+        """Custom HTML conversion with LaTeX handling."""
+        try:
+            # Convert Markdown to HTML with proper config
+            html_content = markdown.markdown(
+                content,
+                extensions=self.extensions,
+                extension_configs=self.extension_configs,
+                output_format='html'
+            )
+
+            soup = BeautifulSoup(html_content, 'html.parser')
+
+            # Process equations (rest of the method remains the same)
+            for block_eq in soup.find_all('div', class_='katex-block'):
+                content = block_eq.string
+                if content:
+                    # Ensure proper delimiters
+                    if not content.startswith('$$'):
+                        content = f'$${content}$$'
+                    block_eq.string = content
+                    block_eq['class'] = 'katex-display'
+
+            for inline_eq in soup.find_all('span', class_='katex-inline'):
+                content = inline_eq.string
+                if content:
+                    # Ensure proper delimiters
+                    if not content.startswith('$'):
+                        content = f'${content}$'
+                    inline_eq.string = content
+
+            # Create wrapper div with proper class
+            wrapper = soup.new_tag('div')
+            wrapper['class'] = 'katex-content'
+
+            # Move all content into wrapper
+            for child in soup.children:
+                wrapper.append(child)
+
+            # Replace soup contents with wrapped version
+            soup.clear()
+            soup.append(wrapper)
+
+            return str(soup)
+        except Exception as e:
+            self.logger.error(f"Error converting to HTML: {str(e)}")
+            raise

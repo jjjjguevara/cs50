@@ -265,6 +265,10 @@ class DITAProcessor:
         try:
             self.logger.debug("Initializing processors.")
 
+            # Initialize processors with features from config
+            processing_options = getattr(config, 'processing', ProcessingOptions())
+            features = processing_options.features
+
             # Initialize transformers
             self.dita_transformer = DITATransformer(self.dita_root)
             self.md_transformer = MarkdownTransformer(self.dita_root)
@@ -277,6 +281,7 @@ class DITAProcessor:
         except Exception as e:
             self.logger.error(f"Processor initialization failed: {str(e)}")
             raise
+
 
 
     def _init_paths(self) -> None:
@@ -1217,17 +1222,22 @@ class DITAProcessor:
             ProcessedContent: Final transformed content of the topic.
         """
         try:
-            self.logger.info(f"Processing topic at path: {topic_path}")
+                self.logger.info(f"Processing topic at path: {topic_path}")
 
-            # Parse the topic into a ParsedElement
-            parsed_element = self.dita_parser.parse_topic(topic_path)
-            self.logger.debug(f"Parsed element: ID={parsed_element.id}, Type={parsed_element.type}, Path={topic_path}")
+                # Parse the topic into a ParsedElement
+                parsed_element = self.dita_parser.parse_topic(topic_path)
 
-            # Transform the parsed element directly
-            transformed_content = self.transform(parsed_element)
+                # Add LaTeX detection and handling
+                if parsed_element.type == ElementType.MARKDOWN:
+                    has_latex = self._detect_latex(parsed_element.content)
+                    parsed_element.metadata['has_latex'] = has_latex
+                    if has_latex:
+                        self.logger.debug(f"LaTeX detected in topic {topic_path}")
 
-            # Return the ProcessedContent
-            return transformed_content
+                # Transform the parsed element
+                transformed_content = self.transform(parsed_element)
+
+                return transformed_content
 
         except Exception as e:
             self.logger.error(f"Error processing topic {topic_path}: {str(e)}", exc_info=True)
@@ -1244,10 +1254,14 @@ class DITAProcessor:
         try:
             self.logger.debug(f"Transforming element: {element.id} of type {element.type}")
 
+            # Get current processing features
+            features = self.current_context.map_context.features if self.current_context else ProcessingFeatures()
+
+            # Transform based on type with features
             if element.type == ElementType.MARKDOWN:
-                return self.md_transformer.transform_topic(element)  # Pass the entire element
+                transformed = self.md_transformer.transform_topic(element)
             elif element.type == ElementType.DITA:
-                return self.dita_transformer.transform_topic(element)  # Pass the entire element
+                transformed = self.dita_transformer.transform_topic(element)
             else:
                 raise ProcessingError(
                     error_type="transformation",
@@ -1255,6 +1269,8 @@ class DITAProcessor:
                     context=str(element.topic_path),
                     element_id=element.id
                 )
+
+            return transformed
 
         except Exception as e:
             self.logger.error(f"Transform failed: {str(e)}")
@@ -1288,6 +1304,21 @@ class DITAProcessor:
     ############################
     # Element level processing #
     ############################
+
+    def _detect_latex(self, content: str) -> bool:
+        """Detect LaTeX content in text."""
+        latex_patterns = [
+            r'\$\$(.*?)\$\$',  # Display math
+            r'(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)'  # Inline math
+        ]
+
+        import re
+        for pattern in latex_patterns:
+            if re.search(pattern, content, re.DOTALL):
+                self.logger.debug(f"Found LaTeX pattern: {pattern}")
+                return True
+        return False
+
 
     def _track_elements(self, discovered_map: DiscoveredMap) -> List[TrackedElement]:
         """
@@ -1620,53 +1651,6 @@ class DITAProcessor:
     # Pipeline Management #
     #######################
 
-    # Configuration
-    def configure_processor(self, config: DITAConfig) -> None:
-        """
-        Configure processor with provided settings.
-
-        Args:
-            config (DITAConfig): The configuration to apply to the processor.
-        """
-        try:
-            self.logger.debug("Configuring processor")
-
-            # Validate topics_dir and other paths
-            if not config.topics_dir:
-                self.logger.error("topics_dir is not configured or is None.")
-                raise ValueError("topics_dir must be set in the DITA configuration.")
-
-            # Apply paths directly from the DITAConfig
-            self.dita_root = config.topics_dir.parent  # Assuming topics and maps share a parent directory
-            self.maps_dir = config.maps_dir or self.dita_root / "maps"  # Fallback if maps_dir is not set
-            self.topics_dir = config.topics_dir
-            self.artifacts_dir = config.artifacts_dir or self.dita_root / "artifacts"  # Fallback
-            self.static_dir = config.static_dir or self.dita_root / "static"  # Fallback
-
-            self.logger.debug(f"Paths configured: topics_dir={self.topics_dir}, maps_dir={self.maps_dir}")
-
-            # Map processing settings
-            self.processing_options = ProcessingOptions(
-                process_latex=config.process_latex if hasattr(config, "process_latex") else False,
-                number_headings=config.number_headings,
-                enable_cross_refs=config.enable_cross_refs,
-                show_toc=config.show_toc,
-            )
-
-            self.logger.debug(f"Processing options configured: {self.processing_options}")
-
-            # Configure components
-            self._configure_transformers(config)
-            self._configure_handlers(config)
-
-            self.logger.debug("Processor configuration completed successfully")
-
-        except Exception as e:
-            self.logger.error(f"Processor configuration failed: {str(e)}", exc_info=True)
-            raise
-
-
-
     def _validate_paths(self, config: DITAConfig) -> bool:
         """
         Validate paths in the configuration.
@@ -1703,33 +1687,81 @@ class DITAProcessor:
             return False
 
 
-    def _configure_transformers(self, config: DITAConfig) -> None:
+    # Configuration
+    def configure_processor(self, config: DITAConfig) -> None:
         """
-        Configure transformers based on the provided configuration.
+        Configure processor with provided settings.
 
         Args:
-            config (DITAConfig): The processor configuration.
+            config (DITAConfig): The configuration to apply to the processor.
         """
-        self.logger.debug("Configuring transformers")
+        try:
+            self.logger.debug("Configuring processor")
 
-        # Derive root paths dynamically if they are not explicitly provided
-        dita_root = getattr(config, "topics_dir", None)
-        if not dita_root:
-            raise ValueError("DITAConfig must have a 'topics_dir' attribute to configure transformers.")
+            # Validate paths
+            if not config.topics_dir:
+                self.logger.error("topics_dir is not configured or is None.")
+                raise ValueError("topics_dir must be set in the DITA configuration.")
 
-        markdown_root = dita_root  # Assuming Markdown content is under the same root
+            # Configure paths
+            self.dita_root = config.topics_dir.parent
+            self.maps_dir = config.maps_dir or self.dita_root / "maps"
+            self.topics_dir = config.topics_dir
+            self.artifacts_dir = config.artifacts_dir or self.dita_root / "artifacts"
+            self.static_dir = config.static_dir or self.dita_root / "static"
 
-        # Initialize transformers with derived paths
-        self.dita_transformer = DITATransformer(dita_root)
-        self.md_transformer = MarkdownTransformer(markdown_root)
+            self.logger.debug(f"Paths configured: topics_dir={self.topics_dir}, maps_dir={self.maps_dir}")
 
-        # Additional transformer configurations
-        self.dita_transformer.configure(config)
-        self.md_transformer.configure(config)
+            # Store configuration
+            self.config = config
 
-        self.logger.debug("Transformers configured successfully")
+            # Configure components
+            self._configure_transformers(config)
+            self._configure_handlers(config)
+
+            self.logger.debug("Processor configuration completed successfully")
+
+        except Exception as e:
+            self.logger.error(f"Processor configuration failed: {str(e)}", exc_info=True)
+            raise
 
 
+    def _configure_transformers(self, config: DITAConfig) -> None:
+        """
+        Configure transformers with DITAConfig.
+
+        Args:
+            config: DITAConfig configuration object
+        """
+        try:
+            self.logger.debug("Configuring transformers")
+
+            # Configure DITA transformer
+            self.dita_transformer.configure(config)
+
+            # Configure Markdown transformer
+            self.md_transformer.configure(config)
+
+            self.logger.debug(
+                "Transformers configured successfully",
+                extra={
+                    'config': {
+                        'process_latex': config.process_latex,
+                        'number_headings': config.number_headings,
+                        'enable_cross_refs': config.enable_cross_refs,
+                        'show_toc': config.show_toc
+                    }
+                }
+            )
+
+        except Exception as e:
+            self.logger.error(f"Transformer configuration failed: {str(e)}")
+            raise ProcessingError(
+                error_type="configuration",
+                message="Failed to configure transformers",
+                context="transformer_configuration",
+                stacktrace=str(e)
+            )
 
     def _configure_handlers(self, config: DITAConfig) -> None:
         """

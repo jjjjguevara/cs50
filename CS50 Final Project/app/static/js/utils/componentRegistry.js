@@ -1,8 +1,8 @@
 import BrownianMotion3D from "@artifacts/components/brownian";
 
-const components = {
-  brownian: BrownianMotion3D,
-};
+// const components = {
+//   brownian: BrownianMotion3D,
+// };
 
 // Register components
 export function registerComponents() {

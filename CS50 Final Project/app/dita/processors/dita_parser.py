@@ -20,6 +20,7 @@ from ..models.types import (
 from ..utils.heading import HeadingHandler
 from app_config import DITAConfig
 import xml.etree.ElementTree as ET
+from lxml import etree
 
 
 
@@ -128,47 +129,60 @@ class DITAParser:
                 context=str(map_path)
             )
 
-
-
     def parse_topic(self, topic_path: Path) -> ParsedElement:
-        """
-        Parse a topic file into a ParsedElement.
-
-        Args:
-            topic_path (Path): Path to the topic file.
-
-        Returns:
-            ParsedElement: The parsed topic.
-        """
+        """Parse a topic file into a ParsedElement."""
         try:
-            # Normalize the topic path to avoid redundancies
-            base_dir = topic_path.parent
-            topic_path = base_dir / topic_path.name  # Ensure correct file path resolution
-
             # Read the file content
             content = topic_path.read_text()
 
             # Determine the element type
             element_type = (
-                ElementType.MARKDOWN if topic_path.suffix == '.md' else ElementType.DITA
+                ElementType.MARKDOWN if topic_path.suffix == '.md'
+                else ElementType.DITA
             )
 
-            # Create and return a ParsedElement
+            # Detect LaTeX content
+            has_latex = self._detect_latex(content)
+
+            # Create metadata
+            metadata = {
+                'has_latex': has_latex,
+                'latex_blocks': self._count_latex_blocks(content) if has_latex else 0,
+                'content_type': element_type.value
+            }
+
+            # Return ParsedElement without preprocessing
             return ParsedElement(
                 id=self.id_handler.generate_id(str(topic_path)),
                 topic_id=topic_path.stem,
                 type=element_type,
-                content=content,
+                content=content,  # Pass raw content
                 topic_path=topic_path,
                 source_path=topic_path,
-                metadata={}  # Add metadata extraction if needed
+                metadata=metadata
             )
         except Exception as e:
             self.logger.error(f"Error parsing topic {topic_path}: {str(e)}")
             raise
 
+    def _detect_latex(self, content: str) -> bool:
+            """Detect if content contains LaTeX equations."""
+            import re
+            latex_patterns = [
+                r'\$\$(.*?)\$\$',  # Display math
+                r'(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)'  # Inline math
+            ]
+            return any(re.search(pattern, content, re.DOTALL) for pattern in latex_patterns)
 
-
+    def _count_latex_blocks(self, content: str) -> dict:
+        """Count LaTeX blocks in content."""
+        import re
+        display_count = len(re.findall(r'\$\$(.*?)\$\$', content, re.DOTALL))
+        inline_count = len(re.findall(r'(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)', content))
+        return {
+            'display': display_count,
+            'inline': inline_count
+        }
 
 
     def parse_markdown_file(self, file_path: str) -> ParsedElement:
@@ -208,8 +222,15 @@ class DITAParser:
             self.logger.error(f"Error parsing Markdown file {file_path}: {e}")
             raise
 
-
-
+    def parse_xml_content(self, content: str) -> etree._Element:
+        """Parse raw XML content into etree."""
+        try:
+            content_bytes = content.encode('utf-8') if isinstance(content, str) else content
+            parser = etree.XMLParser(remove_blank_text=True)
+            return etree.fromstring(content_bytes, parser=parser)
+        except Exception as e:
+            self.logger.error(f"Error parsing XML content: {str(e)}")
+            raise
 
     def _extract_topics(self, dita_map_content: str, map_path: Path) -> List[ParsedElement]:
         try:
@@ -250,7 +271,6 @@ class DITAParser:
         except ET.ParseError as e:
             self.logger.error(f"XML parsing error for {map_path}: {str(e)}", exc_info=True)
             raise
-
 
 
     def _extract_elements(self, topic_content: str, topic_path: Path) -> List[ParsedElement]:

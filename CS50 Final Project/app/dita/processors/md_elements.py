@@ -12,13 +12,134 @@ from app.dita.utils.id_handler import DITAIDHandler
 from app.dita.models.types import MDElementInfo, MDElementContext, ElementAttributes, MDElementType
 
 
-class MarkdownContentProcessor:
+class MarkdownElementProcessor:
     """Defines Markdown element structures and attributes."""
 
     def __init__(self):
             self.logger = logging.getLogger(__name__)
             self.id_handler = DITAIDHandler()
             self._processed_elements: Dict[str, Any] = {}
+
+             # Define HTML mappings
+            self._element_mappings: Dict[MDElementType, str] = {
+                # Block elements
+                MDElementType.HEADING: 'h1',  # Adjusted based on level
+                MDElementType.PARAGRAPH: 'p',
+                MDElementType.UNORDERED_LIST: 'ul',
+                MDElementType.ORDERED_LIST: 'ol',
+                MDElementType.LIST_ITEM: 'li',
+                MDElementType.CODE_BLOCK: 'pre',
+                MDElementType.BLOCKQUOTE: 'blockquote',
+                MDElementType.TABLE: 'table',
+                MDElementType.TABLE_HEADER: 'th',
+                MDElementType.TABLE_ROW: 'tr',
+                MDElementType.TABLE_CELL: 'td',
+
+                # Inline elements
+                MDElementType.INLINE_CODE: 'code',
+                MDElementType.LINK: 'a',
+                MDElementType.IMAGE: 'img',
+                MDElementType.EMPHASIS: 'em',
+                MDElementType.STRONG: 'strong',
+                MDElementType.BOLD: 'strong',
+                MDElementType.ITALIC: 'em',
+                MDElementType.UNDERLINE: 'u',
+
+                # Extended elements
+                MDElementType.FIGURE: 'figure',
+                MDElementType.DEFINITION: 'dl',
+                MDElementType.TERM: 'dt',
+                MDElementType.PRE: 'pre',
+                MDElementType.CITE: 'cite',
+                MDElementType.QUOTE: 'q',
+
+                # Fallback
+                MDElementType.UNKNOWN: 'div'
+            }
+
+            self._class_mappings: Dict[MDElementType, List[str]] = {
+                # Block element classes
+                MDElementType.HEADING: ['md-heading'],
+                MDElementType.PARAGRAPH: ['md-p'],
+                MDElementType.UNORDERED_LIST: ['md-ul'],
+                MDElementType.ORDERED_LIST: ['md-ol'],
+                MDElementType.LIST_ITEM: ['md-li'],
+                MDElementType.CODE_BLOCK: ['code-block', 'highlight'],
+                MDElementType.BLOCKQUOTE: ['blockquote', 'md-quote'],
+                MDElementType.TABLE: ['table', 'table-bordered'],
+                MDElementType.TABLE_HEADER: ['th'],
+                MDElementType.TABLE_ROW: ['tr'],
+                MDElementType.TABLE_CELL: ['td'],
+
+                # Inline element classes
+                MDElementType.INLINE_CODE: ['code-inline'],
+                MDElementType.LINK: ['md-link'],
+                MDElementType.IMAGE: ['img-fluid', 'md-image'],
+                MDElementType.EMPHASIS: ['md-em'],
+                MDElementType.STRONG: ['md-strong'],
+                MDElementType.BOLD: ['md-bold'],
+                MDElementType.ITALIC: ['md-italic'],
+                MDElementType.UNDERLINE: ['md-underline'],
+
+                # Extended element classes
+                MDElementType.FIGURE: ['figure', 'md-figure'],
+                MDElementType.DEFINITION: ['md-definition'],
+                MDElementType.TERM: ['md-term'],
+                MDElementType.PRE: ['pre-formatted'],
+                MDElementType.CITE: ['md-cite'],
+                MDElementType.QUOTE: ['md-quote']
+            }
+
+            self._attribute_mappings: Dict[MDElementType, Dict[str, str]] = {
+                # Link attributes
+                MDElementType.LINK: {
+                    'target': '_blank',
+                    'rel': 'noopener noreferrer'
+                },
+
+                # Image attributes
+                MDElementType.IMAGE: {
+                    'loading': 'lazy',
+                    'decoding': 'async'
+                },
+
+                # Code block attributes
+                MDElementType.CODE_BLOCK: {
+                    'spellcheck': 'false',
+                    'translate': 'no'
+                },
+
+                # Table attributes
+                MDElementType.TABLE: {
+                    'role': 'grid',
+                    'aria-label': 'Content Table'
+                },
+
+                # Definition attributes
+                MDElementType.DEFINITION: {
+                    'role': 'definition'
+                },
+
+                # Blockquote attributes
+                MDElementType.BLOCKQUOTE: {
+                    'cite': ''  # Filled during processing
+                }
+            }
+
+
+    def get_html_tag(self, element_type: MDElementType, context: Optional[MDElementContext] = None) -> str:
+            """Get HTML tag for Markdown element type."""
+            if element_type == MDElementType.HEADING and context and context.level:
+                return f'h{context.level}'
+            return self._element_mappings.get(element_type, 'div')
+
+    def get_classes(self, element_type: MDElementType) -> List[str]:
+        """Get CSS classes for Markdown element type."""
+        return self._class_mappings.get(element_type, [])
+
+    def get_attributes(self, element_type: MDElementType) -> Dict[str, str]:
+        """Get HTML attributes for Markdown element type."""
+        return self._attribute_mappings.get(element_type, {})
 
     def process_element(self, elem: Tag, source_path: Optional[Path] = None) -> MDElementInfo:
         """

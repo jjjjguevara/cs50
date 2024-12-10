@@ -15,41 +15,5 @@
             href="../topics/cs50/final-project-presentation.md"
             type="concept"
         />
-        <topicref
-            href="../topics/cs50/development-timeline.md"
-            type="concept"
-        />
-        <topicref href="../topics/cs50/project-diagram.md" type="concept" />
-    </topicgroup>
-
-    <!-- Main Features -->
-    <topicgroup>
-        <topicmeta>
-            <navtitle>Final Project's features</navtitle>
-        </topicmeta>
-        <topicref href="../topics/cs50/main-features.md" type="concept" />
-    </topicgroup>
-
-    <!-- Specifications -->
-    <topicgroup>
-        <topicmeta>
-            <navtitle>Internal standards and specification</navtitle>
-        </topicmeta>
-                <topicref
-            href="../topics/cs50/specifications.md"
-            type="concept"
-        />
-                <topicref
-            href="../topics/cs50/content-standard.md"
-            type="concept"
-        />
-    </topicgroup>
-
-    <!-- Final Status -->
-    <topicgroup>
-        <topicmeta>
-            <navtitle>Status report</navtitle>
-        </topicmeta>
-        <topicref href="../topics/cs50/final-summary.md" type="concept" />
     </topicgroup>
 </map>

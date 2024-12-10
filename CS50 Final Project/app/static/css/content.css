@@ -407,7 +407,6 @@ h6:hover .pilcrow {
 
 /* LaTeX Equations */
 
-
 .katex {
     font-size: 1.1em;
 }
@@ -433,7 +432,6 @@ h6:hover .pilcrow {
     border: 1px solid #dc3545;
     border-radius: 0.25rem;
 }
-
 
 .latex-error {
     color: #dc3545;
@@ -526,83 +524,21 @@ h6:hover .pilcrow {
 }
 
 /* Code blocks */
+.code-block {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 1rem;
+    margin: 1rem 0;
+    position: relative;
+}
 
-def add_styles(self) -> str:
-    return """
-    .code-block {
-        background-color: #f8f9fa;
-        border-radius: 4px;
-        padding: 1rem;
-        margin: 1rem 0;
-        position: relative;
-    }
-
-    .code-label {
-        position: absolute;
-        top: 0;
-        right: 1rem;
-        padding: 0.25rem 0.5rem;
-        background-color: #e9ecef;
-        border-radius: 0 0 4px 4px;
-        font-size: 0.875rem;
-        color: #6c757d;
-    }
-
-    .todo-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .todo-item input[type="checkbox"] {
-        margin: 0;
-    }
-
-    .todo-item.completed {
-        text-decoration: line-through;
-        color: #6c757d;
-    }
-
-    .image-container {
-        margin: 1rem 0;
-        text-align: center;
-    }
-
-    .image-container img {
-        max-width: 100%;
-        height: auto;
-    }
-
-    .image-container figcaption {
-        margin-top: 0.5rem;
-        font-style: italic;
-        color: #6c757d;
-    }
-
-    def get_code_block_styles() -> str:
-        return """
-        .code-block-wrapper {
-            position: relative;
-            margin: 1rem 0;
-        }
-
-        .code-block {
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            padding: 1rem;
-            margin: 0;
-            overflow-x: auto;
-        }
-
-        .code-label {
-            position: absolute;
-            top: 0;
-            right: 1rem;
-            padding: 0.25rem 0.5rem;
-            background-color: #e9ecef;
-            border-radius: 0 0 4px 4px;
-            font-size: 0.875rem;
-            color: #6c757d;
-            z-index: 1;
-        }
-        """
+.code-label {
+    position: absolute;
+    top: 0;
+    right: 1rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #e9ecef;
+    border-radius: 0 0 4px 4px;
+    font-size: 0.875rem;
+    color: #6c757d;
+}

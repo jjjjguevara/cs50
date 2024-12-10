@@ -22,18 +22,7 @@ class LaTeXProcessor:
         self.renderer = KaTeXRenderer()
 
     def process_equations(self, equations: List[LaTeXEquation]) -> List[ProcessedEquation]:
-        """
-        Process LaTeX equations through validation and rendering pipeline.
-
-        Args:
-            equations: List of equations found in content
-
-        Returns:
-            List of processed equations
-
-        Raises:
-            ProcessingError: If processing fails
-        """
+        """Process LaTeX equations through validation and rendering pipeline."""
         try:
             self.logger.debug(f"Processing {len(equations)} LaTeX equations")
             processed_equations = []
@@ -42,19 +31,12 @@ class LaTeXProcessor:
                 try:
                     # Validate equation
                     if not self.validator.validate_equation(equation):
-                        raise ProcessingError(
-                            error_type="latex_validation",
-                            message=f"Invalid LaTeX equation: {equation.id}",
-                            context=equation.content
-                        )
+                        continue
 
-                    # Render equation
-                    html_content = self.renderer.render_equation(equation)
-
-                    # Create processed result
+                    # Store original content
                     processed = ProcessedEquation(
                         id=equation.id,
-                        html=html_content,
+                        html=equation.content,  # Store raw LaTeX
                         original=equation.content,
                         is_block=equation.is_block
                     )
@@ -63,7 +45,7 @@ class LaTeXProcessor:
 
                 except Exception as e:
                     self.logger.error(f"Failed to process equation {equation.id}: {str(e)}")
-                    raise
+                    continue
 
             return processed_equations
 

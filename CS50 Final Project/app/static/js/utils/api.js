@@ -54,4 +54,14 @@ export const getTopicContent = async (topicId) => {
   }
 };
 
+export const getDitaMaps = async () => {
+  try {
+    const response = await api.get("/api/ditamaps");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching ditamaps:", error);
+    throw error;
+  }
+};
+
 export { api };

@@ -83,7 +83,6 @@ class ParsedMap:
     metadata: Dict[str, Any]
     source_path: Path
 
-
 @dataclass
 class ProcessedContent:
     """Processed element content"""
@@ -171,7 +170,14 @@ class ProcessingFeatures:
     needs_toc: bool = True
     needs_artifacts: bool = False
     needs_latex: bool = False
-    # Future processing features can be added here
+    latex_settings: Optional[Dict[str, Any]] = field(default_factory=lambda: {
+        'macros': {
+            "\\N": "\\mathbb{N}",
+            "\\R": "\\mathbb{R}"
+        },
+        'throw_on_error': False,
+        'output_mode': 'html'
+    })
 
 # Heading tracking types
 @dataclass
@@ -311,7 +317,7 @@ class ProcessingOptions:
     enable_cross_refs: bool = True
     process_artifacts: bool = True
     show_toc: bool = True
-    features: Optional[Dict[str, bool]] = None
+    features: ProcessingFeatures = field(default_factory=ProcessingFeatures)
 
 @dataclass
 class DITAParserConfig:
@@ -348,7 +354,14 @@ class ProcessorConfig:
     paths: PathConfig
     processing: ProcessingOptions
     features: ProcessingFeatures
-
+    latex_config: Optional[Dict[str, Any]] = field(default_factory=lambda: {
+        'enabled': False,
+        'settings': {
+            'macros': {},
+            'throw_on_error': False,
+            'output_mode': 'html'
+        }
+    })
 
 ## Element tracking
 @dataclass
@@ -388,6 +401,7 @@ class DITAElementType(Enum):
     LIST_ITEM = "li"
     ORDERED_LIST = "ol"
     CODE_BLOCK = "codeblock"
+    BLOCKQUOTE = "blockquote"
     CODE_PHRASE = "codeph"
     FIGURE = "fig"
     IMAGE = "image"
@@ -418,6 +432,7 @@ class DITAElementType(Enum):
     CMD = "cmd"
     INFO = "info"
     TASKBODY = "taskbody"
+    WARNING = "warning"
     UNKNOWN = "unknown"
 
 @dataclass

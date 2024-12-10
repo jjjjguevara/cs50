@@ -12,33 +12,16 @@ class KaTeXRenderer:
     def render_equation(self, equation: LaTeXEquation) -> str:
         """
         Render LaTeX equation to HTML.
-
-        Args:
-            equation: Equation to render
-
-        Returns:
-            HTML string with rendered equation
-
-        Raises:
-            ValueError: If rendering fails
         """
         try:
             # Prepare equation class based on type
-            equation_class = "display-equation" if equation.is_block else "inline-equation"
+            equation_class = "katex-display" if equation.is_block else "katex-inline"
 
-            # Create KaTeX compatible HTML
-            html = (
-                f'<div class="katex-equation {equation_class}" '
-                f'data-equation-id="{equation.id}">'
-                f'{self._escape_html(equation.content)}'
-                f'</div>' if equation.is_block else
-                f'<span class="katex-equation {equation_class}" '
-                f'data-equation-id="{equation.id}">'
-                f'{self._escape_html(equation.content)}'
-                f'</span>'
-            )
-
-            return html
+            # Use proper KaTeX delimiters
+            if equation.is_block:
+                return f'<div class="{equation_class}" data-equation-id="{equation.id}">$${self._escape_html(equation.content)}$$</div>'
+            else:
+                return f'<span class="{equation_class}" data-equation-id="{equation.id}">${self._escape_html(equation.content)}$</span>'
 
         except Exception as e:
             self.logger.error(f"Failed to render equation {equation.id}: {str(e)}")

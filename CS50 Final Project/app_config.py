@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 from typing import Optional
+from dataclasses import dataclass
+import json
 
 class DevelopmentConfig:
     DEBUG = True
@@ -19,7 +21,6 @@ class DITAConfig:
     """
     Main configuration class for DITA processing.
     """
-
     def __init__(
         self,
         # Ensure topics_dir is either None or a Path object
@@ -31,6 +32,7 @@ class DITAConfig:
         enable_cross_refs: bool = True,
         show_toc: bool = True,
         process_latex: bool = False,
+        latex_settings: Optional[dict] = None,
     ):
 
 
@@ -41,10 +43,8 @@ class DITAConfig:
         if isinstance(env_var, str):
             topics_dir = Path(env_var)
 
-        # Now topics_dir is guaranteed to be a Path object or None
+        # Rest of the configuration setup
         self.topics_dir = topics_dir.resolve() if topics_dir else None
-
-        # Continue with the rest of the configuration setup
         self.maps_dir = maps_dir or self._default_dir("DITA_MAPS_DIR", "app/dita/maps")
         self.artifacts_dir = artifacts_dir or self._default_dir("DITA_ARTIFACTS_DIR", "app/dita/artifacts")
         self.static_dir = static_dir or self._default_dir("DITA_STATIC_DIR", "app/static")
@@ -52,6 +52,16 @@ class DITAConfig:
         self.enable_cross_refs = enable_cross_refs
         self.show_toc = show_toc
         self.process_latex = process_latex
+
+        # LaTeX configuration
+        self.latex_settings = latex_settings or {
+            'macros': {
+                "\\N": "\\mathbb{N}",
+                "\\R": "\\mathbb{R}"
+            },
+            'throw_on_error': False,
+            'output_mode': 'html'
+        }
 
     def _default_dir(self, env_var: str, default: str) -> Path:
         """
@@ -97,6 +107,16 @@ class DITAConfig:
         number_headings = os.getenv("DITA_NUMBER_HEADINGS", "False").lower() in ("true", "1", "yes")
         enable_cross_refs = os.getenv("DITA_ENABLE_CROSS_REFS", "True").lower() in ("true", "1", "yes")
         show_toc = os.getenv("DITA_SHOW_TOC", "True").lower() in ("true", "1", "yes")
+        process_latex = os.getenv("DITA_PROCESS_LATEX", "False").lower() in ("true", "1", "yes")
+
+        # Parse LaTeX settings from environment
+        latex_settings = {}
+        if process_latex:
+            latex_settings = {
+                'macros': json.loads(os.getenv("DITA_LATEX_MACROS", "{}")),
+                'throw_on_error': os.getenv("DITA_LATEX_THROW_ON_ERROR", "False").lower() in ("true", "1", "yes"),
+                'output_mode': os.getenv("DITA_LATEX_OUTPUT_MODE", "html")
+            }
 
         return cls(
             topics_dir=Path(topics_dir) if topics_dir else None,
@@ -106,8 +126,9 @@ class DITAConfig:
             number_headings=number_headings,
             enable_cross_refs=enable_cross_refs,
             show_toc=show_toc,
+            process_latex=process_latex,
+            latex_settings=latex_settings
         )
-
 
 class ConfigValidator:
     """
