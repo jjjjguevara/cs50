@@ -10,7 +10,8 @@ from app.dita.models.types import (
     DITAElementInfo,
     DITAElementContext,
     ElementAttributes,
-    ElementType
+    ElementType,
+    ProcessingPhase
 )
 from app.dita.processors.content_processors import ContentProcessor
 
@@ -24,6 +25,39 @@ class DITAElementProcessor:
         self.id_handler = DITAIDHandler()
         self._processed_elements: Dict[str, Any] = {}
         self.content_processor = content_processor
+        self.current_phase = ProcessingPhase.DISCOVERY
+
+        # Initialize processing caches
+        self._processed_elements: Dict[str, Any] = {}
+        self._memoized_results: Dict[str, Any] = {}
+        self._type_mapping_cache: Dict[str, DITAElementType] = {}
+        self._validation_cache: Dict[str, bool] = {}
+
+        # Initialize element tracking
+        self._tracked_elements: Dict[str, Any] = {}
+        self._element_hierarchy: Dict[str, List[str]] = {}
+        self._element_refs: Dict[str, int] = {}
+
+        # Initialize metadata tracking
+        self._metadata_cache: Dict[str, Dict[str, Any]] = {}
+        self._custom_metadata: Dict[str, Dict[str, Any]] = {}
+        self._metadata_validation: Dict[str, bool] = {}
+
+        # Initialize processing state
+        self._processing_depth: int = 0
+        self._current_topic_id: Optional[str] = None
+        self._current_element_id: Optional[str] = None
+        self._processing_enabled: bool = True
+        self._validation_enabled: bool = True
+        self._processed_count: int = 0
+        self._error_count: int = 0
+
+        # Initialize configuration
+        self._config = {
+            'strict_mode': False,
+            'enable_caching': True,
+            'enable_validation': True
+        }
 
         # Defines HTML output mappings for each DITA element type
         self._processing_rules: Dict[DITAElementType, Dict[str, Any]] = {
@@ -260,7 +294,10 @@ class DITAElementProcessor:
             }
         }
 
-
+    def set_processing_phase(self, phase: ProcessingPhase) -> None:
+        """Update current processing phase."""
+        self.current_phase = phase
+        self.logger.debug(f"Updated processing phase to {phase.value}")
 
     def process_elements(self, xml_tree: etree._Element) -> List[DITAElementInfo]:
         """
@@ -285,12 +322,12 @@ class DITAElementProcessor:
                     rules = self._processing_rules.get(element_type,
                                 self._processing_rules[DITAElementType.UNKNOWN])
 
-                    # Create element context
+                    # Create element context with proper dict conversion
                     context = DITAElementContext(
                         parent_id=None,  # Will be set if parent exists
                         element_type=elem.tag,
                         classes=rules['default_classes'],
-                        attributes=elem.attrib,
+                        attributes=dict(elem.attrib),  # Convert to dict
                         topic_type=self._get_topic_type(elem),
                         is_body=self._is_body_element(elem)
                     )
@@ -340,7 +377,7 @@ class DITAElementProcessor:
                         self._get_element_type(child),
                         self._processing_rules[DITAElementType.UNKNOWN]
                     ),
-                    context._replace(parent_id=attributes.id)
+                    context.replace(parent_id=attributes.id)
                 )
                 for child in elem
                 if isinstance(child.tag, str)
@@ -381,57 +418,50 @@ class DITAElementProcessor:
             )
 
     def _process_attributes(
-            self,
-            elem: etree._Element,
-            rules: Dict[str, Any]
-        ) -> ElementAttributes:
-        """
-        Process element attributes according to rules.
+       self,
+       elem: etree._Element,
+       rules: Dict[str, Any]
+   ) -> ElementAttributes:
+       try:
+           # Convert attrib to dict for type safety
+           elem_attrs = dict(elem.attrib)
 
-        Args:
-            elem: The element being processed
-            rules: Processing rules for this element
+           # Generate ID
+           element_id = elem_attrs.get("id") or self.id_handler.generate_content_id(
+               Path(str(elem.tag))
+           )
 
-        Returns:
-            ElementAttributes: Processed attributes
-        """
-        try:
-            # Generate ID
-            element_id = elem.get("id") or self.id_handler.generate_content_id(
-                Path(str(elem.tag))
-            )
+           # Get classes from rules and element
+           classes = rules['default_classes'].copy()
+           if elem_attrs.get('class'):
+               classes.extend(elem_attrs['class'].split())
 
-            # Get classes from rules and element
-            classes = rules['default_classes'].copy()
-            if elem.get('class'):
-                classes.extend(elem.get('class').split())
+           # Add type-specific classes if applicable
+           if 'type_class_mapping' in rules and 'type' in elem_attrs:
+               type_class = rules['type_class_mapping'].get(
+                   elem_attrs['type'],
+                   rules['type_class_mapping'].get('default', '')
+               )
+               if type_class:
+                   classes.append(type_class)
 
-            # Add type-specific classes if applicable
-            if 'type_class_mapping' in rules and 'type' in elem.attrib:
-                type_class = rules['type_class_mapping'].get(
-                    elem.attrib['type'],
-                    rules['type_class_mapping'].get('default', '')
-                )
-                if type_class:
-                    classes.append(type_class)
+           # Process custom attributes
+           custom_attrs = {}
+           # Add rule-defined attributes
+           if 'attributes' in rules:
+               custom_attrs.update(rules['attributes'])
+           # Add element attributes
+           custom_attrs.update(elem_attrs)
 
-            # Process custom attributes
-            custom_attrs = {}
-            # Add rule-defined attributes
-            if 'attributes' in rules:
-                custom_attrs.update(rules['attributes'])
-            # Add element attributes
-            custom_attrs.update(elem.attrib)
+           return ElementAttributes(
+               id=element_id,
+               classes=classes,
+               custom_attrs=custom_attrs
+           )
 
-            return ElementAttributes(
-                id=element_id,
-                classes=classes,
-                custom_attrs=custom_attrs
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing attributes: {str(e)}")
-            return ElementAttributes(id="", classes=[], custom_attrs={})
+       except Exception as e:
+           self.logger.error(f"Error processing attributes: {str(e)}")
+           return ElementAttributes(id="", classes=[], custom_attrs={})
 
 
     def _process_images(self, element_info: DITAElementInfo) -> DITAElementInfo:
@@ -1169,22 +1199,6 @@ class DITAElementProcessor:
             self.logger.error(f"Error getting body type: {str(e)}")
             return None
 
-    def _validate_element(self, elem: etree._Element) -> bool:
-        """
-        Validate an element to ensure it has meaningful content.
-
-        Args:
-            elem: The DITA XML element.
-
-        Returns:
-            bool: True if the element is valid, False otherwise.
-        """
-        try:
-            # Check if the element has text content
-            return bool(elem.text and str(elem.text).strip())
-        except Exception as e:
-            self.logger.error(f"Error validating element {etree.QName(elem).localname}: {str(e)}")
-            return False
 
     # ==========================================================================
     # VALIDATION
@@ -1376,15 +1390,10 @@ class DITAElementProcessor:
     # ==========================================================================
 
     def _get_element_metadata(self, elem: etree._Element) -> Dict[str, Any]:
-        """
-        Extract and process element metadata with extensibility for different formats and uses.
+        """Extract metadata from element with error handling."""
+        # Initialize element_type outside try block
+        element_type = DITAElementType.UNKNOWN
 
-        Args:
-            elem: The DITA XML element
-
-        Returns:
-            Dict[str, Any]: Processed metadata with standardized structure
-        """
         try:
             # Get element type and rules
             element_type = self._get_element_type(elem)
@@ -1423,11 +1432,18 @@ class DITAElementProcessor:
             }
             metadata['attributes'].update({k: v for k, v in standard_metadata.items() if v is not None})
 
-            # Add context information
+            # Add context information with proper parent type handling
+            parent_elem = elem.getparent()
+            parent_type = (
+                self._get_element_type(parent_elem).value
+                if parent_elem is not None
+                else None
+            )
+
             metadata['context'].update({
                 'topic_type': self._get_topic_type(elem),
                 'is_body': self._is_body_element(elem),
-                'parent_type': self._get_element_type(elem.getparent()).value if elem.getparent() is not None else None,
+                'parent_type': parent_type,
                 'path': self._get_element_path(elem)
             })
 
@@ -1465,13 +1481,17 @@ class DITAElementProcessor:
             return metadata
 
         except Exception as e:
-            self.logger.error(f"Error extracting metadata: {str(e)}")
-            return {
-                'element_info': {
-                    'type': element_type.value if element_type else 'unknown',
-                    'error': str(e)
+                self.logger.error(f"Error extracting metadata: {str(e)}")
+                return {
+                    'element_info': {
+                        'type': element_type.value,  # Now element_type is always defined
+                        'error': str(e)
+                    },
+                    'attributes': {},
+                    'context': {},
+                    'processing': {},
+                    'custom': {}
                 }
-            }
 
     def _extract_image_metadata(self, elem: etree._Element) -> Dict[str, Any]:
         """Extract image-specific metadata."""

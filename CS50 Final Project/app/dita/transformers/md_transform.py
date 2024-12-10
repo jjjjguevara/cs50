@@ -14,13 +14,16 @@ from ..models.types import (
     MDElementInfo,
     MDElementType,
     HeadingContext,
-    ProcessingContext
+    ProcessingContext,
+    ProcessedContent
 )
 from app_config import DITAConfig
 from ..utils.html_helpers import HTMLHelper
 from ..utils.heading import HeadingHandler
-from app.dita.processors.md_elements import MarkdownContentProcessor
+from app.dita.processors.content_processors import ContentProcessor
+from app.dita.processors.md_elements import MarkdownElementProcessor
 from app.dita.utils.latex.latex_processor import LaTeXProcessor
+from app.dita.utils.latex.latex_processor import KaTeXRenderer
 from app.dita.transformers.base_transformer import BaseTransformer
 
 
@@ -31,31 +34,71 @@ class MarkdownTransformer(BaseTransformer):
         self.root_path = root_path
         self.html_helper = HTMLHelper(root_path)
         self.heading_handler = HeadingHandler()
-        self.content_processor = MarkdownContentProcessor()
-        self.latex_processor = LaTeXProcessor()
 
-        # Update extensions configuration
+        # Initialize content processor first
+        content_processor = ContentProcessor(
+            dita_root=root_path,
+            markdown_root=root_path
+        )
+
+        # Pass content processor to markdown element processor
+        self.content_processor = MarkdownElementProcessor(content_processor)
+
+        # Initialize LaTeX pipeline components
+        self.latex_processor = LaTeXProcessor()
+        self.katex_renderer = KaTeXRenderer()
+
+        # Initialize markdown with core extensions only
         self.extensions = [
             'markdown.extensions.fenced_code',
-            'markdown.extensions.tables',
-            'app.dita.utils.markdown.latex_extension'
+            'markdown.extensions.tables'
         ]
 
-        # Fix extension configs to match LaTeXExtension's expected config
-        self.extension_configs = {
-            'app.dita.utils.markdown.latex_extension': {
-                'enable_numbering': False,
-                'enable_references': False,
-                'preserve_delimiters': True
-            }
+        # Element transformers mapping
+        self._element_transformers = {
+            MDElementType.HEADING: self._transform_heading,
+            MDElementType.PARAGRAPH: self._transform_paragraph,
+            MDElementType.LINK: self._transform_link,
+            MDElementType.IMAGE: self._transform_image,
+            MDElementType.CODE_BLOCK: self._transform_code_block,
+            MDElementType.BLOCKQUOTE: self._transform_blockquote,
+            MDElementType.TODO: self._transform_todo,
+            MDElementType.FOOTNOTE: self._transform_footnote,
+            MDElementType.YAML_METADATA: self._transform_metadata,
+            MDElementType.UNORDERED_LIST: self._transform_list,
+            MDElementType.ORDERED_LIST: self._transform_list,
+            MDElementType.LIST_ITEM: self._transform_list_item,
+            MDElementType.TABLE: self._transform_table,
+            MDElementType.BOLD: self._transform_bold,
+            MDElementType.ITALIC: self._transform_italic
         }
-    def configure(self, config: DITAConfig):
-            """
-            Apply additional configuration settings.
-            """
+
+
+    def configure(self, config: DITAConfig) -> None:
+        """Configure transformer with settings and handlers."""
+        try:
             self.logger.debug("Configuring MarkdownTransformer")
-            # Example: Add custom configuration logic
-            self.some_markdown_setting = getattr(config, 'markdown_setting', None)
+
+            # Configure handlers
+            self.heading_handler.set_numbering_enabled(config.number_headings)
+            self.html_helper.configure_helper(config)
+            self.id_handler.configure(config)
+            self.metadata_handler.configure(config)
+
+            # Configure processing features
+            self.enable_latex = config.process_latex
+            self.enable_numbering = config.number_headings
+            self.enable_cross_refs = config.enable_cross_refs
+            self.show_toc = config.show_toc
+
+            self.logger.debug(
+                f"Configured with features: latex={self.enable_latex}, "
+                f"numbering={self.enable_numbering}, cross_refs={self.enable_cross_refs}"
+            )
+
+        except Exception as e:
+            self.logger.error(f"MarkdownTransformer configuration failed: {str(e)}")
+            raise
 
     def transform_topic(
             self,
@@ -63,104 +106,41 @@ class MarkdownTransformer(BaseTransformer):
             context: ProcessingContext,
             html_converter: Optional[Callable[[str, ProcessingContext], str]] = None
         ) -> ProcessedContent:
-        """
-        Transform Markdown topic to HTML with proper context handling.
-
-        Args:
-            parsed_element: The parsed element to transform
-            context: Processing context for transformation
-            to_html_func: Optional custom HTML conversion function
-
-        Returns:
-            ProcessedContent: The transformed content with metadata
-        """
+        """Transform parsed Markdown to HTML with full pipeline integration."""
         try:
             self.logger.debug(f"Transforming Markdown topic: {parsed_element.topic_path}")
 
-            # Start new topic for heading tracking
+            # Extract metadata
+            metadata = self.metadata_handler.extract_metadata(
+                parsed_element.topic_path,
+                parsed_element.id
+            )
+
+            # Convert Markdown to initial HTML
+            html_content = self._convert_markdown_to_html(parsed_element.content, context)
+
+            # Parse with BeautifulSoup for processing
+            soup = BeautifulSoup(html_content, 'html.parser')
+
+            # Process headings first
             self.heading_handler.start_new_topic()
-
-            # Initialize content parts
-            content = parsed_element.content
-            html_parts = []
-
-            # Process frontmatter if present
-            if content.startswith('---'):
-                end_index = content.find('---', 3)
-                if end_index != -1:
-                    frontmatter = content[0:end_index+3]
-                    content = content[end_index+3:].strip()
-                    html_parts.append(
-                        f'<div class="code-block-wrapper">'
-                        f'<div class="code-label">yaml</div>'
-                        f'<pre class="code-block yaml-frontmatter">'
-                        f'<code>{html.escape(frontmatter)}</code></pre>'
-                        f'</div>'
-                    )
-
-            # Use markdown-specific converter if none provided
-            converter = html_converter or self._convert_markdown_to_html
-
-            # Call base transformer with our converter
-            return super().transform_topic(
-                parsed_element=parsed_element,
-                context=context,
-                html_converter=converter
-            )
-
-            try:
-                # Convert content with context
-                html_content = html_converter(content, context)
-
-                # Parse with BeautifulSoup for processing
-                soup = BeautifulSoup(html_content, 'html.parser')
-
-                # Process elements
-                self.process_elements(soup, parsed_element.topic_path)
-
-                # Add frontmatter if present
-                if html_parts:
-                    frontmatter_div = BeautifulSoup('\n'.join(html_parts), 'html.parser')
-                    soup.insert(0, frontmatter_div)
-
-                # Wrap in container with necessary classes
-                wrapper = soup.new_tag('div')
-                wrapper['class'] = 'markdown-content'
-                if parsed_element.metadata.get('has_latex'):
-                    wrapper['class'] += ' katex-content'
-
-                # Move all content to wrapper
-                for child in soup.children:
-                    wrapper.append(child)
-
-                # Create final processed content
-                return ProcessedContent(
-                    html=str(wrapper),
-                    element_id=parsed_element.id,
-                    metadata={
-                        **parsed_element.metadata,
-                        'content_type': 'markdown',
-                        'processed_at': datetime.now().isoformat(),
-                        'topic_path': str(parsed_element.topic_path)
-                    }
+            for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                level = int(heading.name[1])
+                heading_id, numbered_text = self.heading_handler.process_heading(
+                    heading.get_text(),
+                    level,
+                    is_topic_title=(level == 1 and 'title' in heading.get('class', []))
                 )
+                heading['id'] = heading_id
+                heading.string = numbered_text
 
-            except Exception as e:
-                self.logger.error(f"Error in HTML conversion: {str(e)}")
-                raise
+            # Process other elements
+            self.process_elements(soup, parsed_element)
 
-        except Exception as e:
-            self.logger.error(f"Error transforming Markdown topic: {str(e)}")
-            return ProcessedContent(
-                html=f"<div class='error'>Error processing topic {parsed_element.id}: {str(e)}</div>",
-                element_id=parsed_element.id,
-                metadata={
-                    'error': str(e),
-                    'error_type': type(e).__name__,
-                    'processed_at': datetime.now().isoformat()
-                }
-            )
-
+            # Process LaTeX if enabled
+            if self.enable_latex and metadata.get('has_latex'):
+                html_content = self._process_latex(str(soup))
+                soup = BeautifulSoup(html_content, 'html.parser')
 
     def process_elements(
             self,
@@ -443,3 +423,112 @@ class MarkdownTransformer(BaseTransformer):
         except Exception as e:
             self.logger.error(f"Error converting to HTML: {str(e)}")
             raise
+
+
+    def _transform_heading(self, element_info: MDElementInfo) -> str:
+        level = element_info.level or 1
+        heading_id, numbered_text = self.heading_handler.process_heading(
+            element_info.content, level
+        )
+        return f'<h{level} id="{heading_id}">{numbered_text}<a href="#{heading_id}" class="heading-anchor">¶</a></h{level}>'
+
+    def _transform_link(self, element_info: MDElementInfo) -> str:
+        href = element_info.attributes.custom_attrs.get('href', '')
+        classes = ' '.join(element_info.attributes.classes)
+        target = '_blank' if href.startswith(('http://', 'https://')) else None
+        target_attr = f' target="{target}"' if target else ''
+        return f'<a href="{href}" class="{classes}"{target_attr}>{element_info.content}</a>'
+
+    def _transform_image(self, element_info: MDElementInfo) -> str:
+        src = element_info.attributes.custom_attrs.get('src', '')
+        alt = element_info.attributes.custom_attrs.get('alt', '')
+        title = element_info.attributes.custom_attrs.get('title', '')
+        classes = ' '.join(['img-fluid', *element_info.attributes.classes])
+
+        img_html = f'<img src="{src}" alt="{alt}" class="{classes}"'
+        if title:
+            img_html += f' title="{title}"'
+        img_html += ' />'
+
+        if alt:  # Wrap in figure if there's alt text
+            return f'<figure class="figure">{img_html}<figcaption class="figure-caption">{alt}</figcaption></figure>'
+        return img_html
+
+    def _transform_code_block(self, element_info: MDElementInfo) -> str:
+        language = element_info.metadata.get('code_info', {}).get('language', '')
+        content = html.escape(element_info.content)
+
+        if language == 'mermaid':
+            return f'<div class="mermaid">{content}</div>'
+
+        lang_label = f'<div class="code-label">{language}</div>' if language else ''
+        return (
+            f'<div class="code-block-wrapper">'
+            f'{lang_label}'
+            f'<pre class="code-block" data-language="{language}">'
+            f'<code class="language-{language}">{content}</code>'
+            f'</pre></div>'
+        )
+
+    def _transform_todo(self, element_info: MDElementInfo) -> str:
+        is_checked = element_info.metadata.get('todo_info', {}).get('is_checked', False)
+        checked_attr = 'checked' if is_checked else ''
+        return (
+            f'<div class="todo-item">'
+            f'<input type="checkbox" {checked_attr} disabled />'
+            f'<label>{element_info.content}</label>'
+            f'</div>'
+        )
+
+    def _transform_list(self, element_info: MDElementInfo) -> str:
+        tag = 'ol' if element_info.type == MDElementType.ORDERED_LIST else 'ul'
+        classes = ' '.join(element_info.attributes.classes)
+        return f'<{tag} class="{classes}">{element_info.content}</{tag}>'
+
+
+    def _process_latex(self, content: str) -> str:
+        """Process LaTeX equations in content."""
+        try:
+            # Extract equations
+            block_pattern = r'\$\$(.*?)\$\$'
+            inline_pattern = r'(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)'
+
+            equations: List[LaTeXEquation] = []
+
+            # Process block equations
+            for i, match in enumerate(re.finditer(block_pattern, content, re.DOTALL)):
+                equations.append(LaTeXEquation(
+                    id=f'eq-block-{i}',
+                    content=match.group(1).strip(),
+                    is_block=True
+                ))
+
+            # Process inline equations
+            for i, match in enumerate(re.finditer(inline_pattern, content)):
+                equations.append(LaTeXEquation(
+                    id=f'eq-inline-{i}',
+                    content=match.group(1).strip(),
+                    is_block=False
+                ))
+
+            # Process equations through LaTeX pipeline
+            processed = self.latex_processor.process_equations(equations)
+
+            # Replace equations in content
+            for equation in processed:
+                if equation.is_block:
+                    content = content.replace(
+                        f'$${equation.original}$$',
+                        self.katex_renderer.render_equation(equation)
+                    )
+                else:
+                    content = content.replace(
+                        f'${equation.original}$',
+                        self.katex_renderer.render_equation(equation)
+                    )
+
+            return content
+
+        except Exception as e:
+            self.logger.error(f"LaTeX processing failed: {str(e)}")
+            return content

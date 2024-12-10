@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Dict, Any, Callable, List, Union
+from typing import Optional, Dict, Any, Callable, List, Union, cast
 from datetime import datetime
 from pathlib import Path
 from app.dita.utils.id_handler import DITAIDHandler
@@ -33,7 +33,7 @@ class ContentProcessor:
 
         # Initialize processors with reference to this processor for error handling
         self.dita_element_processor = DITAElementProcessor(self)
-        self.md_element_processor = MarkdownElementProcessor()
+        self.md_element_processor = MarkdownElementProcessor(self)
 
         # Initialize transformers
         self.dita_transformer = DITATransformer(dita_root)
