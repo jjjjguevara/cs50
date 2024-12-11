@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union, Any, Tuple
 import logging
 import yaml
+import sqlite3
 from lxml import etree
 from lxml.etree import _Element
 import frontmatter
@@ -32,6 +33,7 @@ class MetadataField:
 class MetadataHandler:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self._conn = self._init_db_connection()
         self._metadata_cache: Dict[str, Dict[str, Any]] = {}
         self.parser = etree.XMLParser(
             recover=True,
@@ -42,10 +44,27 @@ class MetadataHandler:
             no_network=True
         )
 
+    def _init_db_connection(self) -> sqlite3.Connection:
+            """Initialize SQLite connection with proper settings."""
+            try:
+                db_path = Path('metadata.db')  # You might want to make this configurable
+                conn = sqlite3.connect(str(db_path))
+                conn.row_factory = sqlite3.Row
+                return conn
+            except Exception as e:
+                self.logger.error(f"Failed to initialize database connection: {str(e)}")
+                raise
 
     def configure(self, config: DITAConfig) -> None:
         """Configure metadata handler."""
         try:
+            if hasattr(self, '_conn'):
+                self._conn.close()
+
+            # Use config's metadata DB path
+            self._conn = sqlite3.connect(str(config.metadata_db_path))
+            self._conn.row_factory = sqlite3.Row
+
             self.logger.debug("Configuring metadata handler")
             # Add any configuration-specific settings here
             self.logger.debug("Metadata handler configuration completed")
@@ -103,6 +122,46 @@ class MetadataHandler:
             except yaml.YAMLError as e:
                 raise ValueError(f"Error parsing YAML metadata: {e}")
         return {}, content
+
+    def add_index_entry(
+            self,
+            topic_id: str,
+            term: str,
+            entry_type: str,
+            target_id: Optional[str] = None
+        ) -> None:
+            """Add an index entry."""
+            try:
+                cur = self._conn.cursor()
+                cur.execute("""
+                    INSERT INTO index_entries (topic_id, term, type, target_id)
+                    VALUES (?, ?, ?, ?)
+                """, (topic_id, term, entry_type, target_id))
+                self._conn.commit()
+
+            except Exception as e:
+                self.logger.error(f"Error adding index entry: {str(e)}")
+
+    def add_conditional_attribute(
+        self,
+        name: str,
+        attr_type: str,
+        scope: str,
+        description: Optional[str] = None
+    ) -> None:
+        """Add a conditional processing attribute."""
+        try:
+            cur = self._conn.cursor()
+            cur.execute("""
+                INSERT INTO conditional_attributes
+                (name, attribute_type, scope, description)
+                VALUES (?, ?, ?, ?)
+            """, (name, attr_type, scope, description))
+            self._conn.commit()
+
+        except Exception as e:
+            self.logger.error(f"Error adding conditional attribute: {str(e)}")
+
 
     def _determine_content_type(self, file_path: Path) -> ContentType:
         """Determine content type from file extension"""
@@ -222,6 +281,9 @@ class MetadataHandler:
     def cleanup(self) -> None:
             """Clean up metadata handler resources and state."""
             try:
+                if hasattr(self, '_conn'):
+                    self._conn.close()
+
                 self.logger.debug("Starting metadata handler cleanup")
 
                 # Clear cached metadata

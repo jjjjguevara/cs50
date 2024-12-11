@@ -18,6 +18,8 @@ from ..models.types import (
 )
 from app_config import DITAConfig
 from .base_transformer import BaseTransformer
+from ..processors.dita_parser import DITAParser
+from app.dita.processors.content_processors import ContentProcessor
 from ..processors.dita_elements import DITAElementProcessor
 from ..utils.html_helpers import HTMLHelper
 from ..utils.id_handler import DITAIDHandler
@@ -33,57 +35,19 @@ class DITATransformer(BaseTransformer):
         super().__init__(dita_root)
         self.logger = logging.getLogger(__name__)
         self.dita_root = dita_root
+        self.dita_parser = DITAParser()
         self.html_helper = HTMLHelper(dita_root)
         self.id_handler = DITAIDHandler()
-        self.content_processor = DITAContentProcessor()
         self.heading_handler = HeadingHandler()
-        # Map DITA elements to HTML elements
-        self._element_mappings: Dict[DITAElementType, str] = {
-            DITAElementType.CONCEPT: 'article',
-            DITAElementType.TASK: 'article',
-            DITAElementType.REFERENCE: 'article',
-            DITAElementType.TOPIC: 'article',
-            DITAElementType.MAP: 'div',
-            DITAElementType.SECTION: 'section',
-            DITAElementType.PARAGRAPH: 'p',
-            DITAElementType.NOTE: 'div',
-            DITAElementType.TABLE: 'table',
-            DITAElementType.LIST: 'ul',
-            DITAElementType.LIST_ITEM: 'li',
-            DITAElementType.ORDERED_LIST: 'ol',
-            DITAElementType.CODE_BLOCK: 'pre',
-            DITAElementType.CODE_PHRASE: 'code',
-            DITAElementType.FIGURE: 'figure',
-            DITAElementType.IMAGE: 'img',
-            DITAElementType.XREF: 'a',
-            DITAElementType.LINK: 'a',
-            DITAElementType.TITLE: 'h1',
-            DITAElementType.SHORTDESC: 'p',
-            DITAElementType.ABSTRACT: 'div',
-            DITAElementType.PREREQ: 'div',
-            DITAElementType.STEPS: 'div',
-            DITAElementType.STEP: 'div',
-            DITAElementType.SUBSTEP: 'div',
-            DITAElementType.SUBSTEPS: 'div',
-            DITAElementType.DEFINITION: 'dl',
-            DITAElementType.TERM: 'dt',
-            DITAElementType.BOLD: 'strong',
-            DITAElementType.ITALIC: 'em',
-            DITAElementType.UNDERLINE: 'u',
-            DITAElementType.PHRASE: 'span',
-            DITAElementType.QUOTE: 'blockquote',
-            DITAElementType.PRE: 'pre',
-            DITAElementType.CITE: 'cite',
-            DITAElementType.METADATA: 'div',
-            DITAElementType.TOPICREF: 'div',
-            DITAElementType.TOPICGROUP: 'div',
-            DITAElementType.UL: 'ul',
-            DITAElementType.LI: 'li',
-            DITAElementType.CMD: 'div',
-            DITAElementType.INFO: 'div',
-            DITAElementType.TASKBODY: 'div',
-            DITAElementType.UNKNOWN: 'div'
-        }
+
+        # Initialize content processor first
+        content_processor = ContentProcessor(
+            dita_root=dita_root,
+            markdown_root=dita_root
+        )
+
+        self.content_processor = DITAElementProcessor(content_processor)
+
         # Map DITA elements to their transformers
         self._element_transformers: Dict[DITAElementType, Callable[[DITAElementInfo], str]] = {
             DITAElementType.CODE_BLOCK: self._transform_code_block,

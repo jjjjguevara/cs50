@@ -1,23 +1,51 @@
+# app/dita/config_manager.py
+from typing import Optional, TYPE_CHECKING
 from pathlib import Path
 import os
 import logging
+import sqlite3
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
-from app_config import (
-    DITAConfig,
-    get_environment
+from app_config import DITAConfig, get_environment
+from .models.types import (
+    ProcessingOptions,
+    DITAProcessingConfig,
+    DITAParserConfig,
+    ProcessingFeatures,
+    ProcessingPhase,
+    ProcessingState
 )
-from .models.types import ProcessingOptions, DITAProcessingConfig, DITAParserConfig
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from .context_manager import ContextManager
 
 class ConfigManager:
-    """Manages DITA configuration loading and validation."""
+    """Manages DITA configuration and context management."""
 
     def __init__(self):
         self._config: Optional[DITAConfig] = None
+        self._context_manager: Optional['ContextManager'] = None
         self.logger = logging.getLogger(__name__)
+
+    def initialize(self) -> None:
+        """Initialize both configuration and context management."""
+        try:
+            # Load configuration first
+            if not self._config:
+                self._config = self.load_config()
+
+            # Initialize context manager with metadata DB path
+            if not self._context_manager:
+                metadata_db_path = self._get_metadata_db_path()
+                self._ensure_metadata_db(metadata_db_path)
+                self._context_manager = ContextManager(metadata_db_path)
+
+            self.logger.info("Configuration and context management initialized successfully")
+
+        except Exception as e:
+            self.logger.error(f"Initialization failed: {str(e)}")
+            raise
 
     def load_config(self) -> 'DITAConfig':
         """
@@ -69,132 +97,6 @@ class ConfigManager:
         except Exception as e:
             self.logger.error(f"Failed to load DITA configuration: {str(e)}", exc_info=True)
             raise
-
-    def validate_config(self, config: 'DITAConfig') -> bool:
-        """
-        Validate the provided DITAConfig instance.
-
-        Args:
-            config: DITAConfig instance to validate.
-
-        Returns:
-            bool: True if the configuration is valid, False otherwise.
-        """
-        # Check required fields
-        required_fields = ['topics_dir']
-        for field in required_fields:
-            if not hasattr(config, field) or getattr(config, field) is None:
-                self.logger.error(f"Missing required configuration field: {field}")
-                return False
-
-        # Validate topics directory
-        topics_dir = config.topics_dir
-        if topics_dir is None:
-            self.logger.error("Topics directory is not set")
-            return False
-
-        try:
-            topics_path = Path(topics_dir)
-            if not topics_path.exists():
-                self.logger.error(f"Topics directory does not exist: {topics_dir}")
-                return False
-        except Exception as e:
-            self.logger.error(f"Invalid topics directory path: {str(e)}")
-            return False
-
-        return True
-
-
-
-    def get_config(self) -> 'DITAConfig':
-        """
-        Get current DITA configuration.
-
-        Returns:
-            Current DITAConfig instance
-        """
-        if not self._config:
-            self._config = self.load_config()
-        return self._config
-
-    def update_config(self, updates: Dict[str, Any]) -> None:
-        """
-        Update DITA configuration.
-
-        Args:
-            updates: Dictionary of updates to apply
-        """
-        try:
-            config = self.get_config()
-
-            # Apply updates
-            for key, value in updates.items():
-                if hasattr(config, key):
-                    setattr(config, key, value)
-
-            # Validate updated config
-            if not self.validate_config(config):
-                raise ValueError("Invalid configuration after update")
-
-            self._config = config
-
-        except Exception as e:
-            self.logger.error(f"Config update failed: {str(e)}")
-            raise
-
-    def validate_paths(self, config: 'DITAConfig') -> bool:
-        """
-        Validate the paths in the DITA configuration.
-
-        Args:
-            config (DITAConfig): The configuration to validate.
-
-        Returns:
-            bool: True if all required paths are valid, False otherwise.
-        """
-        try:
-            required_paths = [
-                config.topics_dir,
-                config.maps_dir,
-                config.artifacts_dir,
-                config.static_dir,
-            ]
-
-            # Check that all paths exist and are directories
-            for path in required_paths:
-                if not path.exists() or not path.is_dir():
-                    self.logger.error(f"Invalid path: {path} does not exist or is not a directory.")
-                    return False
-
-            return True
-        except Exception as e:
-            self.logger.error(f"Path validation failed: {str(e)}", exc_info=True)
-            return False
-
-
-    def setup_paths(self, config: 'DITAConfig') -> None:
-        """
-        Setup required paths in the DITA configuration.
-
-        Args:
-            config (DITAConfig): The configuration with paths to set up.
-        """
-        try:
-            paths_to_setup = [
-                config.topics_dir,
-                config.maps_dir,
-                config.artifacts_dir,
-                config.static_dir,
-            ]
-
-            for path in paths_to_setup:
-                if not path.exists():
-                    self.logger.info(f"Creating missing directory: {path}")
-                    path.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            self.logger.error(f"Path setup failed: {str(e)}", exc_info=True)
-            raise
-
 
     def _load_development_config(self) -> 'DITAConfig':
         """
@@ -250,6 +152,214 @@ class ConfigManager:
         except Exception as e:
             self.logger.error(f"Failed to load default configuration: {str(e)}", exc_info=True)
             raise
+
+
+    def get_config(self) -> 'DITAConfig':
+        """
+        Get current DITA configuration.
+
+        Returns:
+            Current DITAConfig instance
+        """
+        if not self._config:
+            self._config = self.load_config()
+        return self._config
+
+    def _get_metadata_db_path(self) -> Path:
+            """Get the metadata database path from config or environment."""
+            if self._config:
+                return self._config.metadata_db_path
+
+            # Default to environment variable or fallback path
+            db_path = os.getenv('DITA_METADATA_DB', 'metadata.db')
+            return Path(db_path)
+
+    def _ensure_metadata_db(self, db_path: Path) -> None:
+        """Ensure metadata database exists and has correct schema."""
+        try:
+            # Create parent directories if needed
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Initialize database connection
+            conn = sqlite3.connect(str(db_path))
+            cur = conn.cursor()
+
+            # Check if schema needs to be created
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            existing_tables = {row[0] for row in cur.fetchall()}
+
+            if not existing_tables:
+                self.logger.info("Creating metadata database schema")
+                self._create_metadata_schema(conn)
+
+            conn.close()
+            self.logger.debug(f"Metadata database ready at {db_path}")
+
+        except Exception as e:
+            self.logger.error(f"Failed to initialize metadata database: {str(e)}")
+            raise
+
+    def _create_metadata_schema(self, conn: sqlite3.Connection) -> None:
+        """Create metadata database schema."""
+        try:
+            with open('metadata.sql', 'r') as f:
+                schema = f.read()
+                conn.executescript(schema)
+            conn.commit()
+        except Exception as e:
+            self.logger.error(f"Failed to create schema: {str(e)}")
+            raise
+
+    def get_context_manager(self) -> 'ContextManager':
+            """Get the context manager instance."""
+            if not self._context_manager:
+                self.initialize()
+            if not self._context_manager:
+                raise RuntimeError("Failed to initialize context manager")
+            return self._context_manager
+
+    def update_config(self, updates: Dict[str, Any]) -> None:
+        """
+        Update DITA configuration and reinitialize context if needed.
+
+        Args:
+            updates: Dictionary of updates to apply
+        """
+        try:
+            config = self.get_config()
+
+            # Track if metadata DB path is changing
+            old_db_path = getattr(config, 'metadata_db_path', None)
+
+            # Apply updates
+            for key, value in updates.items():
+                if hasattr(config, key):
+                    setattr(config, key, value)
+
+            # Validate updated config
+            if not self.validate_config(config):
+                raise ValueError("Invalid configuration after update")
+
+            self._config = config
+
+            # Reinitialize context manager if DB path changed
+            new_db_path = getattr(config, 'metadata_db_path', None)
+            if old_db_path != new_db_path:
+                self.logger.info("Metadata DB path changed, reinitializing context manager")
+                if self._context_manager:
+                    self._context_manager.cleanup()
+                self._context_manager = None
+                self.initialize()
+
+        except Exception as e:
+            self.logger.error(f"Config update failed: {str(e)}")
+            raise
+
+    def validate_config(self, config: DITAConfig) -> bool:
+            """
+            Validate the provided DITAConfig instance.
+            """
+            try:
+                # Check required fields
+                required_fields = ['topics_dir', 'metadata_db_path']
+                for field in required_fields:
+                    if not hasattr(config, field) or getattr(config, field) is None:
+                        self.logger.error(f"Missing required configuration field: {field}")
+                        return False
+
+                # Validate topics directory
+                topics_dir = config.topics_dir
+                if topics_dir is None:
+                    self.logger.error("Topics directory is not set")
+                    return False
+
+                # Validate metadata DB path
+                db_path = config.metadata_db_path
+                if not db_path.parent.exists():
+                    self.logger.warning(f"Metadata DB directory doesn't exist: {db_path.parent}")
+                    try:
+                        db_path.parent.mkdir(parents=True, exist_ok=True)
+                    except Exception as e:
+                        self.logger.error(f"Could not create metadata DB directory: {e}")
+                        return False
+
+                return True
+
+            except Exception as e:
+                self.logger.error(f"Configuration validation failed: {str(e)}")
+                return False
+
+    def _validate_processing_features(self, config: DITAConfig) -> bool:
+        """Validate processing features configuration."""
+        try:
+            features = getattr(config, 'processing_features', ProcessingFeatures())
+
+            # Validate LaTeX settings if enabled
+            if features.needs_latex:
+                if not features.latex_settings:
+                    self.logger.error("LaTeX settings missing but LaTeX processing enabled")
+                    return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Processing features validation failed: {str(e)}")
+            return False
+
+
+
+    def setup_paths(self, config: 'DITAConfig') -> None:
+            """
+            Setup required paths in the DITA configuration.
+
+            Args:
+                config (DITAConfig): The configuration with paths to set up.
+            """
+            try:
+                paths_to_setup = [
+                    config.topics_dir,
+                    config.maps_dir,
+                    config.artifacts_dir,
+                    config.static_dir,
+                ]
+
+                for path in paths_to_setup:
+                    if not path.exists():
+                        self.logger.info(f"Creating missing directory: {path}")
+                        path.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                self.logger.error(f"Path setup failed: {str(e)}", exc_info=True)
+                raise
+
+    def validate_paths(self, config: 'DITAConfig') -> bool:
+        """
+        Validate the paths in the DITA configuration.
+
+        Args:
+            config (DITAConfig): The configuration to validate.
+
+        Returns:
+            bool: True if all required paths are valid, False otherwise.
+        """
+        try:
+            required_paths = [
+                config.topics_dir,
+                config.maps_dir,
+                config.artifacts_dir,
+                config.static_dir,
+            ]
+
+            # Check that all paths exist and are directories
+            for path in required_paths:
+                if not path.exists() or not path.is_dir():
+                    self.logger.error(f"Invalid path: {path} does not exist or is not a directory.")
+                    return False
+
+            return True
+        except Exception as e:
+            self.logger.error(f"Path validation failed: {str(e)}", exc_info=True)
+            return False
+
 
     def _validate_parser_config(self, parser_config: 'DITAParserConfig') -> bool:
         """
@@ -308,7 +418,17 @@ class ConfigManager:
             self.logger.error(f"Processing configuration validation failed: {str(e)}", exc_info=True)
             return False
 
-
+    def cleanup(self) -> None:
+        """Clean up resources."""
+        try:
+            if self._context_manager:
+                self._context_manager.cleanup()
+                self._context_manager = None
+            self._config = None
+            self.logger.debug("Configuration manager cleaned up successfully")
+        except Exception as e:
+            self.logger.error(f"Cleanup failed: {str(e)}")
+            raise
 
 # Create singleton instance
 config_manager = ConfigManager()

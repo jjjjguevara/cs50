@@ -28,6 +28,7 @@ class DITAConfig:
         maps_dir: Optional[Path] = None,
         artifacts_dir: Optional[Path] = None,
         static_dir: Optional[Path] = None,
+        metadata_db_path: Optional[Path] = None,
         number_headings: bool = False,
         enable_cross_refs: bool = True,
         show_toc: bool = True,
@@ -48,10 +49,12 @@ class DITAConfig:
         self.maps_dir = maps_dir or self._default_dir("DITA_MAPS_DIR", "app/dita/maps")
         self.artifacts_dir = artifacts_dir or self._default_dir("DITA_ARTIFACTS_DIR", "app/dita/artifacts")
         self.static_dir = static_dir or self._default_dir("DITA_STATIC_DIR", "app/static")
+        self.metadata_db_path = metadata_db_path or Path('metadata.db')
         self.number_headings = number_headings
         self.enable_cross_refs = enable_cross_refs
         self.show_toc = show_toc
         self.process_latex = process_latex
+
 
         # LaTeX configuration
         self.latex_settings = latex_settings or {

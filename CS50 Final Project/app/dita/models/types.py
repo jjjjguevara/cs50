@@ -1,9 +1,10 @@
 # app/dita/utils/types.py
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Union, Set
-from pathlib import Path
 from enum import Enum
+from typing import List, Dict, Optional, Any, Set, Union
+from pathlib import Path
+
 
 # Type aliases
 MetadataDict = Dict[str, Any]
@@ -49,6 +50,7 @@ class ElementType(Enum):
     TOPICREF = "topicref"
     UNKNOWN = "unknown"
 
+# Enums for validation
 class ProcessingPhase(Enum):
     """Phases of the processing pipeline"""
     DISCOVERY = "discovery"
@@ -58,11 +60,246 @@ class ProcessingPhase(Enum):
     ASSEMBLY = "assembly"
 
 class ProcessingState(Enum):
-    """States for processing pipeline"""
+    """Processing states."""
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
     ERROR = "error"
+
+@dataclass
+class ProcessingFeatures:
+    """Processing requirements"""
+    needs_heading_numbers: bool = True
+    needs_toc: bool = True
+    needs_artifacts: bool = False
+    needs_latex: bool = False
+    latex_settings: Optional[Dict[str, Any]] = field(default_factory=lambda: {
+        'macros': {
+            "\\N": "\\mathbb{N}",
+            "\\R": "\\mathbb{R}"
+        },
+        'throw_on_error': False,
+        'output_mode': 'html'
+    })
+
+class ContentScope(Enum):
+    """Scope for conditional attributes."""
+    GLOBAL = "global"
+    MAP = "map"
+    TOPIC = "topic"
+    ELEMENT = "element"
+
+class ContentItem:
+    """Base class for DITA content items (topics and maps)."""
+    id: str
+    file_path: Path
+    title: str
+    version: str = "1.0"
+    status: str = "draft"
+    language: str = "en"
+    content_hash: Optional[str] = None
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class Topic(ContentItem):
+    """Topic content model."""
+    type_id: int
+    short_desc: Optional[str] = None
+    parent_topic_id: Optional[str] = None
+    root_map_id: Optional[str] = None
+    specialization_type: Optional[str] = None
+    content_type: str = "dita"  # 'dita' or 'markdown'
+
+@dataclass
+class Map(ContentItem):
+    """Map content model."""
+    toc_enabled: bool = True
+    index_numbers_enabled: bool = True
+    context_root: Optional[str] = None
+
+
+@dataclass
+class MDElementContext:
+    """Context for markdown element processing"""
+    parent_id: Optional[str]
+    element_type: str
+    classes: List[str]
+    attributes: Dict[str, str]
+    topic_path: Optional[Path] = None
+
+
+
+@dataclass
+class ElementContext:
+    """Fine-grained context for element processing."""
+    element_id: str
+    topic_id: str
+    element_type: str
+    context_type: str  # body, abstract, prereq, etc.
+    parent_context: Optional[str]
+    level: int
+    xpath: str
+    conditions: Dict[str, Any] = field(default_factory=dict)
+    processing_features: ProcessingFeatures = field(default_factory=ProcessingFeatures)
+
+
+
+# Topic Type Requirements
+@dataclass
+class TopicTypeRequirement:
+    """Requirements for DITA topic type validation."""
+    id: int
+    type_id: int
+    element_name: str
+    min_occurs: int = 1
+    max_occurs: Optional[int] = None  # None means unbounded
+    parent_element: Optional[str] = None
+    description: Optional[str] = None
+
+@dataclass
+class TopicType:
+    """Represents a DITA topic type with its requirements."""
+    id: int
+    name: str
+    base_type: Optional[str]
+    description: str
+    schema_file: Optional[str]
+    is_custom: bool = False
+    requirements: List[TopicTypeRequirement] = field(default_factory=list)
+
+
+# Relationship Types
+@dataclass
+class TopicRelationship:
+    """Represents relationships between topics."""
+    relationship_id: int
+    source_topic_id: str
+    target_topic_id: str
+    relationship_type: str
+    weight: int = 0
+    created_at: datetime = field(default_factory=datetime.now)
+
+@dataclass
+class TopicElement:
+    """Represents an element within a topic."""
+    element_id: str
+    topic_id: str
+    element_type: str
+    parent_element_id: Optional[str]
+    sequence_num: int
+    content_hash: Optional[str]
+    context: Optional[ElementContext] = None
+    created_at: datetime = field(default_factory=datetime.now)
+
+
+
+
+@dataclass
+class HeadingContext:
+    """Context for heading processing"""
+    parent_id: Optional[str] = None
+    level: int = 1
+    is_topic_title: bool = False
+
+
+@dataclass
+class BaseContext:
+    """Base context information."""
+    id: str
+    content_type: str  # 'topic' or 'map'
+    processing_phase: ProcessingPhase
+    processing_state: ProcessingState
+    features: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class TopicContext:
+    """Context for topic processing."""
+    base: BaseContext
+    map_id: str
+    parent_id: Optional[str]
+    level: int
+    sequence_num: int
+    heading_number: Optional[str]
+    context_path: str
+    topic_type: TopicType
+    processing_features: ProcessingFeatures = field(default_factory=ProcessingFeatures)
+
+@dataclass
+class MapContext:
+    """Context for map processing."""
+    base: BaseContext  # base contains metadata
+    topic_order: List[str]
+    root_context: str
+    conditions: Dict[str, Any] = field(default_factory=dict)
+    features: ProcessingFeatures = field(default_factory=ProcessingFeatures)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ProcessingContext:
+    """Complete processing context combining map and topic contexts."""
+    map_context: MapContext
+    topics: Dict[str, TopicContext]  # topic_id -> TopicContext
+    current_topic_id: Optional[str] = None
+
+    def get_current_topic_context(self) -> Optional[TopicContext]:
+        if self.current_topic_id:
+            return self.topics.get(self.current_topic_id)
+        return None
+
+    def set_current_topic(self, topic_id: str) -> None:
+        if topic_id in self.topics:
+            self.current_topic_id = topic_id
+
+
+
+
+
+# Conditional Processing Types
+@dataclass
+class ConditionalAttribute:
+    """Represents a conditional processing attribute."""
+    attribute_id: int
+    name: str
+    description: Optional[str]
+    is_toggle: bool
+    context_dependent: bool
+    scope: str  # 'global', 'map', 'topic', or 'element'
+
+@dataclass
+class ConditionalValue:
+    """Represents a value for a conditional attribute."""
+    value_id: int
+    attribute_id: int
+    value: str
+    description: Optional[str]
+
+@dataclass
+class ContentCondition:
+    """Represents a condition applied to content."""
+    condition_id: int
+    content_id: str
+    attribute_id: int
+    value_id: int
+    content_type: str  # 'topic', 'map', or 'element'
+
+# Content Processing Types
+@dataclass
+class ProcessingMetadata:
+    """Metadata for content processing."""
+    processing_id: int
+    content_id: str
+    content_type: str
+    process_latex: bool = False
+    enable_cross_refs: bool = True
+    show_toc: bool = True
+    custom_settings: Dict[str, Any] = field(default_factory=dict)
+    created_at: datetime = field(default_factory=datetime.now)
+
+
 
 @dataclass
 class ParsedElement:
@@ -110,48 +347,9 @@ class DiscoveredMap:
     topics: List[DiscoveredTopic]
     metadata: Dict[str, Any]
 
-# Context tracking types
-@dataclass
-class MapContext:
-    """Tracking context for map processing"""
-    map_id: str
-    map_path: Path
-    metadata: Dict[str, Any]
-    topic_order: List[str]  # List of topic IDs in order
-    features: Dict[str, bool]  # Map-level features/conditions
-    type: ElementType
-
-@dataclass
-class TopicContext:
-    """Tracking context for topic processing"""
-    topic_id: str
-    topic_path: Path
-    type: ElementType
-    parent_map_id: str
-    metadata: Dict[str, Any]
-    features: Dict[str, bool]  # Topic-level features/conditions
-    state: ProcessingState = ProcessingState.PENDING
-
-@dataclass
-class ProcessingContext:
-    """Complete processing context"""
-    map_context: MapContext
-    topics: Dict[str, TopicContext]  # topic_id -> TopicContext
-    current_topic_id: Optional[str] = None
-
-# MD types
-@dataclass
-class MDElementContext:
-    """Context for markdown element processing"""
-    parent_id: Optional[str]
-    element_type: str
-    classes: List[str]
-    attributes: Dict[str, str]
-    topic_path: Optional[Path] = None
-
 # Feature types
 
-@dataclass
+
 @dataclass
 class ContentFeatures:
     """Detected content features"""
@@ -163,21 +361,7 @@ class ContentFeatures:
     has_artifacts: bool = False
     # Future features can be added here
 
-@dataclass
-class ProcessingFeatures:
-    """Processing requirements"""
-    needs_heading_numbers: bool = True
-    needs_toc: bool = True
-    needs_artifacts: bool = False
-    needs_latex: bool = False
-    latex_settings: Optional[Dict[str, Any]] = field(default_factory=lambda: {
-        'macros': {
-            "\\N": "\\mathbb{N}",
-            "\\R": "\\mathbb{R}"
-        },
-        'throw_on_error': False,
-        'output_mode': 'html'
-    })
+
 
 # Heading tracking types
 @dataclass
@@ -203,13 +387,6 @@ class HeadingState:
     def current_heading_number(self) -> str:
         """Return current heading number as a string."""
         return '.'.join(str(self.counters[f'h{l}']) for l in range(1, 7) if self.counters[f'h{l}'] > 0)
-
-@dataclass
-class HeadingContext:
-    """Context for heading processing"""
-    parent_id: Optional[str] = None
-    level: int = 1
-    is_topic_title: bool = False
 
 
 # Reference tracking types
