@@ -8,17 +8,23 @@ import logging, html
 from bs4 import BeautifulSoup, NavigableString, Tag
 import re
 import yaml
-
 from app.dita.processors.content_processors import ContentProcessor
 from app.dita.utils.id_handler import DITAIDHandler
-from app.models import Author, Citation, ContentStatus, TopicMetadata
+from app.dita.models.models import (
+    Author,
+    Citation,
+    ContentStatus,
+    ContentType,
+    TopicMetadata,
+    MapMetadata
+)
 from app.dita.models.types import (
-DITAElementType,
-MDElementInfo,
-MDElementContext,
-ElementAttributes,
-MDElementType,
-ProcessingPhase
+    DITAElementType,
+    MDElementInfo,
+    MDElementContext,
+    ElementAttributes,
+    MDElementType,
+    ProcessingPhase
 )
 
 
@@ -211,8 +217,36 @@ class MarkdownElementProcessor:
             # Get element content
             content = self._get_element_content(elem)
 
+            # Table specialization detection
+            if elem.name == 'table':
+                table_type = self._detect_table_specialization(elem)
+                metadata = {
+                    'table_info': {
+                        'type': table_type,
+                        'has_header': bool(elem.find('thead')),
+                        'rows': len(elem.find_all('tr')),
+                        'columns': len(elem.find_all('tr')[0].find_all(['td', 'th'])) if elem.find('tr') else 0
+                    }
+                }
+                # Add specialized metadata based on type
+                if table_type == 'bibliography':
+                    metadata['table_info'].update({
+                        'citation_format': elem.get('data-citation-format', 'apa'),
+                        'sort_by': elem.get('data-sort', 'author')
+                    })
+                elif table_type == 'glossary':
+                    metadata['table_info'].update({
+                        'sort_by': elem.get('data-sort', 'term'),
+                        'show_references': elem.get('data-show-refs', 'true') == 'true'
+                    })
+                elif table_type == 'metadata':
+                    metadata['table_info'].update({
+                        'visibility': elem.get('data-visibility', 'visible'),
+                        'collapsible': elem.get('data-collapsible', 'false') == 'true'
+                    })
+
             # Extract metadata
-            metadata = self._get_element_metadata(elem)
+            metadata = self._extract_element_metadata(elem)
 
             # Apply any type-specific attribute mappings
             if 'attribute_mapping' in rules:
@@ -448,6 +482,39 @@ class MarkdownElementProcessor:
        except Exception as e:
            self.logger.error(f"Error extracting content from {elem.name}: {str(e)}")
            return ""
+
+    def _detect_table_specialization(self, table: Tag) -> str:
+            """Detect table specialization based on context and attributes."""
+            # Check explicit type attribute
+            if table_type := table.get('data-table-type'):
+                return table_type
+
+            # Check classes
+            classes = table.get('class', [])
+            if isinstance(classes, str):
+                classes = classes.split()
+
+            specialization_classes = {
+                'bibliography': {'bibliography', 'citations', 'references'},
+                'glossary': {'glossary', 'terms', 'definitions'},
+                'metadata': {'metadata', 'article-info', 'topic-meta'}
+            }
+
+            for spec_type, spec_classes in specialization_classes.items():
+                if any(cls in classes for cls in spec_classes):
+                    return spec_type
+
+            # Content-based detection
+            if table.find('thead'):
+                headers = [th.get_text().lower() for th in table.find('thead').find_all('th')]
+                if {'term', 'definition'}.issubset(headers):
+                    return 'glossary'
+                if {'author', 'year', 'title'}.issubset(headers):
+                    return 'bibliography'
+                if {'property', 'value'}.issubset(headers):
+                    return 'metadata'
+
+            return 'default'
 
     def _get_footnote_content(self, elem: Tag, rules: dict) -> str:
        """
@@ -1103,85 +1170,743 @@ class MarkdownElementProcessor:
     # METADATA EXTRACTION
     # ==========================================================================
 
+    # PRIMARY METADATA EXTRACTION
 
-    def _get_element_metadata(self, elem: Tag) -> Dict[str, Any]:
-        """Extract metadata from Markdown element with SQL-compatible structure."""
+    def _extract_yaml_frontmatter(self, content: str) -> Dict[str, Any]:
+        """
+        Extract and validate YAML frontmatter from markdown content.
+        Handles document-level metadata including:
+        - Content info (title, slug, type)
+        - Publication info (dates, version)
+        - Authors and contributors
+        - Categories and keywords
+        - Media requirements
+        - Delivery settings
+        - Processing conditions
+        """
         try:
+            if not content.startswith('---'):
+                return {}
+
+            end_idx = content.find('---', 3)
+            if end_idx == -1:
+                return {}
+
+            # Parse YAML block
+            frontmatter = yaml.safe_load(content[3:end_idx])
+
             # Initialize metadata structure
             metadata = {
-                'element_info': {
-                    'type': self._get_element_type(elem).value,
-                    'tag': elem.name,
-                    'id': elem.get('id', ''),
-                    'created': datetime.now().isoformat(),
-                    'processing_phase': self.current_phase.value if hasattr(self, 'current_phase') else None
+                'content': {
+                    'title': frontmatter.get('title'),
+                    'slug': frontmatter.get('slug'),
+                    'content_type': frontmatter.get('content-type', 'article'),
+                    'categories': frontmatter.get('categories', []),
+                    'keywords': frontmatter.get('keywords', []),
+                    'language': frontmatter.get('language', 'en-US'),
+                    'region': frontmatter.get('region', 'Global'),
+                    'abstract': frontmatter.get('abstract')
                 },
-                'content_info': {
-                    'has_children': bool(elem.find_all()),
-                    'has_text': bool(elem.string),
-                    'word_count': len(elem.get_text().split()) if elem.string else 0
+                'publication': {
+                    'publication_date': frontmatter.get('publication-date'),
+                    'last_edited': frontmatter.get('last-edited'),
+                    'version': frontmatter.get('version', '1.0'),
+                    'status': frontmatter.get('status', 'draft'),
+                    'revision_history': frontmatter.get('revision-history', [])
                 },
-                'attributes': {},
-                'context': {},
-                'processing': {},
-                'custom': {}
+                'contributors': {
+                    'authors': [
+                        {
+                            'conref': author.get('conref'),
+                            'name': author.get('name'),
+                            'role': author.get('role', 'author')
+                        }
+                        for author in frontmatter.get('authors', [])
+                    ],
+                    'editor': frontmatter.get('editor'),
+                    'reviewer': frontmatter.get('reviewer')
+                },
+                'delivery': {
+                    'channel_web': frontmatter.get('delivery', {}).get('channel-web', True),
+                    'channel_app': frontmatter.get('delivery', {}).get('channel-app', False),
+                    'channel_print': frontmatter.get('delivery', {}).get('channel-print', False)
+                },
+                'media': {
+                    'pdf_download': frontmatter.get('media', {}).get('pdf-download'),
+                    'interactive_media': frontmatter.get('media', {}).get('interactive-media', False),
+                    'video_embed': frontmatter.get('media', {}).get('video-embed'),
+                    'simulation': frontmatter.get('media', {}).get('simulation')
+                },
+                'conditions': {
+                    'audience': frontmatter.get('audience', []),
+                    'subscription_required': frontmatter.get('features', {}).get('subscription-required', False),
+                    'featured': frontmatter.get('features', {}).get('featured', False),
+                    'accessibility_compliant': frontmatter.get('accessibility-compliant')
+                },
+                'analytics': frontmatter.get('analytics', {}),
+                'specialization': {
+                            'object': frontmatter.get('object', ''),
+                            'role': frontmatter.get('role', ''),
+                        },
+
+
             }
 
-            # Extract standard Markdown attributes
-            standard_metadata = {
-                'lang': elem.get('lang'),
-                'dir': elem.get('dir'),
-                'title': elem.get('title'),
-                'data-type': elem.get('data-type'),
-                'data-status': elem.get('data-status')
-            }
-            metadata['attributes'].update({k: v for k, v in standard_metadata.items() if v is not None})
+            # Validate required fields
+            if not metadata['content']['title']:
+                self.logger.warning("Missing required field: title")
 
-            # Add context information
-            parent = elem.find_parent()
-            metadata['context'].update({
-                'parent_type': parent.name if parent else None,
-                'path': self._get_element_path(elem),
-                'is_block': self._is_block_element(elem)
-            })
+            if not metadata['content']['slug']:
+                # Generate slug from title if missing
+                title = metadata['content']['title'] or ''
+                metadata['content']['slug'] = re.sub(
+                    r'[^\w\-]',
+                    '-',
+                    title.lower()
+                ).strip('-')
 
-            # Element-specific metadata extraction
+            return metadata
+
+        except yaml.YAMLError as e:
+            self.logger.error(f"Error parsing YAML frontmatter: {str(e)}")
+            return {}
+        except Exception as e:
+            self.logger.error(f"Error processing frontmatter: {str(e)}")
+            return {}
+
+    # SECONDARY METADATA EXTRACTION
+
+    def _extract_element_metadata(
+        self,
+        elem: Tag,
+        document_metadata: Dict[str, Any],
+        map_metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Extract element-level metadata with document context.
+        Handles:
+        - Element information
+        - Content status
+        - Conditional processing
+        - Content features
+        - Element specific data (images, code, etc.)
+
+        Args:
+            elem: BeautifulSoup tag to process
+            document_metadata: YAML frontmatter context
+        """
+        try:
             element_type = self._get_element_type(elem)
-            if element_type == MDElementType.IMAGE:
-                metadata.update(self._extract_image_metadata(elem))
-            elif element_type == MDElementType.LINK:
-                metadata.update(self._extract_link_metadata(elem))
+
+            # Core element metadata
+            metadata = {
+                'element': {
+                    'type': element_type.value,
+                    'tag': elem.name,
+                    'id': elem.get('id') or self.id_handler.generate_id(str(elem.name)),
+                    'classes': elem.get('class', []),
+                    'title': elem.get('title'),
+                    'language': elem.get('lang', document_metadata.get('content', {}).get('language', 'en-US')),
+                    'has_children': bool(elem.find_all()),
+                    'has_text': bool(elem.string)
+                },
+                'content': {
+                    'word_count': len(elem.get_text().split()) if elem.string else 0,
+                    'text_direction': elem.get('dir', 'ltr'),
+                    'is_block': self._is_block_element(elem)
+                },
+                'processing': {
+                    'state': 'pending',
+                    'visibility': True,  # Default to visible
+                    'priority': elem.get('data-priority', 'normal')
+                },
+                'specialization': {
+                    'object': document_metadata.get('specialization', {}).get('object', ''),
+                    'role': document_metadata.get('specialization', {}).get('role', '')
+                },
+                'context': self._determine_element_context(elem),
+                'conditions': self._extract_conditional_metadata(elem, document_metadata, map_metadata),
+            }
+
+            # Add conditional processing based on document settings
+            if conditions := document_metadata.get('conditions'):
+                metadata['conditions'] = {
+                    'audience': elem.get('data-audience', conditions.get('audience', [])),
+                    'subscription_required': elem.get(
+                        'data-subscription',
+                        conditions.get('subscription_required', False)
+                    ),
+                    'platform': elem.get('data-platform', []),
+                    'product': elem.get('data-product', [])
+                }
+
+            # Handle element-specific metadata
+            elif element_type == MDElementType.IMAGE:
+                metadata['media'] = {
+                    'src': elem.get('src', ''),
+                    'alt': elem.get('alt', ''),
+                    'title': elem.get('title', ''),
+                    'width': elem.get('width'),
+                    'height': elem.get('height'),
+                    'loading': elem.get('loading', 'lazy'),
+                    'interactive': document_metadata.get('media', {}).get('interactive_media', False)
+                }
+
+
             elif element_type == MDElementType.CODE_BLOCK:
-                metadata.update(self._extract_code_metadata(elem))
-            elif element_type == MDElementType.TODO:
-                metadata.update(self._extract_todo_metadata(elem))
+                metadata['code'] = {
+                    'language': self._get_code_language(elem),
+                    'line_count': len(elem.get_text().splitlines()),
+                    'is_mermaid': bool(self._get_code_language(elem) == 'mermaid'),
+                    'show_line_numbers': elem.get('data-show-line-numbers', 'true').lower() == 'true'
+                }
 
-            # Extract custom metadata from data-* attributes
-            custom_metadata = {
+            elif element_type == MDElementType.LINK:
+                href = str(elem.get('href', ''))
+                metadata['link'] = {
+                    'href': href,
+                    'title': elem.get('title'),
+                    'is_external': href.startswith(('http://', 'https://')),
+                    'is_conref': href.startswith('conref:'),
+                    'target': elem.get('target', '_blank' if href.startswith(('http://', 'https://')) else None)
+
+                }
+
+            # Handle custom data attributes
+            custom_attrs = {
                 k: v for k, v in elem.attrs.items()
-                if k.startswith('data-') and k not in {'data-type', 'data-status'}
+                if k.startswith('data-') and k not in {
+                    'data-audience', 'data-subscription',
+                    'data-platform', 'data-product',
+                    'data-priority', 'data-show-line-numbers'
+                }
             }
-            if custom_metadata:
-                metadata['custom'].update(custom_metadata)
+            if custom_attrs:
+                metadata['custom'] = custom_attrs
 
-            # Add SQL compatibility hints
-            metadata['_extensible'] = {
-                'json_compatible': True,
-                'sql_compatible': True,
-                'conversion_hints': self._get_conversion_hints(element_type),
-                'schema_version': '1.0'
-            }
+            # Add accessibility information if required
+            if document_metadata.get('conditions', {}).get('accessibility_compliant'):
+                metadata['accessibility'] = {
+                    'role': elem.get('role'),
+                    'aria-label': elem.get('aria-label'),
+                    'aria-describedby': elem.get('aria-describedby')
+                }
 
             return metadata
 
         except Exception as e:
-            self.logger.error(f"Error extracting metadata: {str(e)}")
-            return {
-                'element_info': {
-                    'type': MDElementType.UNKNOWN.value,
-                    'error': str(e)
+            self.logger.error(f"Error extracting element metadata: {str(e)}")
+            return self.content_processor.create_md_error_element(
+                error=e,
+                element_context=str(elem.name)
+            )
+
+
+    def _extract_element_attributes(
+        self,
+        elem: Tag,
+        document_metadata: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Extract and normalize element attributes with document context.
+
+        Args:
+            elem: BeautifulSoup tag to process
+            document_metadata: YAML frontmatter context
+
+        Returns:
+            Dict containing:
+            - Core attributes (id, class, etc.)
+            - Conditional attributes (audience, platform, etc.)
+            - Processing attributes (state, priority)
+            - Feature flags
+            - Custom data attributes
+        """
+        try:
+            # Initialize base attributes structure
+            attributes = {
+                'core': {},
+                'conditional': {},
+                'processing': {},
+                'features': {},
+                'custom': {}
+            }
+
+            # Process core attributes with proper list handling
+            core_attrs = {
+                'id': elem.get('id'),
+                'class': elem.get('class'),
+                'title': elem.get('title'),
+                'style': elem.get('style'),
+                'lang': elem.get('lang', document_metadata.get('content', {}).get('language')),
+                'dir': elem.get('dir', 'ltr')
+            }
+
+            # Clean and normalize core attributes
+            for key, value in core_attrs.items():
+                if value is not None:
+                    # Handle list attributes (like classes)
+                    if isinstance(value, list):
+                        attributes['core'][key] = ' '.join(value)
+                    else:
+                        attributes['core'][key] = str(value)
+
+            # Process conditional attributes based on document settings
+            document_conditions = document_metadata.get('conditions', {})
+            if document_conditions:
+                conditional_attrs = {
+                    'audience': elem.get('data-audience', document_conditions.get('audience', [])),
+                    'platform': elem.get('data-platform', []),
+                    'product': elem.get('data-product', []),
+                    'revision': elem.get('data-revision'),
+                    'importance': elem.get('data-importance', 'normal'),
+                    'visibility': elem.get('data-visibility', 'show')
+                }
+
+                # Clean and normalize conditional attributes
+                for key, value in conditional_attrs.items():
+                    if value:
+                        if isinstance(value, list):
+                            attributes['conditional'][key] = [str(v) for v in value]
+                        else:
+                            attributes['conditional'][key] = str(value)
+
+            # Process processing attributes
+            processing_attrs = {
+                'state': elem.get('data-state', 'active'),
+                'priority': elem.get('data-priority', 'normal'),
+                'processing-role': elem.get('data-processing-role', 'normal')
+            }
+            attributes['processing'].update(processing_attrs)
+
+            # Process feature flags
+            document_features = document_metadata.get('features', {})
+            if document_features:
+                feature_attrs = {
+                    'interactive': elem.get('data-interactive', document_features.get('interactive_media', False)),
+                    'subscription-required': elem.get('data-subscription', document_features.get('subscription_required', False)),
+                    'show-line-numbers': str(elem.get('data-show-line-numbers', 'true')).lower() == 'true',
+                    'mermaid': elem.get('data-mermaid', False)
+                }
+                attributes['features'].update(feature_attrs)
+
+            # Handle accessibility attributes if compliance is required
+            if document_metadata.get('conditions', {}).get('accessibility_compliant'):
+                accessibility_attrs = {
+                    'role': elem.get('role'),
+                    'aria-label': elem.get('aria-label'),
+                    'aria-describedby': elem.get('aria-describedby'),
+                    'aria-hidden': elem.get('aria-hidden'),
+                    'tabindex': elem.get('tabindex')
+                }
+                # Only add non-None accessibility attributes
+                attributes['core'].update({k: v for k, v in accessibility_attrs.items() if v is not None})
+
+            # Process remaining data-* attributes as custom
+            custom_attrs = {
+                k: v for k, v in elem.attrs.items()
+                if k.startswith('data-') and k not in {
+                    'data-audience', 'data-platform', 'data-product',
+                    'data-state', 'data-priority', 'data-processing-role',
+                    'data-interactive', 'data-subscription', 'data-show-line-numbers',
+                    'data-mermaid', 'data-revision', 'data-importance', 'data-visibility'
                 }
             }
+            if custom_attrs:
+                attributes['custom'].update(custom_attrs)
+
+            return attributes
+
+        except Exception as e:
+            self.logger.error(f"Error extracting element attributes: {str(e)}")
+            return {
+                'core': {'error': str(e)},
+                'conditional': {},
+                'processing': {},
+                'features': {},
+                'custom': {}
+            }
+
+    def _extract_element_specific_metadata(
+        self,
+        elem: Tag,
+        element_type: MDElementType,
+        document_metadata: Dict[str, Any],
+        specialization: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Extract element-specific metadata with type-based handling.
+
+        Args:
+            elem: BeautifulSoup tag to process
+            element_type: Type of markdown element
+            document_metadata: YAML frontmatter context
+
+        Returns:
+            Dict containing element-specific metadata
+        """
+        try:
+            # Element type specific extraction
+            if element_type == MDElementType.IMAGE:
+                return {
+                    'media': {
+                        'src': elem.get('src', ''),
+                        'alt': elem.get('alt', ''),
+                        'title': elem.get('title', ''),
+                        'width': elem.get('width'),
+                        'height': elem.get('height'),
+                        'loading': elem.get('loading', 'lazy'),
+                        'interactive': document_metadata.get('media', {}).get('interactive_media', False),
+                        'figure_id': self.id_handler.generate_id(f"fig-{elem.get('alt', '')}"),
+                        'caption': elem.parent.find('figcaption').get_text() if elem.parent and elem.parent.name == 'figure' and elem.parent.find('figcaption') else ''
+                    }
+                }
+
+            elif element_type == MDElementType.LINK:
+                href = str(elem.get('href', ''))
+                return {
+                    'link': {
+                        'href': href,
+                        'title': elem.get('title'),
+                        'text': elem.get_text().strip(),
+                        'is_external': href.startswith(('http://', 'https://')),
+                        'is_conref': href.startswith('conref:'),
+                        'target': elem.get('target', '_blank' if href.startswith(('http://', 'https://')) else None),
+                        'rel': elem.get('rel', 'noopener noreferrer' if href.startswith(('http://', 'https://')) else None),
+                        'reference_type': self._determine_reference_type(href)
+                    }
+                }
+
+            elif element_type == MDElementType.CODE_BLOCK:
+                language = self._get_code_language(elem)
+                return {
+                    'code': {
+                        'language': language,
+                        'line_count': len(elem.get_text().splitlines()),
+                        'is_mermaid': language == 'mermaid',
+                        'show_line_numbers': str(elem.get('data-show-line-numbers', 'true')).lower() == 'true',
+                        'highlight_lines': self._parse_highlight_lines(str(elem.get('data-highlight-lines', ''))),
+                        'caption': elem.get('data-caption'),
+                        'executable': str(elem.get('data-executable', 'false')).lower() == 'true'
+                    }
+                }
+
+            elif element_type == MDElementType.HEADING:
+                level = int(elem.name[1])  # h1 -> 1, h2 -> 2, etc.
+                return {
+                    'heading': {
+                        'level': level,
+                        'text': elem.get_text().strip(),
+                        'is_topic_title': level == 1 and elem.get('class', []) == ['title'],
+                        'numbering_enabled': document_metadata.get('features', {}).get('index-numbers', True),
+                        'anchor_id': self.id_handler.generate_id(elem.get_text().strip()),
+                        'toc_enabled': level <= 3 and document_metadata.get('features', {}).get('show-toc', True)
+                    }
+                }
+
+            elif element_type == MDElementType.TABLE:
+                return {
+                    'table': {
+                        'has_header': bool(elem.find('thead')),
+                        'rows': len(elem.find_all('tr')),
+                        'columns': len(elem.find_all('tr')[0].find_all(['td', 'th'])) if elem.find('tr') else 0,
+                        'caption': elem.find('caption').get_text() if elem.find('caption') else '',
+                        'responsive': 'table-responsive' in elem.get('class', []),
+                        'bordered': 'table-bordered' in elem.get('class', [])
+                    }
+                }
+
+            elif element_type == MDElementType.BLOCKQUOTE:
+                return {
+                    'quote': {
+                        'text': elem.get_text().strip(),
+                        'cite': elem.get('cite'),
+                        'author': elem.find('cite').get_text() if elem.find('cite') else '',
+                        'is_pullquote': 'pullquote' in elem.get('class', []),
+                        'is_callout': 'callout' in elem.get('class', [])
+                    }
+                }
+
+            elif element_type == MDElementType.TODO:
+                text = elem.get_text().strip()
+                return {
+                    'todo': {
+                        'is_checked': text.startswith('[x]'),
+                        'text': text[3:].strip() if text.startswith(('[x]', '[ ]')) else text,
+                        'priority': elem.get('data-priority', 'normal'),
+                        'due_date': elem.get('data-due-date'),
+                        'assigned_to': elem.get('data-assigned-to')
+                    }
+                }
+
+            # Return empty dict for unsupported types
+            return {}
+
+        except Exception as e:
+            self.logger.error(f"Error extracting specific metadata for {element_type}: {str(e)}")
+            return {}
+
+    def _determine_element_context(self, elem: Tag) -> str:
+        element_type = self._get_element_type(elem)
+        if element_type == MDElementType.TABLE:
+            return self._determine_table_context(elem)
+        elif element_type == MDElementType.IMAGE:
+            return self._determine_image_context(elem)
+        elif element_type == MDElementType.CODE_BLOCK:
+            return self._determine_code_context(elem)
+        # Add more cases for other element types as needed
+        return 'default'
+
+    def _determine_table_context(self, table: Tag) -> str:
+        if table.find('thead'):
+            headers = [th.get_text().lower() for th in table.find('thead').find_all('th')]
+            if {'term', 'definition'}.issubset(headers):
+                return 'glossary'
+            if {'author', 'year', 'title'}.issubset(headers):
+                return 'bibliography'
+            if {'property', 'value'}.issubset(headers):
+                return 'metadata'
+        return 'default'
+
+    def _determine_image_context(self, image: Tag) -> str:
+        if 'figure' in image.get('class', []):
+            return 'figure'
+        if 'diagram' in image.get('class', []):
+            return 'diagram'
+        if 'screenshot' in image.get('class', []):
+            return 'screenshot'
+        return 'default'
+
+    def _determine_code_context(self, code: Tag) -> str:
+        if 'language-python' in code.get('class', []):
+            return 'python'
+        if 'language-java' in code.get('class', []):
+            return 'java'
+        if 'language-cpp' in code.get('class', []):
+            return 'cpp'
+        return 'default'
+
+    def _determine_reference_type(self, href: str) -> str:
+        """Determine link reference type."""
+        if href.startswith('conref:'):
+            return 'conref'
+        elif href.startswith(('http://', 'https://')):
+            return 'external'
+        elif href.startswith('#'):
+            return 'local'
+        elif href.startswith('[[') and href.endswith(']]'):
+            return 'wiki'
+        return 'internal'
+
+    def _parse_highlight_lines(self, highlight_str: str) -> List[int]:
+        """Parse code block line highlighting."""
+        if not highlight_str:
+            return []
+
+        try:
+            lines = []
+            for part in highlight_str.split(','):
+                if '-' in part:
+                    start, end = map(int, part.split('-'))
+                    lines.extend(range(start, end + 1))
+                else:
+                    lines.append(int(part))
+            return sorted(set(lines))
+        except ValueError:
+            return []
+
+    def _extract_conditional_metadata(
+        self,
+        elem: Tag,
+        document_metadata: Dict[str, Any],
+        map_metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        conditions = {}
+        """
+        Extract conditional processing metadata with document context.
+        Handles DITA-style conditional processing including:
+        - Audience/Platform/Product conditions
+        - Feature flags and toggles
+        - Processing instructions
+        - Version control
+        - Delivery channels
+
+        Args:
+            elem: BeautifulSoup tag to process
+            document_metadata: YAML frontmatter context
+
+        Returns:
+            Dict containing conditional processing directives
+        """
+        try:
+            # Get document-level conditions
+            doc_conditions = document_metadata.get('conditions', {})
+            doc_features = document_metadata.get('features', {})
+            doc_delivery = document_metadata.get('delivery', {})
+
+            conditions = {
+                # Audience targeting
+                'audience': {
+                    'groups': self._parse_condition_list(
+                        elem.get('data-audience', doc_conditions.get('audience', []))
+                    ),
+                    'subscription_required': elem.get(
+                        'data-subscription',
+                        doc_conditions.get('subscription_required', False)
+                    ),
+                    'expertise_level': elem.get('data-expertise', 'all')
+                },
+
+                # Platform/Product conditions
+                'platform': {
+                    'os': self._parse_condition_list(
+                        elem.get('data-platform', [])
+                    ),
+                    'browser': self._parse_condition_list(
+                        elem.get('data-browser', [])
+                    ),
+                    'device': self._parse_condition_list(
+                        elem.get('data-device', [])
+                    )
+                },
+
+                # Version control
+                'version': {
+                    'min_version': elem.get(
+                        'data-min-version',
+                        document_metadata.get('publication', {}).get('version')
+                    ),
+                    'max_version': elem.get('data-max-version'),
+                    'revision': elem.get(
+                        'data-revision',
+                        document_metadata.get('publication', {}).get('revision')
+                    )
+                },
+
+                # Delivery channels
+                'delivery': {
+                    'web': elem.get(
+                        'data-web-delivery',
+                        doc_delivery.get('channel_web', True)
+                    ),
+                    'app': elem.get(
+                        'data-app-delivery',
+                        doc_delivery.get('channel_app', False)
+                    ),
+                    'print': elem.get(
+                        'data-print-delivery',
+                        doc_delivery.get('channel_print', False)
+                    )
+                },
+
+                # Feature toggles
+                'features': {
+                    'interactive': elem.get(
+                        'data-interactive',
+                        doc_features.get('interactive_media', False)
+                    ),
+                    'animated': elem.get('data-animated', False),
+                    'executable': elem.get('data-executable', False)
+                },
+
+                # Processing instructions
+                'processing': {
+                    'visibility': elem.get('data-visibility', 'show'),
+                    'importance': elem.get('data-importance', 'normal'),
+                    'processing_role': elem.get('data-processing-role', 'normal'),
+                    'render_mode': elem.get('data-render', 'default')
+                },
+
+                # Region/Language conditions
+                'localization': {
+                    'regions': self._parse_condition_list(
+                        elem.get('data-region',
+                        document_metadata.get('content', {}).get('region', ['Global']))
+                    ),
+                    'languages': self._parse_condition_list(
+                        elem.get('data-language',
+                        document_metadata.get('content', {}).get('language', ['en-US']))
+                    )
+                }
+            }
+
+            # Extract custom conditional attributes
+            custom_conditions = {
+                k.replace('data-condition-', ''): v
+                for k, v in elem.attrs.items()
+                if k.startswith('data-condition-')
+            }
+            if custom_conditions:
+                conditions['custom'] = custom_conditions
+
+            return conditions
+
+        except Exception as e:
+            self.logger.error(f"Error extracting conditional metadata: {str(e)}")
+            return {
+                'processing': {'visibility': 'show'},  # Safe default
+                'error': str(e)
+            }
+
+    def _parse_condition_list(self, value: Union[str, List[str], None]) -> List[str]:
+        """Parse condition list from string or list."""
+        if not value:
+            return []
+        if isinstance(value, str):
+            return [v.strip() for v in value.split(',') if v.strip()]
+        if isinstance(value, list):
+            return [str(v).strip() for v in value if str(v).strip()]
+        return []
+
+    def _evaluate_condition(
+        self,
+        condition: str,
+        value: Any,
+        context: Dict[str, Any]
+    ) -> bool:
+        """Evaluate a single condition against context."""
+        try:
+            if condition == 'version':
+                return self._evaluate_version_condition(value, context)
+            elif condition in ['audience', 'platform', 'region']:
+                return bool(set(self._parse_condition_list(value)) &
+                            set(context.get(condition, [])))
+            else:
+                return value == context.get(condition)
+        except Exception as e:
+            self.logger.error(f"Error evaluating condition {condition}: {str(e)}")
+            return True  # Safe default - show content on error
+
+    def _evaluate_version_condition(
+        self,
+        version_value: str,
+        context: Dict[str, Any]
+    ) -> bool:
+        """Evaluate version-based condition."""
+        try:
+            from packaging import version
+            doc_version = version.parse(context.get('version', '1.0'))
+
+            if '-' in version_value:
+                min_ver, max_ver = version_value.split('-')
+                return (
+                    version.parse(min_ver) <= doc_version <= version.parse(max_ver)
+                    if max_ver else
+                    version.parse(min_ver) <= doc_version
+                )
+            return version.parse(version_value) <= doc_version
+        except Exception as e:
+            self.logger.error(f"Error evaluating version condition: {str(e)}")
+            return True
+
+
+
+    # OLD METHODS TO REVISE
+
+
+    def _is_root_element(self, elem: Tag) -> bool:
+        """Check if element is a root-level element."""
+        return elem.name in {'article', 'section', 'main'} or 'data-root' in elem.attrs
 
     def _extract_image_metadata(self, elem: Tag) -> Dict[str, Any]:
        """Extract image-specific metadata."""
@@ -1239,30 +1964,6 @@ class MarkdownElementProcessor:
            }
        }
 
-    def _extract_yaml_frontmatter(self, content: str) -> Dict[str, Any]:
-       """Extract and validate YAML frontmatter."""
-       try:
-           if content.startswith('---'):
-               end_idx = content.find('---', 3)
-               if end_idx != -1:
-                   frontmatter = yaml.safe_load(content[3:end_idx])
-                   return {
-                       'title': frontmatter.get('title'),
-                       'authors': [Author(**author) for author in frontmatter.get('authors', [])],
-                       'created_date': frontmatter.get('date'),
-                       'modified_date': frontmatter.get('modified'),
-                       'version': frontmatter.get('version', '1.0'),
-                       'status': ContentStatus[frontmatter.get('status', 'DRAFT').upper()],
-                       'keywords': set(frontmatter.get('keywords', [])),
-                       'citations': [Citation(**cite) for cite in frontmatter.get('citations', [])],
-                       'language': frontmatter.get('language', 'en'),
-                       'abstract': frontmatter.get('abstract'),
-                       'custom_metadata': frontmatter.get('custom', {})
-                   }
-           return {}
-       except Exception as e:
-           self.logger.error(f"Error parsing YAML frontmatter: {str(e)}")
-           return {}
 
     def _get_element_path(self, elem: Tag) -> str:
        """Get element path similar to XPath."""
@@ -1279,21 +1980,6 @@ class MarkdownElementProcessor:
            self.logger.error(f"Error getting element path: {str(e)}")
            return ""
 
-    def _get_conversion_hints(self, element_type: MDElementType) -> Dict[str, Any]:
-       """Get database conversion hints for element type."""
-       return {
-           'json': {
-               'array_fields': ['authors', 'keywords', 'citations'],
-               'date_fields': ['created_date', 'modified_date', 'review_date'],
-               'nested_objects': ['element_info', 'content_info', 'media_info', 'link_info']
-           },
-           'sql': {
-               'table_name': f'md_{element_type.value}_metadata',
-               'primary_key': 'element_info.id',
-               'indexes': ['element_info.type', 'element_info.created'],
-               'json_columns': ['attributes', 'custom']
-           }
-       }
 
     def _is_block_element(self, elem: Tag) -> bool:
        """Determine if element is a block-level element."""

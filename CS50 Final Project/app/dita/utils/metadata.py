@@ -72,28 +72,25 @@ class MetadataHandler:
             self.logger.error(f"Metadata handler configuration failed: {str(e)}")
             raise
 
-    def extract_metadata(self,
-                         file_path: PathLike,
-                         content_id: str,
-                         heading_id: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Extract metadata from any supported content type.
-        """
+    def extract_metadata(
+        self,
+        file_path: PathLike,
+        content_id: str,
+        heading_id: Optional[str] = None,
+        map_metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         try:
-            # Convert file_path to Path object if it's not already
             if isinstance(file_path, str):
                 file_path = Path(file_path)
 
-            # Ensure file_path is a valid Path
             assert isinstance(file_path, Path), f"Expected Path, got {type(file_path).__name__}"
 
-            # Determine content type
             content_type = self._determine_content_type(file_path)
 
             if content_type == ElementType.MARKDOWN:
-                return self._extract_markdown_metadata(file_path, content_id, heading_id)
+                return self._extract_markdown_metadata(file_path, content_id, heading_id, map_metadata)
             elif content_type in (ElementType.DITA, ElementType.DITAMAP):
-                return self._extract_dita_metadata(file_path, content_id, heading_id)
+                return self._extract_dita_metadata(file_path, content_id, heading_id, map_metadata)
             else:
                 self.logger.warning(f"Unsupported content type for {file_path}")
                 return {}
@@ -175,39 +172,13 @@ class MetadataHandler:
         else:
             raise ValueError(f"Unsupported file type: {suffix}")
 
-    def _extract_markdown_metadata(self,
-                                 file_path: Path,
-                                 content_id: str,
-                                 heading_id: Optional[str]) -> Dict[str, Any]:
-        """Extract metadata from markdown frontmatter"""
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                post = frontmatter.load(f)
-
-            metadata = post.metadata
-            # Add standard fields
-            metadata.update({
-                'content_type': ContentType.MARKDOWN.value,
-                'content_id': content_id,
-                'heading_id': heading_id,
-                'source_file': str(file_path),
-                'processed_at': datetime.now().isoformat()
-            })
-
-            # Handle special flags
-            metadata['has_bibliography'] = metadata.get('bibliography', False)
-
-            return metadata
-
-        except Exception as e:
-            self.logger.error(f"Error processing markdown metadata: {str(e)}")
-            return {}
-
-    def _extract_dita_metadata(self,
-                             file_path: Path,
-                             content_id: str,
-                             heading_id: Optional[str]) -> Dict[str, Any]:
-        """Extract metadata from DITA XML"""
+    def _extract_dita_metadata(
+        self,
+        file_path: Path,
+        content_id: str,
+        heading_id: Optional[str],
+        map_metadata: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         try:
             tree = etree.parse(str(file_path), self.parser)
             metadata = {
@@ -220,21 +191,51 @@ class MetadataHandler:
                 'processed_at': datetime.now().isoformat()
             }
 
-            # Process othermeta elements
             for othermeta in tree.xpath('.//othermeta'):
                 name = othermeta.get('name')
                 content = othermeta.get('content')
                 if name and content:
-                    # Convert specific flags to booleans
                     if name in ['index-numbers', 'append-toc']:
                         metadata[name] = content.lower() == 'true'
                     else:
                         metadata[name] = content
 
+            metadata.update(map_metadata or {})
+
             return metadata
 
         except Exception as e:
             self.logger.error(f"Error processing DITA metadata: {str(e)}")
+            return {}
+
+    def _extract_markdown_metadata(
+        self,
+        file_path: Path,
+        content_id: str,
+        heading_id: Optional[str],
+        map_metadata: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                post = frontmatter.load(f)
+
+            metadata = post.metadata
+            metadata.update({
+                'content_type': ContentType.MARKDOWN.value,
+                'content_id': content_id,
+                'heading_id': heading_id,
+                'source_file': str(file_path),
+                'processed_at': datetime.now().isoformat()
+            })
+
+            metadata['has_bibliography'] = metadata.get('bibliography', False)
+
+            metadata.update(map_metadata or {})
+
+            return metadata
+
+        except Exception as e:
+            self.logger.error(f"Error processing markdown metadata: {str(e)}")
             return {}
 
 

@@ -674,7 +674,8 @@ class MDElementInfo:
     attributes: ElementAttributes
     context: MDElementContext
     metadata: Dict[str, Any]
-    level: Optional[int] = None  # Added level attribute
+    level: Optional[int] = None
+    specialization: Optional[Dict[str, Any]] = None
 
 @dataclass
 class TrackedElement:

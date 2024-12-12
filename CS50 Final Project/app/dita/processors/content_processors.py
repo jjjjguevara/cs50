@@ -145,11 +145,12 @@ class ContentProcessor:
         error: Optional[Exception] = None,
         error_type: str = "markdown_processing_error",
         element_context: Optional[str] = None
-    ) -> MDElementInfo:
+    ) -> Dict[str, Any]:
         """Create Markdown-specific error element."""
-        return cast(MDElementInfo, self.create_error_element(
+        error_element = cast(MDElementInfo, self.create_error_element(
             error=error,
             error_type=error_type,
             element_context=element_context,
             element_type=ElementType.MARKDOWN
         ))
+        return error_element.__dict__
