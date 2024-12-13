@@ -427,6 +427,11 @@ class MarkdownTransformer(BaseTransformer):
            self.logger.error(f"Error transforming emphasis element: {str(e)}")
            return ""
 
+
+
+
+
+
     def _process_images(self, soup: BeautifulSoup, topic_path: Path) -> None:
        """
        Process markdown images with proper path resolution.
@@ -517,8 +522,8 @@ class MarkdownTransformer(BaseTransformer):
 
     def _transform_table(self, element_info: MDElementInfo) -> str:
         """
-        Transform table elements to HTML.
-        Handles tables, headers, rows, and cells.
+        Transform table elements to HTML with specialization support.
+        Handles tables, headers, rows, cells and table specializations.
 
         Args:
             element_info: Processed table information
@@ -528,8 +533,9 @@ class MarkdownTransformer(BaseTransformer):
         """
         try:
             content = html.escape(element_info.content)
+            table_info = element_info.metadata.get('table_info', {})
 
-            # Map element types to HTML configuration
+            # Base configuration for table elements
             table_map = {
                 MDElementType.TABLE: {
                     'tag': 'table',
@@ -558,15 +564,58 @@ class MarkdownTransformer(BaseTransformer):
 
             config = table_map[element_info.type]
             tag = config['tag']
-            classes = ' '.join([config['base_class'], *element_info.attributes.classes])
 
-            # Build attributes string
+            # Handle table specializations
+            if element_info.type == MDElementType.TABLE:
+                specialization = table_info.get('type', 'default')
+                base_classes = [
+                    config['base_class'],
+                    f'table-{specialization}',
+                    *element_info.attributes.classes
+                ]
+
+                # Add specialized attributes
+                specialized_attrs = {
+                    'bibliography': {
+                        'data-citation-format': table_info.get('citation_format', 'apa'),
+                        'data-sort': table_info.get('sort_by', 'author'),
+                        'aria-label': 'Bibliography entries'
+                    },
+                    'glossary': {
+                        'data-sort': table_info.get('sort_by', 'term'),
+                        'data-show-refs': str(table_info.get('show_references', True)).lower(),
+                        'aria-label': 'Glossary terms and definitions'
+                    },
+                    'metadata': {
+                        'data-visibility': table_info.get('visibility', 'visible'),
+                        'data-collapsible': str(table_info.get('collapsible', False)).lower(),
+                        'aria-label': 'Article metadata'
+                    }
+                }
+
+                # Update config attrs with specialization
+                if specialization in specialized_attrs:
+                    config['attrs'].update(specialized_attrs[specialization])
+
+                # Add structural metadata
+                if table_info.get('has_header'):
+                    config['attrs']['data-has-header'] = 'true'
+                if rows := table_info.get('rows'):
+                    config['attrs']['data-rows'] = str(rows)
+                if cols := table_info.get('columns'):
+                    config['attrs']['data-columns'] = str(cols)
+
+            else:
+                # Non-table elements use basic classes
+                base_classes = [config['base_class'], *element_info.attributes.classes]
+
+            # Build final attributes
             attrs = ' '.join([
                 f'{key}="{value}"'
                 for key, value in {
                     **config['attrs'],
                     **element_info.attributes.custom_attrs,
-                    'class': classes
+                    'class': ' '.join(base_classes)
                 }.items()
             ])
 
