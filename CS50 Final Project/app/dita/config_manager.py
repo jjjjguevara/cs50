@@ -9,12 +9,12 @@ from dataclasses import dataclass
 
 from app_config import DITAConfig, get_environment
 from .models.types import (
-    ProcessingOptions,
+    TrackedElement,
     DITAProcessingConfig,
     DITAParserConfig,
-    ProcessingFeatures,
     ProcessingPhase,
-    ProcessingState
+    ProcessingState,
+
 )
 
 if TYPE_CHECKING:
@@ -290,20 +290,57 @@ class ConfigManager:
                 return False
 
     def _validate_processing_features(self, config: DITAConfig) -> bool:
-        """Validate processing features configuration."""
+        """Validate feature configuration."""
         try:
-            features = getattr(config, 'processing_features', ProcessingFeatures())
+            # Get features from config
+            features = config.features if hasattr(config, 'features') else {}
 
-            # Validate LaTeX settings if enabled
-            if features.needs_latex:
-                if not features.latex_settings:
-                    self.logger.error("LaTeX settings missing but LaTeX processing enabled")
+            # Required features - must be present and be boolean
+            required_features = {
+                "process_latex": True,
+                "number_headings": True,
+                "enable_cross_refs": True,
+                "process_artifacts": True,
+                "show_toc": True
+            }
+
+            # Validate required features exist and are proper type
+            for feature, default in required_features.items():
+                if feature not in features:
+                    self.logger.debug(f"Setting default value for {feature}: {default}")
+                    features[feature] = default
+                elif not isinstance(features[feature], bool):
+                    self.logger.error(f"Feature {feature} must be boolean")
                     return False
 
+            # LaTeX-specific validation
+            if features.get("process_latex"):
+                latex_config = config.latex_config if hasattr(config, 'latex_config') else {}
+                if not latex_config:
+                    self.logger.error("LaTeX configuration missing but processing enabled")
+                    return False
+
+                # Validate LaTeX config
+                required_latex_settings = {
+                    "macros": dict,
+                    "throw_on_error": bool,
+                    "output_mode": str
+                }
+
+                for setting, expected_type in required_latex_settings.items():
+                    if setting not in latex_config:
+                        self.logger.error(f"Missing required LaTeX setting: {setting}")
+                        return False
+                    if not isinstance(latex_config[setting], expected_type):
+                        self.logger.error(f"Invalid type for LaTeX setting {setting}")
+                        return False
+
+            # Store validated features back in config
+            config.features = features
             return True
 
         except Exception as e:
-            self.logger.error(f"Processing features validation failed: {str(e)}")
+            self.logger.error(f"Feature validation failed: {str(e)}")
             return False
 
 

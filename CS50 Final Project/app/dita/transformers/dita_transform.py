@@ -9,12 +9,9 @@ from lxml import etree
 from ..models.types import (
     DITAElementType,
     DITAElementInfo,
-    ParsedElement,
+    TrackedElement,
     ProcessedContent,
     ProcessingContext,
-    ElementAttributes,
-    DITAElementContext,
-    HeadingContext
 )
 from app_config import DITAConfig
 from .base_transformer import BaseTransformer
@@ -92,28 +89,27 @@ class DITATransformer(BaseTransformer):
 
     def transform_topic(
             self,
-            parsed_element: ParsedElement,
-            context: ProcessingContext,
-            html_converter: Optional[Callable[[str, ProcessingContext], str]] = None
+            element: TrackedElement,  # Changed from parsed_element: ParsedElement
+            context: ProcessingContext
         ) -> ProcessedContent:
             try:
                 # Let parser handle XML parsing
-                xml_tree = self.dita_parser.parse_xml_content(parsed_element.content)
-
+                xml_tree = self.dita_parser.parse_xml_content(element.content)
                 # Let content processor handle element processing
                 processed_elements = self.content_processor.process_elements(xml_tree)
-
                 # Transform to HTML (our only concern)
                 html_content = self._convert_to_html(processed_elements, context)
 
                 return ProcessedContent(
                     html=html_content,
-                    element_id=parsed_element.id,
-                    metadata=parsed_element.metadata
+                    element_id=element.id,
+                    metadata=element.metadata
                 )
             except Exception as e:
                 self.logger.error(f"Error transforming DITA topic: {str(e)}")
                 raise
+
+
 
 
     def _transform_step(self, element_info: DITAElementInfo) -> str:

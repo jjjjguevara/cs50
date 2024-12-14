@@ -4,7 +4,7 @@ from typing import Callable
 from typing import Dict, Optional, Union, List, Any
 from bs4 import BeautifulSoup
 from pathlib import Path
-from ..models.types import ParsedElement, ProcessedContent, ProcessorConfig, ProcessingContext
+from ..models.types import TrackedElement, ProcessedContent, ProcessorConfig, ProcessingContext
 from ..utils.html_helpers import HTMLHelper
 from ..utils.heading import HeadingHandler
 from ..utils.id_handler import DITAIDHandler
@@ -27,10 +27,12 @@ class BaseTransformer:
 
     def transform_topic(
             self,
-            parsed_element: ParsedElement,
+            element: TrackedElement,
             context: ProcessingContext,
             html_converter: Optional[Callable[[str, ProcessingContext], str]] = None
         ) -> ProcessedContent:
+            """Base transform method for all transformers."""
+            raise NotImplementedError
             """
             Transform a parsed element into HTML.
 

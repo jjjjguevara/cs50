@@ -1,5 +1,4 @@
 # app/dita/utils/markdown/md_elements.py
-
 from datetime import datetime
 from enum import Enum
 from typing import Dict, Optional, Union, List, Any
@@ -20,13 +19,13 @@ from app.dita.models.models import (
 )
 from app.dita.models.types import (
     DITAElementType,
+    ElementType,
     MDElementInfo,
-    MDElementContext,
-    ElementAttributes,
     MDElementType,
-    ProcessingPhase
+    ProcessingPhase,
+    TrackedElement,
+    ProcessingState
 )
-
 
 
 class MarkdownElementProcessor:
@@ -200,170 +199,94 @@ class MarkdownElementProcessor:
     def process_element(
         self,
         elem: Tag,
-        source_path: Optional[Path] = None,
-        document_metadata: Optional[Dict[str, Any]] = None,
-        map_metadata: Optional[Dict[str, Any]] = None
-    ) -> MDElementInfo:
-        """
-        Process a Markdown element with its processing rules and extract metadata.
-
-        Args:
-            elem: The BeautifulSoup tag to process.
-            source_path: Optional source file path for context.
-            document_metadata: Optional topic-level metadata.
-            map_metadata: Optional map-level metadata.
-
-        Returns:
-            MDElementInfo: Processed element information.
-        """
+        source_path: Path,
+        document_metadata: Dict[str, Any],
+        map_metadata: Dict[str, Any]
+    ) -> TrackedElement:
+        """Process a markdown element into a TrackedElement with proper metadata."""
         try:
-            # Default metadata to empty dictionaries if None
-            document_metadata = document_metadata or {}
-            map_metadata = map_metadata or {}
-
-            # Determine element type
+            # Get element type - MDElementType is already an ElementType
             element_type = self._get_element_type(elem)
 
-            # Fetch processing rules for the element type, defaulting to UNKNOWN
-            rules = self._processing_rules.get(
-                element_type, self._processing_rules[MDElementType.UNKNOWN]
+            # Initialize tracked element
+            element = TrackedElement.from_discovery(
+                path=source_path,
+                element_type=ElementType(element_type.value),  # Convert to ElementType
+                id_handler=self.id_handler
             )
 
-            # Initialize element context
-            context = MDElementContext(
-                parent_id=None,  # To be populated if a parent exists
-                element_type=element_type.value,
-                classes=rules.get('default_classes', []),
-                attributes=dict(elem.attrs)  # Convert attributes to a dictionary
-            )
+            # Set content
+            element.content = self._get_element_content(elem)
 
-            # Process element attributes based on rules
-            attributes = self._process_attributes(elem, rules)
+            # Process attributes
+            rules = self._processing_rules.get(element_type) or {}
+            element.html_metadata["attributes"] = {}
+            element.html_metadata["classes"] = []
+            self._process_attributes(elem, rules, element.html_metadata)
 
-            # Extract content
-            content = self._get_element_content(elem)
+            # Set metadata
+            element.metadata = self._extract_element_metadata(elem, document_metadata, map_metadata)
 
-            # Extract metadata using the unified metadata scheme
-            metadata = self._extract_element_metadata(
-                elem, document_metadata=document_metadata, map_metadata=map_metadata
-            )
+            # Handle heading level in metadata
+            if element_type == MDElementType.HEADING:
+                element.metadata["heading_level"] = int(elem.name[1]) if elem.name[1:2].isdigit() else 1
 
-            # Apply any type-specific attribute mappings
-            if 'attribute_mapping' in rules:
-                for md_attr, html_attr in rules['attribute_mapping'].items():
-                    if md_attr in elem.attrs:
-                        attributes.custom_attrs[html_attr] = elem.attrs[md_attr]
+            element.state = ProcessingState.PROCESSING
 
-            # Validate required attributes
-            if 'required_attributes' in rules:
-                for required_attr in rules['required_attributes']:
-                    if required_attr not in attributes.custom_attrs:
-                        self.logger.warning(
-                            f"Missing required attribute '{required_attr}' "
-                            f"for element type {element_type}"
-                        )
-
-            # Evaluate feature flags from metadata
-            features = metadata.get('features', {})
-            for feature, enabled in features.items():
-                if enabled:
-                    self.logger.debug(f"Feature '{feature}' is enabled for element '{element_type}'.")
-
-            # Return processed element information
-            return MDElementInfo(
-                type=element_type,
-                content=content,
-                attributes=attributes,
-                context=context,
-                metadata=metadata,
-                level=int(elem.name[1]) if element_type == MDElementType.HEADING else None
-            )
+            return element
 
         except Exception as e:
-            self.logger.error(f"Error processing Markdown element: {str(e)}")
-            error_element = self.content_processor.create_md_error_element(
-                error=e,
-                element_context=str(elem.name) if hasattr(elem, 'name') else None
+            self.logger.error(f"Error processing element: {str(e)}")
+            return TrackedElement.from_discovery(
+                path=source_path,
+                element_type=ElementType.UNKNOWN,
+                id_handler=self.id_handler
             )
-            return MDElementInfo(
-                type=MDElementType.UNKNOWN,
-                content=error_element.get('content', ''),
-                attributes=error_element.get('attributes', {}),
-                context=error_element.get('context', None),
-                metadata=error_element.get('metadata', {}),
-                level=None
-            )
-
 
     def _process_attributes(
-       self,
-       elem: Tag,
-       rules: Dict[str, Any]
-    ) -> ElementAttributes:
-       """
-       Process element attributes according to rules.
+        self,
+        elem: Tag,
+        rules: Dict[str, Any],
+        html_metadata: Dict[str, Any]
+    ) -> None:
+        """
+        Process element attributes directly into html_metadata.
 
-       Args:
-           elem: BeautifulSoup tag
-           rules: Processing rules for the element type
+        Args:
+            elem: BeautifulSoup tag
+            rules: Processing rules for the element type
+            html_metadata: HTML metadata dict to update
+        """
+        try:
+            # Generate ID
+            element_id = elem.get('id') or self.id_handler.generate_id(elem.name)
+            html_metadata["attributes"]["id"] = str(element_id)
 
-       Returns:
-           ElementAttributes: Processed attributes
-       """
-       try:
-           # Generate ID
-           element_id = elem.get('id', '')
-           if isinstance(element_id, list):
-               element_id = element_id[0]
-           if not element_id:
-               element_id = self.id_handler.generate_content_id(Path(str(elem.name)))
+            # Get classes from rules and element
+            classes = rules.get('default_classes', []).copy()
+            if elem_classes := elem.get('class', []):
+                if isinstance(elem_classes, str):
+                    classes.extend(elem_classes.split())
+                else:
+                    classes.extend(elem_classes)
+            html_metadata["classes"] = classes
 
-           # Get classes from rules and element
-           classes = rules['default_classes'].copy()
-           element_classes = elem.get('class', [])
-           if isinstance(element_classes, str):
-               classes.extend(element_classes.split())
-           elif isinstance(element_classes, list):
-               classes.extend(element_classes)
+            # Add rule-defined attributes
+            html_metadata["attributes"].update(rules.get('attributes', {}))
 
-           # Add type-specific classes if applicable
-           if 'type_class_mapping' in rules and 'type' in elem.attrs:
-               type_value = elem.attrs['type']
-               if isinstance(type_value, list):
-                   type_value = type_value[0]
-               type_class = rules['type_class_mapping'].get(
-                   type_value,
-                   rules['type_class_mapping'].get('default', '')
-               )
-               if type_class:
-                   classes.append(type_class)
+            # Add element attributes, handling lists
+            for key, value in elem.attrs.items():
+                if key not in {'id', 'class'}:
+                    html_metadata["attributes"][key] = value[0] if isinstance(value, list) else value
 
-           # Process custom attributes
-           custom_attrs = {}
+            # Apply attribute mappings from rules
+            for md_attr, html_attr in rules.get('attribute_mapping', {}).items():
+                if md_attr in elem.attrs:
+                    attr_value = elem.attrs[md_attr]
+                    html_metadata["attributes"][html_attr] = attr_value[0] if isinstance(attr_value, list) else attr_value
 
-           # Add rule-defined attributes
-           if 'attributes' in rules:
-               custom_attrs.update(rules['attributes'])
-
-           # Add element attributes with list handling
-           for key, value in elem.attrs.items():
-               if key not in {'id', 'class'}:
-                   processed_value = value[0] if isinstance(value, list) else value
-                   custom_attrs[key] = processed_value
-
-           return ElementAttributes(
-               id=str(element_id),
-               classes=classes,
-               custom_attrs=custom_attrs
-           )
-
-       except Exception as e:
-           self.logger.error(f"Error processing attributes: {str(e)}")
-           return ElementAttributes(
-               id=str(self.id_handler.generate_id("error")),
-               classes=[],
-               custom_attrs={}
-           )
+        except Exception as e:
+            self.logger.error(f"Error processing attributes: {str(e)}")
 
 
     def _get_element_type(self, elem: Tag) -> MDElementType:
@@ -854,77 +777,70 @@ class MarkdownElementProcessor:
            self.logger.error(f"Error processing image content: {str(e)}")
            return ""
 
-    def _get_element_attributes(self, elem: Tag, rules: dict) -> ElementAttributes:
-       """
-       Extract and process element attributes based on processing rules.
+    def _get_element_attributes(
+        self,
+        elem: Tag,
+        rules: dict,
+        html_metadata: Dict[str, Any]
+    ) -> None:
+        """
+        Extract and process element attributes directly into html_metadata.
 
-       Args:
-           elem: The BeautifulSoup tag
-           rules: Processing rules for this element type
+        Args:
+            elem: The BeautifulSoup tag
+            rules: Processing rules for this element type
+            html_metadata: HTML metadata dict to update
+        """
+        try:
+            # Generate ID
+            raw_id = elem.get('id', '')
+            element_id = raw_id[0] if isinstance(raw_id, list) else raw_id
+            if not element_id:
+                element_id = self.id_handler.generate_id(elem.name)
+            html_metadata["attributes"]["id"] = str(element_id)
 
-       Returns:
-           ElementAttributes: Processed attributes for the element
-       """
-       try:
-           # Generate or get element ID - handle potential list
-           raw_id = elem.get('id', '')
-           element_id = raw_id[0] if isinstance(raw_id, list) else raw_id
-           if not element_id:
-               element_id = self.id_handler.generate_content_id(Path(str(elem.name)))
+            # Get classes
+            classes = self._get_element_classes(elem)
+            html_metadata["classes"] = classes
 
-           # Rest of implementation stays the same...
-           classes = self._get_element_classes(elem)
-           custom_attrs = {}
+            # Initialize attributes
+            html_metadata["attributes"].update(rules.get('attributes', {}))
 
-           if 'attributes' in rules:
-               custom_attrs.update(rules['attributes'])
+            # Process attribute mappings
+            for md_attr, html_attr in rules.get('attribute_mapping', {}).items():
+                if md_attr in elem.attrs:
+                    attr_value = elem.attrs[md_attr]
+                    html_metadata["attributes"][html_attr] = attr_value[0] if isinstance(attr_value, list) else attr_value
 
-           if 'attribute_mapping' in rules:
-               for md_attr, html_attr in rules['attribute_mapping'].items():
-                   if md_attr in elem.attrs:
-                       attr_value = elem.attrs[md_attr]
-                       if isinstance(attr_value, list):
-                           attr_value = attr_value[0]
-                       custom_attrs[html_attr] = attr_value
+            # Process remaining attributes
+            for attr, value in elem.attrs.items():
+                if attr in {'id', 'class'}:
+                    continue
 
-           for attr, value in elem.attrs.items():
-               if attr in {'id', 'class'}:
-                   continue
+                processed_value = value[0] if isinstance(value, list) else value
 
-               if isinstance(value, list):
-                   value = value[0]
+                if attr == 'href':
+                    html_metadata["attributes"]['href'] = processed_value
+                    if processed_value.startswith(('http://', 'https://')):
+                        html_metadata["attributes"]['target'] = '_blank'
+                        html_metadata["attributes"]['rel'] = 'noopener noreferrer'
+                else:
+                    attr_name = attr if attr in rules.get('allowed_attributes', []) else f'data-{attr}'
+                    html_metadata["attributes"][attr_name] = processed_value
 
-               if attr == 'href':
-                   custom_attrs['href'] = value
-                   if value.startswith(('http://', 'https://')):
-                       custom_attrs['target'] = '_blank'
-                       custom_attrs['rel'] = 'noopener noreferrer'
-               else:
-                   attr_name = attr if attr in rules.get('allowed_attributes', []) else f'data-{attr}'
-                   custom_attrs[attr_name] = value
+            # Add required attributes
+            for required_attr in rules.get('required_attributes', []):
+                if required_attr not in html_metadata["attributes"]:
+                    self.logger.warning(
+                        f"Missing required attribute '{required_attr}' "
+                        f"for element: {elem.name}"
+                    )
+                    html_metadata["attributes"][required_attr] = ''
 
-           if 'required_attributes' in rules:
-               for required_attr in rules['required_attributes']:
-                   if required_attr not in custom_attrs:
-                       self.logger.warning(
-                           f"Missing required attribute '{required_attr}' "
-                           f"for element: {elem.name}"
-                       )
-                       custom_attrs[required_attr] = ''
-
-           return ElementAttributes(
-               id=str(element_id),  # Ensure string type
-               classes=classes,
-               custom_attrs=custom_attrs
-           )
-
-       except Exception as e:
-           self.logger.error(f"Error extracting attributes: {str(e)}")
-           return ElementAttributes(
-               id=str(self.id_handler.generate_id("error")),  # Ensure string type
-               classes=[],
-               custom_attrs={}
-           )
+        except Exception as e:
+            self.logger.error(f"Error extracting attributes: {str(e)}")
+            html_metadata["attributes"] = {"id": str(self.id_handler.generate_id("error"))}
+            html_metadata["classes"] = []
 
     def _get_element_classes(self, elem: Tag) -> List[str]:
        """
@@ -991,25 +907,31 @@ class MarkdownElementProcessor:
            self.logger.error(f"Error getting element classes: {str(e)}")
            return []
 
-    def _default_element(self) -> MDElementInfo:
-       """Return a default Markdown element for unprocessable cases."""
-       return MDElementInfo(
-           type=MDElementType.PARAGRAPH,
-           content="",
-           attributes=ElementAttributes(
-               id=self.id_handler.generate_id("default"),
-               classes=[],
-               custom_attrs={}
-           ),
-           context=MDElementContext(
-               parent_id=None,
-               element_type="default",
-               classes=[],
-               attributes={}
-           ),
-           metadata={},
-           level=None
-       )
+    def _default_element(self, source_path: Path) -> TrackedElement:
+        """Return a default TrackedElement for unprocessable cases."""
+        element = TrackedElement.from_discovery(
+            path=source_path,
+            element_type=ElementType.BODY,  # Use BODY for default paragraphs
+            id_handler=self.id_handler
+        )
+
+        # Set basic metadata
+        element.content = ""
+        element.html_metadata.update({
+            "attributes": {
+                "id": self.id_handler.generate_id("default")
+            },
+            "classes": [],
+            "context": {
+                "parent_id": None,
+                "level": None,
+                "position": None
+            }
+        })
+        element.metadata = {}
+        element.state = ProcessingState.COMPLETED
+
+        return element
 
     def _get_code_language(self, elem: Tag) -> Optional[str]:
        """

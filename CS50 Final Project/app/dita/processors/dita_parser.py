@@ -1,20 +1,20 @@
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Optional
+import sqlite3
+from contextlib import contextmanager
 import logging
+import json
+from typing import List, Dict, Optional, Generator
 from app.dita.utils.id_handler import DITAIDHandler
 from app.dita.utils.metadata import MetadataHandler
 from ..models.types import (
+    TrackedElement,
     DITAElementType,
     DITAElementInfo,
     ElementType,
-    ParsedElement,
-    ParsedMap,
+    ProcessingPhase,
+    ProcessingState,
     ProcessedContent,
-    ElementAttributes,
-    DITAElementContext,
-    HeadingContext,
-    ParsedMap,
     ProcessingError
 )
 from ..utils.heading import HeadingHandler
@@ -23,13 +23,10 @@ import xml.etree.ElementTree as ET
 from lxml import etree
 
 
-
-
-
 class DITAParser:
     """Parser for DITA maps and topics, handling headings and metadata extraction."""
 
-    def __init__(self, config: Optional[DITAConfig] = None):
+    def __init__(self, db_path: Path, root_path: Path, config: Optional[DITAConfig] = None):
         """
         Initialize the DITAParser with an optional configuration.
 
@@ -38,88 +35,251 @@ class DITAParser:
         """
         self.logger = logging.getLogger(__name__)
         self.config = config or DITAConfig()
+        self.root_path = root_path
+        self.db_path = db_path
+        self._init_db()
         self.heading_handler = HeadingHandler()
         self.id_handler = DITAIDHandler()
         self.metadata = MetadataHandler()
         self.heading_handler = HeadingHandler()
 
 
-    def parse_ditamap(self, map_path: Path) -> ParsedMap:
-        """
-        Parse a DITA map, extracting topics, metadata, and title.
+    def _init_db(self) -> None:
+            """Initialize database connection and schema."""
+            try:
+                with self._get_db() as conn:
+                    # Read and execute schema
+                    schema_path = Path(__file__).parent / "metadata.sql"
+                    schema = schema_path.read_text()
+                    conn.executescript(schema)
+                    self.logger.debug("Database schema initialized")
+            except Exception as e:
+                self.logger.error(f"Database initialization failed: {str(e)}")
+                raise
 
-        Args:
-            map_path: Path to the DITA map file.
+    @contextmanager
+    def _get_db(self) -> Generator[sqlite3.Connection, None, None]:
+        """Get database connection with context management."""
+        conn = sqlite3.connect(str(self.db_path))
+        try:
+            conn.row_factory = sqlite3.Row
+            yield conn
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
-        Returns:
-            A ParsedMap object representing the parsed map.
-        """
+    def _store_map_metadata(self, map_element: TrackedElement) -> None:
+            """Store map metadata in database."""
+            try:
+                with self._get_db() as conn:
+                    # Insert into maps table
+                    conn.execute("""
+                        INSERT INTO maps (
+                            map_id, title, file_path, version, status,
+                            language, toc_enabled, index_numbers_enabled,
+                            context_root, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(map_id) DO UPDATE SET
+                            title=excluded.title,
+                            updated_at=excluded.updated_at
+                    """, (
+                        map_element.id,
+                        map_element.title,
+                        str(map_element.path),
+                        map_element.metadata.get('version', '1.0'),
+                        map_element.metadata.get('status', 'draft'),
+                        map_element.metadata.get('language', 'en'),
+                        map_element.metadata.get('toc_enabled', True),
+                        map_element.metadata.get('index_numbers_enabled', True),
+                        str(map_element.path.parent),
+                        map_element.created_at.isoformat(),
+                        map_element.last_updated.isoformat() if map_element.last_updated else None
+                    ))
+
+                    # Store processing context
+                    conn.execute("""
+                        INSERT INTO processing_contexts (
+                            content_id, content_type, phase, state,
+                            features, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        map_element.id,
+                        'map',
+                        map_element.phase.value,
+                        map_element.state.value,
+                        json.dumps(map_element.metadata.get('features', {})),
+                        map_element.created_at.isoformat()
+                    ))
+
+                    # Store feature flags
+                    for name, value in map_element.metadata.items():
+                        if name.startswith('feature_'):
+                            conn.execute("""
+                                INSERT INTO content_flags (
+                                    content_id, name, value, scope
+                                ) VALUES (?, ?, ?, ?)
+                            """, (
+                                map_element.id,
+                                name.replace('feature_', ''),
+                                str(value),
+                                'map'
+                            ))
+
+            except Exception as e:
+                self.logger.error(f"Error storing map metadata: {str(e)}")
+                raise
+
+    def _store_topic_metadata(self, topic_element: TrackedElement) -> None:
+        """Store topic metadata in database."""
+        try:
+            with self._get_db() as conn:
+                # Get topic type ID
+                cur = conn.execute("""
+                    SELECT type_id FROM topic_types
+                    WHERE name = ?
+                """, (topic_element.metadata.get('topic_type', 'topic'),))
+                type_id = cur.fetchone()[0]
+
+                # Insert into topics table
+                conn.execute("""
+                    INSERT INTO topics (
+                        id, title, path, type_id, content_type,
+                        short_desc, parent_topic_id, root_map_id,
+                        specialization_type, created_at, updated_at,
+                        published_version, status, language
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        updated_at=excluded.updated_at,
+                        status=excluded.status
+                """, (
+                    topic_element.id,
+                    topic_element.title,
+                    str(topic_element.path),
+                    type_id,
+                    topic_element.type.value,
+                    topic_element.metadata.get('short_desc'),
+                    topic_element.metadata.get('parent_topic_id'),
+                    topic_element.parent_map_id,
+                    topic_element.metadata.get('specialization_type'),
+                    topic_element.created_at.isoformat(),
+                    topic_element.last_updated.isoformat() if topic_element.last_updated else None,
+                    topic_element.metadata.get('version'),
+                    topic_element.metadata.get('status', 'draft'),
+                    topic_element.metadata.get('language', 'en')
+                ))
+
+                # Store context hierarchy
+                if topic_element.parent_map_id:
+                    conn.execute("""
+                        INSERT INTO context_hierarchy (
+                            map_id, topic_id, parent_id, level,
+                            sequence_num, context_path
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        topic_element.parent_map_id,
+                        topic_element.id,
+                        topic_element.metadata.get('parent_topic_id'),
+                        topic_element.metadata.get('level', 1),
+                        topic_element.sequence_number or 0,
+                        f"{topic_element.parent_map_id}/{topic_element.id}"
+                    ))
+
+                # Store references
+                if refs := topic_element.metadata.get('references', []):
+                    for ref in refs:
+                        conn.execute("""
+                            INSERT INTO content_references (
+                                ref_id, source_id, target_id,
+                                ref_type, text, href
+                            ) VALUES (?, ?, ?, ?, ?, ?)
+                        """, (
+                            self.id_handler.generate_id(f"ref-{ref['target']}"),
+                            topic_element.id,
+                            ref['target'],
+                            ref.get('type', 'internal'),
+                            ref.get('text'),
+                            ref['href']
+                        ))
+
+        except Exception as e:
+            self.logger.error(f"Error storing topic metadata: {str(e)}")
+            raise
+
+
+    def parse_ditamap(self, map_path: Path) -> TrackedElement:
+        """Parse a DITA map into a tracked element."""
         try:
             self.logger.debug(f"Parsing DITA map: {map_path}")
 
             if not map_path.exists() or not map_path.is_file():
                 raise FileNotFoundError(f"DITA map not found: {map_path}")
 
+            # Create initial map element
+            map_element = TrackedElement.create_map(
+                path=map_path,
+                title="Untitled",  # Will be updated
+                id_handler=self.id_handler
+            )
+
             # Load and parse XML content
             dita_map_content = map_path.read_text(encoding="utf-8")
             root = ET.fromstring(dita_map_content)
 
             # Extract title
-            title_elem = root.find("title")
-            title = title_elem.text if title_elem is not None else "Untitled"
+            if title_elem := root.find("title"):
+                map_element.title = title_elem.text
 
-            # Extract metadata including index-numbers setting
-            metadata = {
-                "id": map_path.stem,
+            # Extract metadata including feature flags
+            map_element.metadata.update({
                 "content_type": "ditamap",
-                "processed_at": datetime.now().isoformat()
-            }
-            metadata_elem = root.find("metadata")
-            if metadata_elem is not None:
+                "processed_at": datetime.now().isoformat(),
+                "version": "1.0",  # Default version
+                "language": "en",   # Default language
+                "status": "draft",  # Default status
+            })
+
+            # Process metadata element
+            if metadata_elem := root.find("metadata"):
                 for othermeta in metadata_elem.findall("othermeta"):
                     name = othermeta.get("name")
                     content = othermeta.get("content")
                     if name and content:
-                        metadata[name] = content # keep as string
+                        map_element.metadata[name] = content
 
             # Parse topics
-            topics = []
             for topicref in root.findall(".//topicref"):
-                href = topicref.get("href")
-                if not href:
-                    continue
+                if href := topicref.get("href"):
+                    topic_id = topicref.get("id") or Path(href).stem
+                    topic_path = map_path.parent / href
 
-                topic_id = topicref.get("id") or Path(href).stem
-                topic_path = map_path.parent / href
-
-                # Determine correct element type based on file extension
-                element_type = (
-                    ElementType.MARKDOWN if href.endswith('.md')
-                    else ElementType.DITA if href.endswith('.dita')
-                    else ElementType.UNKNOWN
-                )
-
-                topics.append(
-                    ParsedElement(
-                        id=topic_id,
-                        topic_id=topic_id,
-                        type=element_type,
-                        content="",
-                        topic_path=topic_path,
-                        source_path=map_path,
-                        metadata={}
+                    # Create topic element
+                    topic_element = TrackedElement.from_discovery(
+                        path=topic_path,
+                        element_type=self._determine_element_type(href),
+                        id_handler=self.id_handler,
+                        topic_id=topic_id
                     )
-                )
+                    topic_element.parent_map_id = map_element.id
+                    topic_element.href = href
 
-            parsed_map = ParsedMap(
-                title=title,
-                topics=topics,
-                metadata=metadata,
-                source_path=map_path
-            )
+                    # Track in map
+                    map_element.topics.append(topic_element.id)
+                    map_element.by_type.setdefault(
+                        topic_element.type.value,
+                        []
+                    ).append(topic_element.id)
 
-            self.logger.debug(f"Parsed map: {parsed_map}")
-            return parsed_map
+                    # Store in database
+                    self._store_topic_metadata(topic_element)
+
+            # Store map metadata in database
+            self._store_map_metadata(map_element)
+
+            map_element.phase = ProcessingPhase.VALIDATION
+            return map_element
 
         except Exception as e:
             self.logger.error(f"Error parsing DITA map: {str(e)}", exc_info=True)
@@ -129,41 +289,50 @@ class DITAParser:
                 context=str(map_path)
             )
 
-    def parse_topic(self, topic_path: Path) -> ParsedElement:
-        """Parse a topic file into a ParsedElement."""
+    def parse_topic(self, topic_path: Path) -> TrackedElement:
+        """Parse a topic file into a TrackedElement."""
         try:
-            # Read the file content
-            content = topic_path.read_text()
-
-            # Determine the element type
-            element_type = (
-                ElementType.MARKDOWN if topic_path.suffix == '.md'
-                else ElementType.DITA
+            # Create topic element
+            topic_element = TrackedElement.from_discovery(
+                path=topic_path,
+                element_type=self._determine_element_type(str(topic_path)),
+                id_handler=self.id_handler
             )
 
-            # Detect LaTeX content
-            has_latex = self._detect_latex(content)
+            # Read content
+            topic_element.content = topic_path.read_text()
 
-            # Create metadata
-            metadata = {
-                'has_latex': has_latex,
-                'latex_blocks': self._count_latex_blocks(content) if has_latex else 0,
-                'content_type': element_type.value
-            }
+            # Extract metadata
+            topic_element.metadata.update({
+                'has_latex': self._detect_latex(topic_element.content),
+                'content_type': topic_element.type.value,
+                'status': 'draft',
+                'language': 'en',
+                'version': '1.0'
+            })
 
-            # Return ParsedElement without preprocessing
-            return ParsedElement(
-                id=self.id_handler.generate_id(str(topic_path)),
-                topic_id=topic_path.stem,
-                type=element_type,
-                content=content,  # Pass raw content
-                topic_path=topic_path,
-                source_path=topic_path,
-                metadata=metadata
-            )
+            # Add LaTeX info if needed
+            if topic_element.metadata['has_latex']:
+                topic_element.metadata['latex_blocks'] = self._count_latex_blocks(topic_element.content)
+
+            # Store in database
+            self._store_topic_metadata(topic_element)
+
+            topic_element.phase = ProcessingPhase.VALIDATION
+            return topic_element
+
         except Exception as e:
             self.logger.error(f"Error parsing topic {topic_path}: {str(e)}")
             raise
+
+    def _determine_element_type(self, path: str) -> ElementType:
+        """Determine element type from file path."""
+        if path.endswith('.md'):
+            return ElementType.MARKDOWN
+        elif path.endswith('.dita'):
+            return ElementType.DITA
+        return ElementType.UNKNOWN
+
 
     def _detect_latex(self, content: str) -> bool:
             """Detect if content contains LaTeX equations."""
@@ -184,43 +353,40 @@ class DITAParser:
             'inline': inline_count
         }
 
-
-    def parse_markdown_file(self, file_path: str) -> ParsedElement:
-        """
-        Parse a Markdown file and extract raw YAML metadata and content.
-
-        Args:
-            file_path: Path to the Markdown file as a string.
-
-        Returns:
-            ParsedElement containing the raw metadata and Markdown content.
-        """
+    def parse_markdown_file(self, file_path: str) -> TrackedElement:
+        """Parse a Markdown file and extract YAML metadata and content."""
         try:
-            file_path_obj = Path(file_path)  # Convert to Path object
+            file_path_obj = Path(file_path).resolve()
 
-            # Normalize the file path to avoid redundant directory structure
-            base_dir = file_path_obj.parent
-            file_path_obj = base_dir / file_path_obj.name
+            # Create initial tracked element
+            element = TrackedElement.from_discovery(
+                path=file_path_obj,
+                element_type=ElementType.MARKDOWN,
+                id_handler=self.id_handler,
+                topic_id=file_path_obj.stem
+            )
 
+            # Read and parse content
             with open(file_path_obj, 'r', encoding='utf-8') as f:
-                file_content = f.read()  # Read file content as a string
+                file_content = f.read()
 
             # Extract YAML metadata
             metadata, content = self.metadata.extract_yaml_metadata(file_content)
+            element.content = content
+            element.metadata.update(metadata)
 
-            # Return metadata and raw content
-            return ParsedElement(
-                id=self.id_handler.generate_content_id(file_path_obj),
-                topic_id=file_path_obj.stem,
-                type=ElementType.MARKDOWN,
-                content=content,  # Pass raw Markdown content
-                topic_path=file_path_obj,  # Ensure Path object
-                source_path=file_path_obj,  # Ensure Path object
-                metadata=metadata,  # Pass raw YAML metadata
-            )
+            # Update element state
+            element.phase = ProcessingPhase.VALIDATION
+
+            # Store in database
+            self._store_topic_metadata(element)
+
+            return element
+
         except Exception as e:
             self.logger.error(f"Error parsing Markdown file {file_path}: {e}")
             raise
+
 
     def parse_xml_content(self, content: str) -> etree._Element:
         """Parse raw XML content into etree."""
@@ -232,114 +398,179 @@ class DITAParser:
             self.logger.error(f"Error parsing XML content: {str(e)}")
             raise
 
-    def _extract_topics(self, dita_map_content: str, map_path: Path) -> List[ParsedElement]:
+    def _extract_topics(self, dita_map_content: str, map_path: Path) -> List[TrackedElement]:
+        """Extract topic elements from DITA map content."""
         try:
             root = ET.fromstring(dita_map_content)
             topics = []
 
             for topicref in root.findall(".//topicref"):
-                href = topicref.get("href")
-                if not href:
-                    continue
+                if href := topicref.get("href"):
+                    topic_id = topicref.get("id") or Path(href).stem
+                    self.logger.debug(f"Extracted topic: id={topic_id}, href={href}")
 
-                topic_id = topicref.get("id") or Path(href).stem
-                self.logger.debug(f"Extracted topic: id={topic_id}, href={href}")
+                    # Normalize topic path
+                    topic_path = (map_path.parent / href).resolve()
 
-                # Normalize the path to ensure no redundancy
-                # If the href is relative, it should be resolved relative to the map_path's parent directory
-                topic_path = map_path.parent / href
-
-                # Ensure the path is normalized without redundant segments
-                topic_path = topic_path.resolve()
-
-                # If the topic_path has unexpected directories, normalize them
-                if topic_path.parts[-2] == "maps" and topic_path.parts[-3] == "app":
-                    topic_path = Path(*topic_path.parts[3:])
-
-                topics.append(
-                    ParsedElement(
-                        id=topic_id,
-                        topic_id=topic_id,
-                        type=ElementType.DITAMAP,
-                        content="",
-                        topic_path=topic_path,
-                        source_path=map_path,
-                        metadata={},
+                    # Create tracked element for topic
+                    topic = TrackedElement.from_discovery(
+                        path=topic_path,
+                        element_type=self._determine_element_type(href),
+                        id_handler=self.id_handler,
+                        topic_id=topic_id
                     )
-                )
+
+                    # Set relationship to map
+                    topic.parent_map_id = map_path.stem
+                    topic.href = href
+                    topic.sequence_number = len(topics)  # Order in map
+
+                    # Extract any topicref metadata
+                    topic.metadata.update({
+                        'type': topicref.get('type', 'topic'),
+                        'scope': topicref.get('scope', 'local'),
+                        'format': topicref.get('format'),
+                        'processing-role': topicref.get('processing-role', 'normal')
+                    })
+
+                    # Store in database
+                    self._store_topic_metadata(topic)
+
+                    topics.append(topic)
+
             return topics
+
         except ET.ParseError as e:
             self.logger.error(f"XML parsing error for {map_path}: {str(e)}", exc_info=True)
             raise
 
 
-    def _extract_elements(self, topic_content: str, topic_path: Path) -> List[ParsedElement]:
-        """
-        Extract elements (including headings) from topic content.
-
-        Args:
-            topic_content: Raw content of the topic file.
-            topic_path: Path to the topic file.
-
-        Returns:
-            A list of ParsedElement objects representing the topic content.
-        """
+    def _extract_elements(self, topic_content: str, topic_path: Path) -> List[TrackedElement]:
+        """Extract and track elements from topic content."""
         try:
             self.logger.debug(f"Extracting elements from topic: {topic_path}")
-
             elements = []
-            self.heading_handler.init_state()  # Initialize heading state for this topic
+            self.heading_handler.init_state()
 
-            # Normalize the topic path to avoid redundancies
-            base_dir = topic_path.parent
-            topic_path = base_dir / topic_path.name  # Resolve file path
+            topic_path = topic_path.resolve()
+            current_section = None
 
-            # Process each line to extract potential elements
-            for i, line in enumerate(topic_content.splitlines(), start=1):
-                # Skip empty lines
-                if not line.strip():
-                    continue
+            with self._get_db() as conn:
+                # Start element extraction
+                for i, line in enumerate(topic_content.splitlines(), start=1):
+                    if not line.strip():
+                        continue
 
-                # Determine heading level or treat as body content
-                if line.startswith("#"):  # Example: Markdown-style headings
-                    heading_level = line.count("#")
-                    heading_text = line.lstrip("#").strip()
+                    if line.startswith("#"):  # Headings
+                        level = line.count("#")
+                        text = line.lstrip("#").strip()
 
-                    heading_id, processed_heading = self.heading_handler.process_heading(
-                        text=heading_text, level=heading_level
-                    )
+                        # Create heading element
+                        element = TrackedElement.from_discovery(
+                            path=topic_path,
+                            element_type=ElementType.HEADING,
+                            id_handler=self.id_handler
+                        )
 
-                    element = ParsedElement(
-                        id=heading_id,
-                        topic_id=f"topic-{topic_path.stem}",
-                        type=ElementType.HEADING,
-                        content=processed_heading,
-                        topic_path=topic_path,
-                        source_path=topic_path,
-                        metadata={"heading_level": heading_level},
-                    )
-                    elements.append(element)
+                        # Process heading
+                        heading_id, processed_text = self.heading_handler.process_heading(
+                            text=text, level=level
+                        )
 
-                else:  # Treat as body content
-                    body_id = self.id_handler.generate_id(f"line-{i}-{topic_path.stem}")
-                    element = ParsedElement(
-                        id=body_id,
-                        topic_id=f"topic-{topic_path.stem}",
-                        type=ElementType.BODY,
-                        content=line.strip(),
-                        topic_path=topic_path,
-                        source_path=topic_path,
-                        metadata={},
-                    )
+                        element.id = heading_id
+                        element.content = processed_text
+                        element.metadata.update({
+                            "heading_level": level,
+                            "original_text": text,
+                            "sequence_number": len(elements)
+                        })
+
+                        # Update section tracking
+                        current_section = element.id
+
+                        # Store heading in database
+                        conn.execute("""
+                            INSERT INTO topic_elements (
+                                element_id, topic_id, element_type,
+                                parent_element_id, sequence_num, content_hash
+                            ) VALUES (?, ?, ?, ?, ?, ?)
+                        """, (
+                            element.id,
+                            topic_path.stem,
+                            "heading",
+                            None,
+                            element.metadata["sequence_number"],
+                            hash(element.content)
+                        ))
+
+                        # Store in heading index
+                        conn.execute("""
+                            INSERT INTO heading_index (
+                                id, topic_id, map_id, text,
+                                level, sequence_number, path_fragment
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            element.id,
+                            topic_path.stem,
+                            element.parent_map_id,
+                            text,
+                            level,
+                            str(self.heading_handler._state.counters[f'h{level}']),
+                            element.id
+                        ))
+
+                    else:  # Body content
+                        element = TrackedElement.from_discovery(
+                            path=topic_path,
+                            element_type=ElementType.BODY,
+                            id_handler=self.id_handler
+                        )
+
+                        element.content = line.strip()
+                        element.metadata.update({
+                            "line_number": i,
+                            "section_id": current_section,
+                            "sequence_number": len(elements)
+                        })
+
+                        # Store body element in database
+                        conn.execute("""
+                            INSERT INTO topic_elements (
+                                element_id, topic_id, element_type,
+                                parent_element_id, sequence_num, content_hash
+                            ) VALUES (?, ?, ?, ?, ?, ?)
+                        """, (
+                            element.id,
+                            topic_path.stem,
+                            "body",
+                            current_section,
+                            element.metadata["sequence_number"],
+                            hash(element.content)
+                        ))
+
+                    # Store element context
+                    conn.execute("""
+                        INSERT INTO element_context (
+                            element_id, context_type, parent_context,
+                            level, xpath
+                        ) VALUES (?, ?, ?, ?, ?)
+                    """, (
+                        element.id,
+                        element.type.value,
+                        current_section,
+                        element.metadata.get("heading_level", 0),
+                        f"/topic/{topic_path.stem}/{element.type.value}[{len(elements)}]"
+                    ))
+
                     elements.append(element)
 
             self.logger.debug(f"Extracted {len(elements)} elements from topic: {topic_path}")
             return elements
 
         except Exception as e:
-            self.logger.error(f"Error extracting elements from topic {topic_path}: {str(e)}", exc_info=True)
+            self.logger.error(f"Error extracting elements: {str(e)}", exc_info=True)
             raise ProcessingError(
                 error_type="element_extraction",
-                message=f"Failed to extract elements from topic: {str(e)}",
-                context=str(topic_path),
+                message=f"Failed to extract elements: {str(e)}",
+                context=str(topic_path)
             )

@@ -8,8 +8,6 @@ from app.dita.utils.id_handler import DITAIDHandler
 from app.dita.models.types import (
     DITAElementType,
     DITAElementInfo,
-    DITAElementContext,
-    ElementAttributes,
     ElementType,
     ProcessingPhase
 )

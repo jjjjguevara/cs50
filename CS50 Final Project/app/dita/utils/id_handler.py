@@ -28,17 +28,24 @@ class DITAIDHandler:
             self.logger.error(f"ID handler configuration failed: {str(e)}")
             raise
 
-    def generate_id(self, text: str) -> str:
-            """Generate a unique ID for any text."""
+    def generate_id(self, text: str, prefix: Optional[str] = None) -> str:
+            """Generate a unique ID for any content."""
+            # Clean the base ID
             base_id = re.sub(r'[^\w\- ]', '', text.lower()).strip().replace(' ', '-')
+
+            # Add prefix if provided
+            if prefix:
+                base_id = f"{prefix}-{base_id}"
+
+            # Ensure uniqueness
             unique_id = base_id
             counter = 1
             while unique_id in self.used_ids:
                 unique_id = f"{base_id}-{counter}"
                 counter += 1
+
             self.used_ids[unique_id] = 1
             return unique_id
-
 
 
     def generate_content_id(self, path: Path) -> str:
@@ -75,25 +82,14 @@ class DITAIDHandler:
             return sanitized_id
 
     def resolve_xref(self, source_id: str, target_ref: str) -> str:
-        """Resolve cross-references between topics"""
-        # Handle both internal and cross-topic references
-        if '#' in target_ref:
-            topic_ref, heading_ref = target_ref.split('#', 1)
-            if topic_ref:
-                return f"/entry/{self._sanitize_id(topic_ref)}#{heading_ref}"
-            return f"#{heading_ref}"
-        return f"/entry/{self._sanitize_id(target_ref)}"
+            """Resolve cross-references between topics"""
+            if '#' in target_ref:
+                topic_ref, heading_ref = target_ref.split('#', 1)
+                if topic_ref:
+                    return f"/entry/{self._sanitize_id(topic_ref)}#{heading_ref}"
+                return f"#{heading_ref}"
+            return f"/entry/{self._sanitize_id(target_ref)}"
 
     def cleanup(self) -> None:
-            """Clean up ID handler resources and state."""
-            try:
-                self.logger.debug("Starting ID handler cleanup")
-
-                # Clear used IDs
-                self.used_ids.clear()
-
-                self.logger.debug("ID handler cleanup completed")
-
-            except Exception as e:
-                self.logger.error(f"ID handler cleanup failed: {str(e)}")
-                raise
+        """Reset ID tracking"""
+        self.used_ids.clear()

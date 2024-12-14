@@ -1,6 +1,4 @@
 # app/dita/transformers/md_transform.py
-
-
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -10,14 +8,12 @@ import html
 import markdown
 from bs4 import BeautifulSoup, Tag
 from ..models.types import (
-    MapContext,
-    ParsedElement,
+    TrackedElement,
+    ProcessingState,
     ProcessedContent,
     MDElementInfo,
     MDElementType,
-    HeadingContext,
     ProcessingContext,
-    HeadingReference,
     LaTeXEquation,
     ProcessingError
 )
@@ -49,7 +45,7 @@ class MarkdownTransformer(BaseTransformer):
         )
 
         # Pass content processor to markdown element processor
-        self.content_processor = MarkdownElementProcessor(content_processor)
+        self.content_processor = MarkdownElementProcessor(content_processor, document_metadata={}, map_metadata={})
 
         # Initialize LaTeX pipeline components
         self.latex_processor = LaTeXProcessor()
@@ -83,15 +79,7 @@ class MarkdownTransformer(BaseTransformer):
             MDElementType.UNDERLINE: self._transform_emphasis,
             MDElementType.STRIKETHROUGH: self._transform_emphasis,
             MDElementType.YAML_METADATA: self._transform_metadata,
-
-            # METADATA USAGE
-            # The transform metadata method should prepare the metadata to be served to another transformer method
-            # For example, methods which inject metadata into HTML content objects for the front end:
-            # `article metadata` tables, `Bibliography` tables, `Glossary` tables, etc.
-            # The output of this method should therefore be a dictionary of metadata key-value pairs
-
         }
-
 
     def configure(self, config: DITAConfig) -> None:
         """Configure transformer with settings and handlers."""
@@ -108,7 +96,7 @@ class MarkdownTransformer(BaseTransformer):
             self.enable_latex = config.process_latex
             self.enable_numbering = config.number_headings
             self.enable_cross_refs = config.enable_cross_refs
-            self.show_toc = config.show_toc
+            self.enable_toc = config.show_toc
 
             self.logger.debug(
                 f"Configured with features: latex={self.enable_latex}, "
@@ -121,126 +109,160 @@ class MarkdownTransformer(BaseTransformer):
 
     def transform_topic(
             self,
-            parsed_element: ParsedElement,
+            element: TrackedElement,
             context: ProcessingContext,
             html_converter: Optional[Callable[[str, ProcessingContext], str]] = None
         ) -> ProcessedContent:
-        """Transform parsed Markdown to HTML with full pipeline integration."""
-        try:
-            self.logger.debug(f"Transforming Markdown topic: {parsed_element.topic_path}")
+            """Transform markdown to HTML with processing context."""
+            try:
+                # Extract metadata using element's path and ID
+                metadata = self.metadata_handler.extract_metadata(element.path, element.id)
 
-            # Extract metadata
-            metadata = self.metadata_handler.extract_metadata(
-                parsed_element.topic_path,
+                def _inject_strategies(html_content: str) -> str:
+                    # Check features from ProcessingContext
+                    if context.features.get("process_latex") and metadata.get('has_latex'):
+                        html_content = self._process_latex(html_content)
+
+                    # if context.features.get("show_toc"):
+                    #     html_content = self._append_toc(html_content)
+
+                    # Optional injections based on metadata
+                    if version := metadata.get('topic_version'):
+                        html_content = self._inject_topic_version(html_content, version)
+
+                    if section := metadata.get('topic_section'):
+                        html_content = self._inject_topic_section(html_content, section)
+
+                    return html_content
+
+                # Transform content
+                html_content = self._transform_markdown_to_html(element.content, context)
+
+                # Process with BeautifulSoup
+                soup = BeautifulSoup(html_content, 'html.parser')
+                self.process_elements(soup, element)  # Updated to use TrackedElement
+
+                # Apply injection strategies
+                html_content = _inject_strategies(str(soup))
+
+                # Final processing
+                final_html = self.html_helper.process_final_content(html_content)
+
+                # Update element state
+                element.state = ProcessingState.COMPLETED
+
+                return ProcessedContent(
+                    html=final_html,
+                    element_id=element.id,
+                    metadata=metadata
+                )
+
+            except Exception as e:
+                element.set_error(str(e))
+                self.logger.error(f"Error transforming markdown: {str(e)}")
+                return ProcessedContent(
+                    html=f"<div class='error'>Transform error: {str(e)}</div>",
+                    element_id=element.id,
+                    metadata={}
+                )
+
+
+
+    ##########################################################################
+    # Injection strategies (for transform_topic)
+    ##########################################################################
+
+    def _process_latex(self, html_content: str) -> str:
+        processed_equations = self.latex_processor.process_equations(self._extract_latex_equations(html_content))
+        for equation in processed_equations:
+            html_content = html_content.replace(equation.original, equation.html)
+        return html_content
+
+    # def _append_toc(self, html_content: str) -> str:
+    #     toc_html = self.html_helper.generate_toc(html_content)
+    #     return f"{toc_html}\n{html_content}"
+
+    # def _append_bibliography(self, html_content: str, metadata: Dict[str, Any]) -> str:
+    #     bibliography_data = metadata.get('bibliography', [])
+    #     bibliography_html = self.html_helper.generate_bibliography(bibliography_data)
+    #     return f"{html_content}\n{bibliography_html}"
+
+    # def _append_glossary(self, html_content: str, metadata: Dict[str, Any]) -> str:
+    #     glossary_data = metadata.get('glossary', [])
+    #     glossary_html = self.html_helper.generate_glossary(glossary_data)
+    #     return f"{html_content}\n{glossary_html}"
+
+    def _inject_topic_version(self, html_content: str, version: str) -> str:
+        # Implementation to inject specific topic version
+        ...
+
+    def _inject_topic_section(self, html_content: str, section: str) -> str:
+        # Implementation to inject specific topic section
+        ...
+
+
+    ##########################################################################
+    # Transformer methods and final processing
+    ##########################################################################
+
+
+    def process_elements(
+        self,
+        soup: BeautifulSoup,
+        parsed_element: TrackedElement
+    ) -> None:
+        """Process soup elements using our tracking and metadata infrastructure."""
+        try:
+            document_metadata = self.metadata_handler.extract_metadata(
+                parsed_element.path,
                 parsed_element.id
             )
 
-            # Convert Markdown to initial HTML
-            html_content = self._transform_markdown_to_html(parsed_element.content, context)
-
-            # Parse with BeautifulSoup for processing
-            soup = BeautifulSoup(html_content, 'html.parser')
-
-            # Process headings first
-            self.heading_handler.start_new_topic()
-            for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-                level = int(heading.name[1])
-                heading_id, numbered_text = self.heading_handler.process_heading(
-                    heading.get_text(),
-                    level,
-                    is_topic_title=(level == 1 and 'title' in heading.get('class', []))
+            for html_elem in soup.find_all(True):
+                # Process element with full context
+                processed_element = self.content_processor.process_element(
+                    html_elem,
+                    source_path=parsed_element.path,
+                    document_metadata=document_metadata,
+                    map_metadata=parsed_element.metadata
                 )
-                heading['id'] = heading_id
-                heading.string = numbered_text
 
-            # Process other elements
-            self.process_elements(soup, parsed_element)
+                # Apply metadata and attributes
+                if processed_element.html_metadata["attributes"].get("id"):
+                    html_elem["id"] = processed_element.html_metadata["attributes"]["id"]
 
-            # Process LaTeX if enabled
-            if self.enable_latex and metadata.get('has_latex'):
-                html_content = self._process_latex(str(soup))
-                soup = BeautifulSoup(html_content, 'html.parser')
+                if processed_element.html_metadata["classes"]:
+                    html_elem["class"] = " ".join(processed_element.html_metadata["classes"])
 
-            # Add table of contents if enabled
-            if self.show_toc:
-                html_content = self.html_helper.render_headings(str(soup), True)
-            else:
-                html_content = str(soup)
+                # Handle image elements specially
+                if processed_element.type == MDElementType.IMAGE:
+                    if transformed_html := self._transform_image(processed_element):
+                        new_element = BeautifulSoup(transformed_html, "html.parser")
+                        html_elem.replace_with(new_element)
+                    continue
 
-            # Process final HTML
-            final_html = self.html_helper.process_final_content(html_content)
-
-            return ProcessedContent(
-                html=final_html,
-                element_id=parsed_element.id,
-                metadata={
-                    **metadata,
-                    'processed_at': datetime.now().isoformat()
-                }
-            )
+                # Apply element-specific transformations
+                if processed_element.type.value in MDElementType.__members__:
+                    md_type = MDElementType(processed_element.type.value)
+                    if md_type in self._element_transformers:
+                        transform_method = self._element_transformers[md_type]
+                        if transformed_html := transform_method(processed_element):
+                            new_element = BeautifulSoup(transformed_html, "html.parser")
+                            html_elem.replace_with(new_element)
 
         except Exception as e:
-            self.logger.error(f"Error transforming topic: {str(e)}")
-            raise
-
-    def process_elements(
-       self,
-       soup: BeautifulSoup,
-       parsed_element: ParsedElement
-    ) -> None:
-       """
-       Process HTML elements using the Markdown content processor.
-
-       Args:
-           soup: BeautifulSoup object containing parsed HTML
-           parsed_element: Original parsed element for context
-       """
-       try:
-           # Process elements by type using content processor
-           for element in soup.find_all(True):
-               # Get element info from content processor
-               element_info = self.content_processor.process_element(
-                   element,
-                   source_path=parsed_element.topic_path
-               )
-
-               # Apply processed attributes
-               if element_info.attributes.id:
-                   element['id'] = element_info.attributes.id
-
-               if element_info.attributes.classes:
-                   element['class'] = ' '.join(element_info.attributes.classes)
-
-               for key, value in element_info.attributes.custom_attrs.items():
-                   element[key] = value
-
-               # Transform element based on type
-               if element_info.type in self._element_transformers:
-                   transform_method = self._element_transformers[element_info.type]
-                   transformed_html = transform_method(element_info)
-
-                   if transformed_html:
-                       new_element = BeautifulSoup(transformed_html, 'html.parser')
-                       element.replace_with(new_element)
-
-               # Handle special path resolution for images
-               elif element_info.type == MDElementType.IMAGE:
-                   src = element.get('src', '')
-                   if src:
-                       element['src'] = self.html_helper.resolve_image_path(
-                           src,
-                           parsed_element.topic_path
-                       )
-
-       except Exception as e:
-           self.logger.error(f"Error processing elements: {str(e)}")
-           raise
+            self.logger.error(f"Error processing elements: {str(e)}")
+            raise ProcessingError(
+                error_type="transformation",
+                message=str(e),
+                context=str(parsed_element.path)
+            )
 
     def _apply_heading_attributes(
         self,
         element: Tag,
         level: int,
-        heading_info: MDElementInfo,
+        tracked_element: TrackedElement,
         context: ProcessingContext
     ) -> None:
         """
@@ -249,7 +271,7 @@ class MarkdownTransformer(BaseTransformer):
         Args:
             element: The heading element
             level: Heading level (1-6)
-            heading_info: Processed heading information
+            tracked_element: Processed element information
             context: Current processing context
         """
         try:
@@ -257,7 +279,7 @@ class MarkdownTransformer(BaseTransformer):
             heading_id, numbered_heading = self.heading_handler.process_heading(
                 text=element.get_text().strip(),
                 level=level,
-                is_topic_title=(level == 1 and heading_info.metadata.get('is_title', False))
+                is_topic_title=(level == 1 and tracked_element.metadata.get('is_title', False))
             )
 
             # Update element attributes
@@ -266,8 +288,8 @@ class MarkdownTransformer(BaseTransformer):
 
             # Add heading classes
             default_classes = ['heading', f'heading-{level}']
-            if heading_info.attributes.classes:
-                default_classes.extend(heading_info.attributes.classes)
+            if tracked_element.html_metadata["classes"]:
+                default_classes.extend(tracked_element.html_metadata["classes"])
             element['class'] = ' '.join(default_classes)
 
             # Create and add anchor link
@@ -276,91 +298,93 @@ class MarkdownTransformer(BaseTransformer):
             anchor.string = '¶'
             element.append(anchor)
 
-            # Track cross-reference information
-            self.heading_handler.add_heading_reference(
-                HeadingReference(
-                    id=heading_id,
-                    text=numbered_heading,
-                    level=level,
-                    topic_id=heading_info.context.parent_id,
-                    map_id=context.map_context.base.id if context and hasattr(context, 'map_context') else None
-                )
-            )
+            # Store heading info in topic metadata
+            if context.current_topic_id:
+                heading_data = {
+                    "text": numbered_heading,
+                    "level": level,
+                    "id": heading_id,
+                    "topic_id": tracked_element.topic_id,
+                    "map_id": tracked_element.parent_map_id
+                }
+
+                # Add to topic metadata
+                topic_meta = context.topic_metadata.setdefault(context.current_topic_id, {})
+                topic_meta.setdefault("headings", {})[heading_id] = heading_data
 
         except Exception as e:
             self.logger.error(f"Error applying heading attributes: {str(e)}")
             raise
 
-    def _transform_heading(self, element_info: MDElementInfo) -> str:
-           """
-           Transform a heading element to HTML.
+    def _transform_heading(self, tracked_element: TrackedElement) -> str:
+        """
+        Transform a heading element to HTML.
 
-           Args:
-               element_info: Processed heading information
+        Args:
+            tracked_element: Processed element information
 
-           Returns:
-               str: Transformed HTML
-           """
-           try:
-               level = element_info.level or 1
-               heading_id = element_info.attributes.id
-               content = element_info.content
-               classes = ' '.join(['heading', f'heading-{level}', *element_info.attributes.classes])
+        Returns:
+            str: Transformed HTML
+        """
+        level = tracked_element.metadata.get("heading_level", 1)
+        heading_id = tracked_element.html_metadata["attributes"].get("id", "")
+        content = tracked_element.content
+        classes = ' '.join(['heading', f'heading-{level}', *tracked_element.html_metadata["classes"]])
 
-               return (
-                   f'<h{level} id="{heading_id}" class="{classes}">'
-                   f'{content}'
-                   f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
-                   f'</h{level}>'
-               )
+        # Get numbering preference from metadata
+        if tracked_element.metadata.get("number_headings", True):
+            content = self.heading_handler.process_heading(content, level)
 
-           except Exception as e:
-               self.logger.error(f"Error transforming heading: {str(e)}")
-               return ""
+        return (
+            f'<h{level} id="{heading_id}" class="{classes}">'
+            f'{content}'
+            f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
+            f'</h{level}>'
+        )
 
-    def _transform_paragraph(self, element_info: MDElementInfo) -> str:
-       """
-       Transform paragraph elements to HTML.
+    def _transform_paragraph(self, tracked_element: TrackedElement) -> str:
+        """
+        Transform paragraph elements to HTML.
 
-       Args:
-           element_info: Processed paragraph information
+        Args:
+            tracked_element: Processed element information
 
-       Returns:
-           str: Transformed HTML
-       """
-       try:
-           content = html.escape(element_info.content)
-           classes = ' '.join(['paragraph', *element_info.attributes.classes])
+        Returns:
+            str: Transformed HTML
+        """
+        try:
+            content = html.escape(tracked_element.content)
+            classes = ' '.join(['paragraph', *tracked_element.html_metadata["classes"]])
 
-           return (
-               f'<p class="{classes}">'
-               f'{content}'
-               f'</p>'
-           )
+            return (
+                f'<p class="{classes}">'
+                f'{content}'
+                f'</p>'
+            )
 
-       except Exception as e:
-           self.logger.error(f"Error transforming paragraph: {str(e)}")
-           return ""
+        except Exception as e:
+            self.logger.error(f"Error transforming paragraph: {str(e)}")
+            return ""
 
-    def _transform_footnote(self, element_info: MDElementInfo) -> str:
+    def _transform_footnote(self, tracked_element: TrackedElement) -> str:
        """
        Transform footnote elements to HTML, supporting Obsidian-style footnotes.
        Handles both inline references and footnote content sections.
 
        Args:
-           element_info: Processed footnote information
+           tracked_element: Processed footnote information
 
        Returns:
            str: Transformed HTML
        """
        try:
-           content = html.escape(element_info.content)
-           footnote_id = element_info.attributes.id
-           base_classes = ['footnote', *element_info.attributes.classes]
+           content = html.escape(tracked_element.content)
+           footnote_id = tracked_element.html_metadata["attributes"].get("id", "")
+           base_classes = ['footnote', *tracked_element.html_metadata["classes"]]
 
            # Handle inline reference (^1)
-           if element_info.metadata.get('is_reference', False):
-               ref_number = element_info.metadata.get('footnote_number', '')
+           if tracked_element.metadata.get('is_reference', False):
+               ref_number = tracked_element.metadata.get('footnote_number', '')
                ref_classes = ' '.join(['footnote-ref', *base_classes])
 
                return (
@@ -393,33 +417,35 @@ class MarkdownTransformer(BaseTransformer):
            self.logger.error(f"Error transforming footnote: {str(e)}")
            return ""
 
-    def _transform_emphasis(self, element_info: MDElementInfo) -> str:
+    def _transform_emphasis(self, tracked_element: TrackedElement) -> str:
        """
        Transform emphasis elements to HTML.
        Handles bold, italic, underline and strikethrough, including nested formatting.
 
        Args:
-           element_info: Processed emphasis information
+           tracked_element: Processed element information
 
        Returns:
            str: Transformed HTML
        """
        try:
-           content = html.escape(element_info.content)
+           content = html.escape(tracked_element.content)
 
            # Map element types to HTML tags and classes
            emphasis_map = {
-               MDElementType.BOLD: ('strong', 'bold'),
-               MDElementType.ITALIC: ('em', 'italic'),
-               MDElementType.UNDERLINE: ('u', 'underline'),
-               MDElementType.STRIKETHROUGH: ('del', 'strikethrough')
+               'bold': ('strong', 'bold'),
+               'italic': ('em', 'italic'),
+               'underline': ('u', 'underline'),
+               'strikethrough': ('del', 'strikethrough')
            }
 
-           if element_info.type not in emphasis_map:
+           # Get element type value
+           element_type = tracked_element.type.value
+           if element_type not in emphasis_map:
                return content
 
-           tag, base_class = emphasis_map[element_info.type]
-           classes = ' '.join([base_class, *element_info.attributes.classes])
+           tag, base_class = emphasis_map[element_type]
+           classes = ' '.join([base_class, *tracked_element.html_metadata["classes"]])
 
            return f'<{tag} class="{classes}">{content}</{tag}>'
 
@@ -430,6 +456,29 @@ class MarkdownTransformer(BaseTransformer):
 
 
 
+    # def _process_image(
+    #     self,
+    #     img_elem: Tag,
+    #     processed_element: TrackedElement,
+    #     source_path: Path
+    # ) -> None:
+    #     """Handle image-specific processing."""
+    #     if src := img_elem.get("src", ""):
+    #         img_elem["src"] = self.html_helper.resolve_image_path(src, source_path)
+
+    #     # Handle conditional images
+    #     if processed_element.metadata.get("features", {}).get("conditional_image"):
+    #         if conditional_src := processed_element.metadata.get("conditional_image", {}).get("src"):
+    #             img_elem["src"] = self.html_helper.resolve_image_path(
+    #                 conditional_src,
+    #                 source_path
+    #             )
+
+    #         # Add any responsive classes
+    #         img_elem["class"] = " ".join(filter(None, [
+    #             img_elem.get("class", ""),
+    #             "img-fluid"
+    #         ]))
 
 
     def _process_images(self, soup: BeautifulSoup, topic_path: Path) -> None:
@@ -482,311 +531,268 @@ class MarkdownTransformer(BaseTransformer):
        except Exception as e:
            self.logger.error(f"Error processing images: {str(e)}")
 
-    def _transform_image(self, element_info: MDElementInfo) -> str:
-       """
-       Transform an image element to HTML.
-
-       Args:
-           element_info: Processed image information
-
-       Returns:
-           str: Transformed HTML
-       """
-       try:
-           src = element_info.attributes.custom_attrs.get('src', '')
-           alt = element_info.attributes.custom_attrs.get('alt', '')
-           title = element_info.attributes.custom_attrs.get('title', '')
-           classes = ' '.join(['img-fluid', *element_info.attributes.classes])
-
-           # Build image tag
-           img = f'<img src="{src}" alt="{alt}" class="{classes}"'
-           if title:
-               img += f' title="{title}"'
-           img += ' />'
-
-           # Wrap in figure if there's alt text
-           if alt:
-               return (
-                   f'<figure class="figure">'
-                   f'{img}'
-                   f'<figcaption class="figure-caption">{alt}</figcaption>'
-                   f'</figure>'
-               )
-
-           return img
-
-       except Exception as e:
-           self.logger.error(f"Error transforming image: {str(e)}")
-           return ""
-
-
-    def _transform_table(self, element_info: MDElementInfo) -> str:
+    def _transform_image(self, tracked_element: TrackedElement) -> str:
         """
-        Transform table elements to HTML with specialization support.
-        Handles tables, headers, rows, cells and table specializations.
+        Transform an image element to HTML.
 
         Args:
-            element_info: Processed table information
+            tracked_element: Processed image information
 
         Returns:
             str: Transformed HTML
         """
         try:
-            content = html.escape(element_info.content)
-            table_info = element_info.metadata.get('table_info', {})
+            # Get base attributes
+            attrs = tracked_element.html_metadata["attributes"]
+            src = attrs.get('src', '')
+            alt = attrs.get('alt', '')
+            title = attrs.get('title', '')
 
-            # Base configuration for table elements
-            table_map = {
-                MDElementType.TABLE: {
-                    'tag': 'table',
-                    'base_class': 'markdown-table',
-                    'attrs': {'role': 'grid'}
-                },
-                MDElementType.TABLE_HEADER: {
-                    'tag': 'th',
-                    'base_class': 'table-header',
-                    'attrs': {'scope': 'col'}
-                },
-                MDElementType.TABLE_ROW: {
-                    'tag': 'tr',
-                    'base_class': 'table-row',
-                    'attrs': {}
-                },
-                MDElementType.TABLE_CELL: {
-                    'tag': 'td',
-                    'base_class': 'table-cell',
-                    'attrs': {}
-                }
-            }
+            # Handle conditional images
+            if conditional_src := tracked_element.metadata.get('conditional_image', {}).get('src'):
+                src = conditional_src
 
-            if element_info.type not in table_map:
-                return content
+            # Process source path
+            if src and not src.startswith(('http://', 'https://')):
+                src = self.html_helper.resolve_image_path(src, tracked_element.path)
 
-            config = table_map[element_info.type]
-            tag = config['tag']
+            # Build classes
+            classes = ['img-fluid', 'md-image', *tracked_element.html_metadata["classes"]]
 
-            # Handle table specializations
-            if element_info.type == MDElementType.TABLE:
-                specialization = table_info.get('type', 'default')
-                base_classes = [
-                    config['base_class'],
-                    f'table-{specialization}',
-                    *element_info.attributes.classes
-                ]
+            # Build image tag
+            img_attrs = [
+                f'src="{src}"',
+                f'alt="{alt}"',
+                f'class="{" ".join(classes)}"',
+                'loading="lazy"'
+            ]
 
-                # Add specialized attributes
-                specialized_attrs = {
-                    'bibliography': {
-                        'data-citation-format': table_info.get('citation_format', 'apa'),
-                        'data-sort': table_info.get('sort_by', 'author'),
-                        'aria-label': 'Bibliography entries'
-                    },
-                    'glossary': {
-                        'data-sort': table_info.get('sort_by', 'term'),
-                        'data-show-refs': str(table_info.get('show_references', True)).lower(),
-                        'aria-label': 'Glossary terms and definitions'
-                    },
-                    'metadata': {
-                        'data-visibility': table_info.get('visibility', 'visible'),
-                        'data-collapsible': str(table_info.get('collapsible', False)).lower(),
-                        'aria-label': 'Article metadata'
-                    }
-                }
+            if title:
+                img_attrs.append(f'title="{title}"')
 
-                # Update config attrs with specialization
-                if specialization in specialized_attrs:
-                    config['attrs'].update(specialized_attrs[specialization])
+            img = f'<img {" ".join(img_attrs)} />'
 
-                # Add structural metadata
-                if table_info.get('has_header'):
-                    config['attrs']['data-has-header'] = 'true'
-                if rows := table_info.get('rows'):
-                    config['attrs']['data-rows'] = str(rows)
-                if cols := table_info.get('columns'):
-                    config['attrs']['data-columns'] = str(cols)
+            # Add figure wrapper if there's alt text
+            if alt:
+                return (
+                    f'<figure class="figure">'
+                    f'{img}'
+                    f'<figcaption class="figure-caption">{alt}</figcaption>'
+                    f'</figure>'
+                )
 
-            else:
-                # Non-table elements use basic classes
-                base_classes = [config['base_class'], *element_info.attributes.classes]
-
-            # Build final attributes
-            attrs = ' '.join([
-                f'{key}="{value}"'
-                for key, value in {
-                    **config['attrs'],
-                    **element_info.attributes.custom_attrs,
-                    'class': ' '.join(base_classes)
-                }.items()
-            ])
-
-            return f'<{tag} {attrs}>{content}</{tag}>'
+            return img
 
         except Exception as e:
-            self.logger.error(f"Error transforming table element: {str(e)}")
+            self.logger.error(f"Error transforming image: {str(e)}")
             return ""
 
-    def _transform_code_block(self, element_info: MDElementInfo) -> str:
-       """
-       Transform code elements (both blocks and phrases) to HTML.
 
-       Args:
-           element_info: Processed code element information
+    def _transform_table(self, tracked_element: TrackedElement) -> str:
+        """Transform table elements to HTML."""
+        content = html.escape(tracked_element.content)
+        table_info = tracked_element.metadata.get('table_info', {})
 
-       Returns:
-           str: Transformed HTML
-       """
-       try:
-           # Handle inline code phrase
-           if element_info.type == MDElementType.CODE_PHRASE:
-               content = html.escape(element_info.content)
-               classes = ' '.join(['code-inline', *element_info.attributes.classes])
-               return f'<code class="{classes}">{content}</code>'
+        table_map = {
+            'table': {
+                'tag': 'table',
+                'base_class': 'markdown-table',
+                'attrs': {'role': 'grid'}
+            },
+            'table_header': {
+                'tag': 'th',
+                'base_class': 'table-header',
+                'attrs': {'scope': 'col'}
+            },
+            'table_row': {
+                'tag': 'tr',
+                'base_class': 'table-row',
+                'attrs': {}
+            },
+            'table_cell': {
+                'tag': 'td',
+                'base_class': 'table-cell',
+                'attrs': {}
+            }
+        }
 
-           # Handle code blocks
-           content = html.escape(element_info.content)
-           language = element_info.metadata.get('code_info', {}).get('language', '')
+        element_type = tracked_element.type.value
+        if element_type not in table_map:
+            return content
 
-           # Special handling for Mermaid
-           if language == 'mermaid':
-               return (
-                   f'<div class="mermaid-wrapper">'
-                   f'<div class="mermaid">{content}</div>'
-                   f'</div>'
-               )
+        config = table_map[element_type]
+        tag = config['tag']
 
-           # Build standard code block
-           return (
-               f'<div class="code-block-wrapper">'
-               f'{f"<div class=\"code-label\">{language}</div>" if language else ""}'
-               f'<pre class="code-block highlight" data-language="{language}">'
-               f'<code class="language-{language}">{content}</code>'
-               f'</pre>'
-               f'<button class="copy-code-button" aria-label="Copy code">Copy</button>'
-               f'</div>'
-           )
+        specialization = table_info.get('type', 'default')
+        base_classes = [
+            config['base_class'],
+            f'table-{specialization}',
+            *tracked_element.html_metadata["classes"]
+        ]
 
-       except Exception as e:
-           self.logger.error(f"Error transforming code element: {str(e)}")
-           return ""
+        # Build final attributes
+        final_attrs = config['attrs'].copy()
 
-    def _transform_blockquote(self, element_info: MDElementInfo) -> str:
-       """
-       Transform a blockquote element to HTML.
+        # Handle specializations
+        if specialization in ('bibliography', 'glossary', 'metadata'):
+            if specialization == 'bibliography':
+                final_attrs.update({
+                    'data-citation-format': table_info.get('citation_format', 'apa'),
+                    'data-sort': table_info.get('sort_by', 'author'),
+                    'aria-label': 'Bibliography entries'
+                })
+            elif specialization == 'glossary':
+                final_attrs.update({
+                    'data-sort': table_info.get('sort_by', 'term'),
+                    'data-show-refs': str(table_info.get('show_references', True)).lower(),
+                    'aria-label': 'Glossary terms and definitions'
+                })
+            else:  # metadata
+                final_attrs.update({
+                    'data-visibility': table_info.get('visibility', 'visible'),
+                    'data-collapsible': str(table_info.get('collapsible', False)).lower(),
+                    'aria-label': 'Article metadata'
+                })
 
-       Args:
-           element_info: Processed blockquote information
+        # Add table info attributes
+        if table_info.get('has_header'):
+            final_attrs['data-has-header'] = 'true'
+        if rows := table_info.get('rows'):
+            final_attrs['data-rows'] = str(rows)
+        if cols := table_info.get('columns'):
+            final_attrs['data-columns'] = str(cols)
 
-       Returns:
-           str: Transformed HTML
-       """
-       try:
-           content = html.escape(element_info.content)
-           classes = ' '.join(['blockquote', *element_info.attributes.classes])
+        # Add custom attributes from html_metadata
+        final_attrs.update(tracked_element.html_metadata["attributes"])
+        final_attrs['class'] = ' '.join(base_classes)
 
-           return (
-               f'<blockquote class="{classes}">'
-               f'<p>{content}</p>'
-               f'</blockquote>'
-           )
+        # Build attribute string
+        attrs_str = ' '.join(f'{k}="{v}"' for k, v in final_attrs.items())
 
-       except Exception as e:
-           self.logger.error(f"Error transforming blockquote: {str(e)}")
-           return ""
+        return f'<{tag} {attrs_str}>{content}</{tag}>'
 
+    def _transform_code_block(self, tracked_element: TrackedElement) -> str:
+        """Transform code elements (blocks and phrases) to HTML."""
+        try:
+            content = html.escape(tracked_element.content)
+            element_type = tracked_element.type.value
 
-    def _process_html_elements(self, soup: BeautifulSoup, context: ProcessingContext) -> None:
-       """
-       Process individual HTML elements using element processors.
+            # Handle inline code phrase
+            if element_type == 'code_phrase':
+                classes = ' '.join(['code-inline', *tracked_element.html_metadata["classes"]])
+                return f'<code class="{classes}">{content}</code>'
 
-       Args:
-           soup (BeautifulSoup): Parsed HTML content.
-           context (ProcessingContext): Current processing context
-       """
-       try:
-           for tag in soup.find_all(True):
-               # Get element info from content processor
-               element_info = self.content_processor.process_element(tag)
+            # Handle code blocks
+            language = tracked_element.metadata.get('code_info', {}).get('language', '')
 
-               # Apply element attributes
-               if element_info.attributes.id:
-                   tag['id'] = element_info.attributes.id
+            # Special handling for Mermaid
+            if language == 'mermaid':
+                return (
+                    f'<div class="mermaid-wrapper">'
+                    f'<div class="mermaid">{content}</div>'
+                    f'</div>'
+                )
 
-               if element_info.attributes.classes:
-                   existing_classes = tag.get('class', [])
-                   if isinstance(existing_classes, str):
-                       existing_classes = existing_classes.split()
-                   tag['class'] = ' '.join([*existing_classes, *element_info.attributes.classes])
+            # Build standard code block
+            return (
+                f'<div class="code-block-wrapper">'
+                f'{f"<div class=\"code-label\">{language}</div>" if language else ""}'
+                f'<pre class="code-block highlight" data-language="{language}">'
+                f'<code class="language-{language}">{content}</code>'
+                f'</pre>'
+                f'<button class="copy-code-button" aria-label="Copy code">Copy</button>'
+                f'</div>'
+            )
 
-               # Process custom attributes
-               for key, value in element_info.attributes.custom_attrs.items():
-                   tag[key] = value
+        except Exception as e:
+            self.logger.error(f"Error transforming code element: {str(e)}")
+            return ""
 
-               # Transform element based on type
-               if element_info.type in self._element_transformers:
-                   transform_method = self._element_transformers[element_info.type]
-                   transformed_html = transform_method(element_info)
+    def _transform_blockquote(self, tracked_element: TrackedElement) -> str:
+        """Transform blockquote element to HTML."""
+        try:
+            content = html.escape(tracked_element.content)
+            classes = ' '.join(['blockquote', *tracked_element.html_metadata["classes"]])
 
-                   if transformed_html:
-                       new_element = BeautifulSoup(transformed_html, 'html.parser')
-                       tag.replace_with(new_element)
+            return (
+                f'<blockquote class="{classes}">'
+                f'<p>{content}</p>'
+                f'</blockquote>'
+            )
 
-       except Exception as e:
-           self.logger.error(f"Error processing HTML elements: {str(e)}")
+        except Exception as e:
+            self.logger.error(f"Error transforming blockquote: {str(e)}")
+            return ""
 
     def _transform_markdown_to_html(
-           self,
-           content: str,
-           context: ProcessingContext
-       ) -> str:
-       """
-       Transform Markdown content to HTML with full processing pipeline.
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> str:
+        """
+        Transform Markdown content to HTML with full processing pipeline.
 
-       Args:
-           content: Raw markdown content
-           context: Processing context
+        Args:
+            element: TrackedElement containing markdown content
+            context: Processing context
 
-       Returns:
-           str: Processed HTML content
-       """
-       try:
-           # Initial markdown to HTML conversion
-           html_content = markdown.markdown(
-               content,
-               extensions=self.extensions
-           )
+        Returns:
+            str: Processed HTML content
+        """
+        try:
+            # Initial markdown to HTML conversion
+            html_content = markdown.markdown(
+                element.content,
+                extensions=self.extensions
+            )
 
-           # Parse into BeautifulSoup
-           soup = BeautifulSoup(html_content, 'html.parser')
+            # Parse into BeautifulSoup
+            soup = BeautifulSoup(html_content, 'html.parser')
 
-           # Extract and process LaTeX if present
-           if '$$' in content or '$' in content:
-               self._latex_equations = self._extract_latex_equations(content)
-               if self._latex_equations:
-                   self._process_latex_equations(soup)
+            # Handle LaTeX if present and enabled
+            if context.features.get("process_latex"):
+                if '$$' in element.content or '$' in element.content:
+                    latex_equations = self.latex_processor.process_equations(
+                        self._extract_latex_equations(element.content)
+                    )
+                    if latex_equations:
+                        element.metadata["has_latex"] = True
+                        self._process_latex_equations(soup, latex_equations)
 
-           # Process all elements through transformer pipeline
-           self._process_html_elements(soup, context)
+            # Process all elements through transformer pipeline
+            self.process_elements(soup, element)
 
-           # Create wrapper with proper classes
-           wrapper = soup.new_tag('div')
-           classes = ['markdown-content']
-           if self._latex_equations:
-               classes.append('katex-content')
-           wrapper['class'] = ' '.join(classes)
+            # Create wrapper with proper classes and metadata
+            wrapper = soup.new_tag('div')
+            wrapper_classes = ['markdown-content']
 
-           # Move processed content into wrapper
-           for child in soup.children:
-               wrapper.append(child)
+            # Add conditional classes
+            if element.metadata.get("has_latex"):
+                wrapper_classes.append('katex-content')
+            if element.metadata.get("has_bibliography"):
+                wrapper_classes.append('bibliography-content')
+            if context.features.get("enable_cross_refs"):
+                wrapper_classes.append('cross-refs-enabled')
 
-           return str(wrapper)
+            wrapper['class'] = ' '.join(wrapper_classes)
 
-       except Exception as e:
-           self.logger.error(f"Error transforming markdown to HTML: {str(e)}")
-           raise ProcessingError(
-               error_type="transformation",
-               message=f"HTML transformation failed: {str(e)}",
-               context="markdown_transformation"
-           )
+            # Add metadata attributes
+            for key, value in element.metadata.get("content_attributes", {}).items():
+                wrapper[f"data-{key}"] = str(value)
+
+            # Move processed content into wrapper
+            for child in soup.children:
+                wrapper.append(child)
+
+            return str(wrapper)
+
+        except Exception as e:
+            self.logger.error(f"Error transforming markdown to HTML: {str(e)}")
+            raise ProcessingError(
+                error_type="transformation",
+                message=f"HTML transformation failed: {str(e)}",
+                context=str(element.path)
+            )
 
     def _transform_link(self, element_info: MDElementInfo) -> str:
        """
@@ -864,6 +870,7 @@ class MarkdownTransformer(BaseTransformer):
 
 
 
+
     ##########################################################################
     # Metadata processing
     ##########################################################################
@@ -880,42 +887,30 @@ class MarkdownTransformer(BaseTransformer):
         Returns:
             str: Transformed HTML that can be used by other transformers
         """
-        try:
-            metadata = element_info.metadata
+        metadata = element_info.metadata
 
-            # Don't render metadata directly in content
-            # Instead, prepare it for other transformers
-            if metadata.get('content'):
-                article_meta = {
-                    'title': metadata['content'].get('title'),
-                    'authors': metadata['content'].get('authors', []),
-                    'abstract': metadata['content'].get('abstract'),
-                    'keywords': metadata['content'].get('keywords', [])
-                }
+        if metadata.get('content'):
+            article_meta = {
+                'title': metadata['content'].get('title'),
+                'authors': metadata['content'].get('authors', []),
+                'abstract': metadata['content'].get('abstract'),
+                'keywords': metadata['content'].get('keywords', [])
+            }
+            if not hasattr(self, '_article_metadata'):
+                self._article_metadata = {}
+            self._article_metadata.update(article_meta)
 
-                # Store for article metadata transformer
-                if not hasattr(self, '_article_metadata'):
-                    self._article_metadata = {}
-                self._article_metadata.update(article_meta)
+        if metadata.get('citations'):
+            if not hasattr(self, '_bibliography_data'):
+                self._bibliography_data = []
+            self._bibliography_data.extend(metadata['citations'])
 
-            # Handle bibliography data
-            if metadata.get('citations'):
-                if not hasattr(self, '_bibliography_data'):
-                    self._bibliography_data = []
-                self._bibliography_data.extend(metadata['citations'])
+        if metadata.get('glossary'):
+            if not hasattr(self, '_glossary_entries'):
+                self._glossary_entries = []
+            self._glossary_entries.extend(metadata['glossary'])
 
-            # Handle glossary entries
-            if metadata.get('glossary'):
-                if not hasattr(self, '_glossary_entries'):
-                    self._glossary_entries = []
-                self._glossary_entries.extend(metadata['glossary'])
-
-            # Return empty string since we don't want to inject metadata directly
-            return ""
-
-        except Exception as e:
-            self.logger.error(f"Error transforming metadata: {str(e)}")
-            return ""
+        return ""
 
 
 

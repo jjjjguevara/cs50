@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
-from typing import Optional
-from dataclasses import dataclass
+from typing import Optional, TypedDict, Dict
+from dataclasses import dataclass, field
 import json
 
 class DevelopmentConfig:
@@ -17,6 +17,18 @@ config = {
     'production': ProductionConfig
 }
 
+@dataclass
+class LaTeXConfig:
+    """LaTeX processing configuration."""
+    macros: Dict[str, str] = field(default_factory=lambda: {
+        "\\N": "\\mathbb{N}",
+        "\\R": "\\mathbb{R}"
+    })
+    throw_on_error: bool = False
+    output_mode: str = "html"
+
+
+
 class DITAConfig:
     """
     Main configuration class for DITA processing.
@@ -29,22 +41,15 @@ class DITAConfig:
         artifacts_dir: Optional[Path] = None,
         static_dir: Optional[Path] = None,
         metadata_db_path: Optional[Path] = None,
+        features: Optional[Dict[str, bool]] = None,
+        latex_config: Optional[LaTeXConfig] = None,
         number_headings: bool = False,
         enable_cross_refs: bool = True,
         show_toc: bool = True,
         process_latex: bool = False,
         latex_settings: Optional[dict] = None,
     ):
-
-
-        # First, use os.getenv() to get the directory (returns a string or None)
-        env_var = os.getenv("DITA_TOPICS_DIR", "app/dita/topics")
-
-        # Convert the environment variable (or fallback) to a Path object
-        if isinstance(env_var, str):
-            topics_dir = Path(env_var)
-
-        # Rest of the configuration setup
+        # Directory configuration
         self.topics_dir = topics_dir.resolve() if topics_dir else None
         self.maps_dir = maps_dir or self._default_dir("DITA_MAPS_DIR", "app/dita/maps")
         self.artifacts_dir = artifacts_dir or self._default_dir("DITA_ARTIFACTS_DIR", "app/dita/artifacts")
@@ -55,16 +60,27 @@ class DITAConfig:
         self.show_toc = show_toc
         self.process_latex = process_latex
 
+        # Features configuration
+        self.features = features or {
+            "process_latex": False,
+            "number_headings": False,
+            "enable_cross_refs": True,
+            "process_artifacts": False,
+            "show_toc": True
+        }
 
         # LaTeX configuration
-        self.latex_settings = latex_settings or {
-            'macros': {
-                "\\N": "\\mathbb{N}",
-                "\\R": "\\mathbb{R}"
-            },
-            'throw_on_error': False,
-            'output_mode': 'html'
-        }
+        self.latex_config = latex_config or LaTeXConfig()
+
+        # First, use os.getenv() to get the directory (returns a string or None)
+        env_var = os.getenv("DITA_TOPICS_DIR", "app/dita/topics")
+
+        # Convert the environment variable (or fallback) to a Path object
+        if isinstance(env_var, str):
+            topics_dir = Path(env_var)
+
+        # Rest of the configuration setup
+
 
     def _default_dir(self, env_var: str, default: str) -> Path:
         """
@@ -97,40 +113,36 @@ class DITAConfig:
 
     @classmethod
     def from_environment(cls) -> "DITAConfig":
-        """
-        Create a DITAConfig instance from environment variables.
-
-        Returns:
-            DITAConfig: Configured instance based on environment variables.
-        """
+        """Create a DITAConfig instance from environment variables."""
+        # Directory configuration
         topics_dir = os.getenv("DITA_TOPICS_DIR")
         maps_dir = os.getenv("DITA_MAPS_DIR")
         artifacts_dir = os.getenv("DITA_ARTIFACTS_DIR")
         static_dir = os.getenv("DITA_STATIC_DIR")
-        number_headings = os.getenv("DITA_NUMBER_HEADINGS", "False").lower() in ("true", "1", "yes")
-        enable_cross_refs = os.getenv("DITA_ENABLE_CROSS_REFS", "True").lower() in ("true", "1", "yes")
-        show_toc = os.getenv("DITA_SHOW_TOC", "True").lower() in ("true", "1", "yes")
-        process_latex = os.getenv("DITA_PROCESS_LATEX", "False").lower() in ("true", "1", "yes")
 
-        # Parse LaTeX settings from environment
-        latex_settings = {}
-        if process_latex:
-            latex_settings = {
-                'macros': json.loads(os.getenv("DITA_LATEX_MACROS", "{}")),
-                'throw_on_error': os.getenv("DITA_LATEX_THROW_ON_ERROR", "False").lower() in ("true", "1", "yes"),
-                'output_mode': os.getenv("DITA_LATEX_OUTPUT_MODE", "html")
-            }
+        # Features configuration
+        features = {
+            "process_latex": os.getenv("DITA_PROCESS_LATEX", "False").lower() in ("true", "1", "yes"),
+            "number_headings": os.getenv("DITA_NUMBER_HEADINGS", "False").lower() in ("true", "1", "yes"),
+            "enable_cross_refs": os.getenv("DITA_ENABLE_CROSS_REFS", "True").lower() in ("true", "1", "yes"),
+            "process_artifacts": os.getenv("DITA_PROCESS_ARTIFACTS", "False").lower() in ("true", "1", "yes"),
+            "show_toc": os.getenv("DITA_SHOW_TOC", "True").lower() in ("true", "1", "yes")
+        }
+
+        # LaTeX configuration
+        latex_config = LaTeXConfig(
+            macros=json.loads(os.getenv("DITA_LATEX_MACROS", "{}")),
+            throw_on_error=os.getenv("DITA_LATEX_THROW_ON_ERROR", "False").lower() in ("true", "1", "yes"),
+            output_mode=os.getenv("DITA_LATEX_OUTPUT_MODE", "html")
+        ) if features["process_latex"] else None
 
         return cls(
             topics_dir=Path(topics_dir) if topics_dir else None,
             maps_dir=Path(maps_dir) if maps_dir else None,
             artifacts_dir=Path(artifacts_dir) if artifacts_dir else None,
             static_dir=Path(static_dir) if static_dir else None,
-            number_headings=number_headings,
-            enable_cross_refs=enable_cross_refs,
-            show_toc=show_toc,
-            process_latex=process_latex,
-            latex_settings=latex_settings
+            features=features,
+            latex_config=latex_config
         )
 
 class ConfigValidator:

@@ -30,36 +30,20 @@ from .models.types import (
     ProcessingPhase,
 
     # Content types
-    DiscoveredMap,
-    DiscoveredTopic,
-    ParsedElement,
     TrackedElement,
     ProcessedContent,
     DITAElementType,
 
     # Context types
-    MapContext,
-    TopicContext,
     ProcessingContext,
     ProcessedContent,
 
     # Processing types
-    ParsedMap,
-    ProcessingResult,
-    ProcessingOptions,
     ProcessingError,
-
-    # Feature types
-    ContentFeatures,
-    ProcessingFeatures,
 
     # Artifact types
     ArtifactReference,
     ProcessedArtifact,
-
-    # Reference types
-    HeadingReference,
-    CrossReference,
 
     # Log types
     LogContext,

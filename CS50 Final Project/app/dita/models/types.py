@@ -2,8 +2,11 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Dict, Optional, Any, Set, Union
+from typing import List, Dict, TypedDict, Optional, Any, Set, Union, TYPE_CHECKING
 from pathlib import Path
+from uuid import uuid4
+if TYPE_CHECKING:
+    from app.dita.utils.id_handler import DITAIDHandler
 
 
 # Type aliases
@@ -58,6 +61,7 @@ class ProcessingPhase(Enum):
     TRANSFORMATION = "transformation"
     ENRICHMENT = "enrichment" # LaTeX, artifacts
     ASSEMBLY = "assembly"
+    ERROR = "error"
 
 class ProcessingState(Enum):
     """Processing states."""
@@ -66,259 +70,352 @@ class ProcessingState(Enum):
     COMPLETED = "completed"
     ERROR = "error"
 
+
+
 @dataclass
-class ProcessingFeatures:
-    """Processing requirements"""
-    needs_heading_numbers: bool = True
-    needs_toc: bool = True
-    needs_artifacts: bool = False
-    needs_latex: bool = False
-    latex_settings: Optional[Dict[str, Any]] = field(default_factory=lambda: {
-        'macros': {
-            "\\N": "\\mathbb{N}",
-            "\\R": "\\mathbb{R}"
+class TrackedElement:
+    """Element tracking throughout the entire processing pipeline."""
+    # Core identification
+    id: str
+    type: ElementType
+    path: Path
+    source_path: Path
+    content: str
+
+    # Map/Topic specific
+    title: Optional[str] = None
+    topic_id: Optional[str] = None # Context tracking
+    parent_map_id: Optional[str] = None # Context trackind
+    href: Optional[str] = None  # For topic references in maps
+    topics: List[str] = field(default_factory=list)  # For maps only
+    sequence_number: Optional[int] = None # For ordering
+
+    # Hierarchy tracking
+    order: List[str] = field(default_factory=list)
+    hierarchy: Dict[str, List[str]] = field(default_factory=dict)
+    by_type: Dict[str, List[str]] = field(default_factory=dict)
+
+    # Error tracking
+    last_error: Optional[str] = None
+    last_updated: Optional[datetime] = None
+    created_at: datetime = field(default_factory=datetime.now)
+
+    # Processing state
+    phase: ProcessingPhase = ProcessingPhase.DISCOVERY
+    state: ProcessingState = ProcessingState.PENDING
+    previous_state: Optional[ProcessingState] = None
+    processing_attempts: int = 0
+
+    # Timestamps & Error tracking
+    created_at: datetime = field(default_factory=datetime.now)
+    last_updated: Optional[datetime] = None
+    last_error: Optional[str] = None
+
+    # Metadata & Rendering
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    html_metadata: Dict[str, Any] = field(default_factory=lambda: {
+        "attributes": {},
+        "classes": [],
+        "context": {
+            "parent_id": None,
+            "level": None,
+            "position": None
         },
-        'throw_on_error': False,
-        'output_mode': 'html'
+        "features": {}
     })
 
-class ContentScope(Enum):
-    """Scope for conditional attributes."""
-    GLOBAL = "global"
-    MAP = "map"
-    TOPIC = "topic"
-    ELEMENT = "element"
+    def parse_content(self) -> None:
+        """Load and parse content (replaces ParsedElement functionality)"""
+        if self.phase != ProcessingPhase.DISCOVERY:
+            raise ValueError("Can only parse in DISCOVERY phase")
 
-class ContentItem:
-    """Base class for DITA content items (topics and maps)."""
+        self.state = ProcessingState.PROCESSING
+        self.content = self.path.read_text()
+        self.metadata = self._extract_metadata()
+
+        self.state = ProcessingState.COMPLETED
+        self.phase = ProcessingPhase.VALIDATION
+
+    def _extract_metadata(self) -> Dict[str, Any]:
+        """Extract metadata based on content type"""
+        # Default empty metadata
+        return {}
+
+    def get_attribute(self, key: str) -> Optional[str]:
+        return self.html_metadata["attributes"].get(key)
+
+
+    def add_class(self, class_name: str) -> None:
+        if class_name not in self.html_metadata["classes"]:
+            self.html_metadata["classes"].append(class_name)
+
+    def advance_phase(self, new_phase: ProcessingPhase) -> None:
+        """Advance to next processing phase."""
+        self.phase = new_phase
+        self.state = ProcessingState.PENDING
+        self.last_updated = datetime.now()
+
+    def update_state(self, new_state: ProcessingState) -> None:
+        """Update processing state."""
+        self.previous_state = self.state
+        self.state = new_state
+        self.last_updated = datetime.now()
+
+    def increment_attempts(self) -> None:
+        """Increment processing attempts counter."""
+        self.processing_attempts += 1
+        self.last_updated = datetime.now()
+
+    def set_error(self, error: str) -> None:
+        """Record processing error."""
+        self.last_error = error
+        self.last_updated = datetime.now()
+
+    def can_process(self) -> bool:
+        """Check if element can be processed in current phase."""
+        return (
+            self.state != ProcessingState.ERROR and
+            self.processing_attempts < 3 and
+            self.state != ProcessingState.COMPLETED
+        )
+
+
+    @classmethod
+    def from_discovery(cls, path: Path, element_type: ElementType, id_handler: 'DITAIDHandler', topic_id: Optional[str] = None) -> "TrackedElement":
+        """Create element in DISCOVERY phase (replaces DiscoveredTopic)"""
+        return cls(
+            id=id_handler.generate_id(path.stem),
+            type=element_type,
+            content="",  # Will be loaded during parsing
+            path=path,
+            source_path=path,
+            topic_id=topic_id
+        )
+
+    @classmethod
+    def create_map(cls, path: Path, title: str, id_handler: DITAIDHandler) -> "TrackedElement":
+            """Create map element"""
+            return cls(
+                id=id_handler.generate_id(path.stem, prefix="map"),  # Use prefix for maps
+                type=ElementType.DITAMAP,
+                content="",
+                path=path,
+                source_path=path,
+                title=title
+            )
+    def add_child_element(self, element_type: ElementType, content: str, id_handler: DITAIDHandler) -> "TrackedElement":
+            """Add child element with proper ID handling"""
+            child = TrackedElement(
+                id=id_handler.generate_id(content[:20], prefix=f"{self.id}-child"),  # Use parent ID as prefix
+                type=element_type,
+                content=content,
+                path=self.path,
+                source_path=self.source_path,
+                parent_map_id=self.id
+            )
+            self.hierarchy[self.id].append(child.id)
+            return child
+
+    @property
+    def is_parsed(self) -> bool:
+        """Check if element has completed discovery phase."""
+        phase_order = {
+            ProcessingPhase.DISCOVERY: 0,
+            ProcessingPhase.VALIDATION: 1,
+            ProcessingPhase.TRANSFORMATION: 2,
+            ProcessingPhase.ENRICHMENT: 3,
+            ProcessingPhase.ASSEMBLY: 4
+        }
+        return phase_order[self.phase] > phase_order[ProcessingPhase.DISCOVERY]
+
+    # Could also add helper for checking any phase
+    def is_past_phase(self, check_phase: ProcessingPhase) -> bool:
+        """Check if element has completed a specific phase."""
+        phase_order = {
+            ProcessingPhase.DISCOVERY: 0,
+            ProcessingPhase.VALIDATION: 1,
+            ProcessingPhase.TRANSFORMATION: 2,
+            ProcessingPhase.ENRICHMENT: 3,
+            ProcessingPhase.ASSEMBLY: 4
+        }
+        return phase_order[self.phase] > phase_order[check_phase]
+
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            'id': self.id,
+            'type': self.type.value,
+            'path': str(self.path),
+            'state': self.state.value,
+            'attempts': self.processing_attempts,
+            'created': self.created_at.isoformat(),
+            'updated': self.last_updated.isoformat() if self.last_updated else None,
+            'error': self.last_error,
+            'metadata': self.metadata
+        }
+
+
+
+
+
+
+
+
+@dataclass
+class ProcessingMetadata:
+    """Core metadata needed for rendering and transformation"""
+    # Core identifiers and types
     id: str
-    file_path: Path
-    title: str
-    version: str = "1.0"
-    status: str = "draft"
-    language: str = "en"
-    content_hash: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.now)
-    updated_at: datetime = field(default_factory=datetime.now)
-
-
-@dataclass
-class Topic(ContentItem):
-    """Topic content model."""
-    type_id: int
-    short_desc: Optional[str] = None
-    parent_topic_id: Optional[str] = None
-    root_map_id: Optional[str] = None
-    specialization_type: Optional[str] = None
-    content_type: str = "dita"  # 'dita' or 'markdown'
-
-@dataclass
-class Map(ContentItem):
-    """Map content model."""
-    toc_enabled: bool = True
-    index_numbers_enabled: bool = True
-    context_root: Optional[str] = None
-
-
-@dataclass
-class MDElementContext:
-    """Context for markdown element processing"""
-    parent_id: Optional[str]
-    element_type: str
-    classes: List[str]
-    attributes: Dict[str, str]
-    topic_path: Optional[Path] = None
-
-
-
-@dataclass
-class ElementContext:
-    """Fine-grained context for element processing."""
-    element_id: str
-    topic_id: str
-    element_type: str
-    context_type: str  # body, abstract, prereq, etc.
-    parent_context: Optional[str]
-    level: int
-    xpath: str
-    conditions: Dict[str, Any] = field(default_factory=dict)
-    processing_features: ProcessingFeatures = field(default_factory=ProcessingFeatures)
-
-
-
-# Topic Type Requirements
-@dataclass
-class TopicTypeRequirement:
-    """Requirements for DITA topic type validation."""
-    id: int
-    type_id: int
-    element_name: str
-    min_occurs: int = 1
-    max_occurs: Optional[int] = None  # None means unbounded
-    parent_element: Optional[str] = None
-    description: Optional[str] = None
-
-@dataclass
-class TopicType:
-    """Represents a DITA topic type with its requirements."""
-    id: int
-    name: str
-    base_type: Optional[str]
-    description: str
-    schema_file: Optional[str]
-    is_custom: bool = False
-    requirements: List[TopicTypeRequirement] = field(default_factory=list)
-
-
-# Relationship Types
-@dataclass
-class TopicRelationship:
-    """Represents relationships between topics."""
-    relationship_id: int
-    source_topic_id: str
-    target_topic_id: str
-    relationship_type: str
-    weight: int = 0
-    created_at: datetime = field(default_factory=datetime.now)
-
-@dataclass
-class TopicElement:
-    """Represents an element within a topic."""
-    element_id: str
-    topic_id: str
-    element_type: str
-    parent_element_id: Optional[str]
-    sequence_num: int
-    content_hash: Optional[str]
-    context: Optional[ElementContext] = None
-    created_at: datetime = field(default_factory=datetime.now)
-
-
-
-
-@dataclass
-class HeadingContext:
-    """Context for heading processing"""
+    content_type: ElementType
+    base_type: Optional[str] = None
     parent_id: Optional[str] = None
-    level: int = 1
-    is_topic_title: bool = False
+    language: str = "en"
+
+    # Use TrackedElement for element tracking
+    elements: Dict[str, TrackedElement] = field(default_factory=dict)
+    current_element_id: Optional[str] = None
+
+    def add_element(self, element: TrackedElement) -> None:
+        """Add tracked element"""
+        self.elements[element.id] = element
+
+    def get_current_element(self) -> Optional[TrackedElement]:
+        """Get current element being processed"""
+        if self.current_element_id:
+            return self.elements.get(self.current_element_id)
+        return None
+
+    @property
+    def element_order(self) -> List[str]:
+        """Get ordered list of element IDs"""
+        return [
+            element.id for element in sorted(
+                self.elements.values(),
+                key=lambda e: e.sequence_number or 0
+            )
+        ]
+
+    def get_elements_by_type(self, element_type: ElementType) -> List[TrackedElement]:
+        """Get elements of specific type"""
+        return [
+            element for element in self.elements.values()
+            if element.type == element_type
+        ]
+
+    def get_child_elements(self, parent_id: str) -> List[TrackedElement]:
+        """Get child elements of a parent"""
+        return [
+            element for element in self.elements.values()
+            if element.parent_map_id == parent_id
+        ]
+
+    # Processing flags
+    features: Dict[str, bool] = field(default_factory=lambda: {
+        "index_numbers": True,
+        "toc": True,
+        "latex": False,
+        "artifacts": False,
+        "number_headings": True,
+        "enable_cross_refs": True
+    })
+
+    # Context for rendering
+    map_metadata: Dict[str, Any] = field(default_factory=lambda: {
+        "title": "",
+        "topic_order": [],
+        "current_topic": None
+    })
+
+    # Rendering attributes
+    attributes: Dict[str, Any] = field(default_factory=lambda: {
+        "classes": [],
+        "id": "",
+        "custom_attrs": {}
+    })
+
+    # Content flags
+    display_flags: Dict[str, bool] = field(default_factory=lambda: {
+        "visible": True,
+        "enabled": True,
+        "expanded": True
+    })
+
+    # Cache references during processing
+    references: Dict[str, Dict[str, Any]] = field(default_factory=lambda: {
+        "headings": {},  # id -> {text, level}
+        "xrefs": {}     # id -> {href, text}
+    })
 
 
-@dataclass
-class BaseContext:
-    """Base context information."""
-    id: str
-    content_type: str  # 'topic' or 'map'
-    processing_phase: ProcessingPhase
-    processing_state: ProcessingState
-    features: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
 
-@dataclass
-class TopicContext:
-    """Context for topic processing."""
-    base: BaseContext
-    map_id: str
-    parent_id: Optional[str]
-    level: int
-    sequence_num: int
-    heading_number: Optional[str]
-    context_path: str
-    topic_type: TopicType
-    processing_features: ProcessingFeatures = field(default_factory=ProcessingFeatures)
+    def add_heading(self, heading_id: str, text: str, level: int) -> None:
+        """Cache heading for link resolution"""
+        self.references["headings"][heading_id] = {
+            "text": text,
+            "level": level
+        }
 
-@dataclass
-class MapContext:
-    """Context for map processing."""
-    base: BaseContext  # base contains metadata
-    topic_order: List[str]
-    root_context: str
-    conditions: Dict[str, Any] = field(default_factory=dict)
-    features: ProcessingFeatures = field(default_factory=ProcessingFeatures)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    def resolve_reference(self, ref_id: str) -> Optional[str]:
+        """Get href for reference"""
+        return self.references["xrefs"].get(ref_id, {}).get("href")
+
+
+    def should_render(self) -> bool:
+        """Single decision point for rendering"""
+        return self.display_flags.get("visible", True)
+
+    @property
+    def has_latex(self) -> bool:
+        return self.features.get("latex", False)
+
+    @property
+    def should_number_headings(self) -> bool:
+        return self.features.get("number_headings", True)
 
 
 @dataclass
 class ProcessingContext:
-    """Complete processing context combining map and topic contexts."""
-    map_context: MapContext
-    topics: Dict[str, TopicContext]  # topic_id -> TopicContext
-    current_topic_id: Optional[str] = None
+    """Core processing context with minimal metadata."""
+    # Map level info
+    map_id: str
+    features: Dict[str, bool] = field(default_factory=lambda: {
+        "process_latex": True,
+        "number_headings": True,
+        "enable_cross_refs": True,
+        "process_artifacts": True,
+        "show_toc": True
+    })
 
-    def get_current_topic_context(self) -> Optional[TopicContext]:
+    # Current processing state
+    current_topic_id: Optional[str] = None
+    topic_order: List[str] = field(default_factory=list)
+
+    # Context metadata
+    map_metadata: Dict[str, Any] = field(default_factory=dict)
+    topic_metadata: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+
+    def register_element(self, element: TrackedElement, id_handler: DITAIDHandler) -> None:
+        """Register element with proper ID handling"""
+        if element.type == ElementType.DITAMAP:
+            self.map_id = element.id
+        elif self.current_topic_id:
+            # For elements within topics, use topic prefix
+            element.id = id_handler.generate_id(
+                element.content[:20],
+                prefix=self.current_topic_id
+            )
+
+    def get_topic_metadata(self) -> Optional[Dict[str, Any]]:
         if self.current_topic_id:
-            return self.topics.get(self.current_topic_id)
+            return self.topic_metadata.get(self.current_topic_id)
         return None
 
-    def set_current_topic(self, topic_id: str) -> None:
-        if topic_id in self.topics:
-            self.current_topic_id = topic_id
+    def set_topic(self, topic_id: str, metadata: Dict[str, Any]) -> None:
+        self.current_topic_id = topic_id
+        self.topic_metadata[topic_id] = metadata
 
 
-
-
-
-# Conditional Processing Types
-@dataclass
-class ConditionalAttribute:
-    """Represents a conditional processing attribute."""
-    attribute_id: int
-    name: str
-    description: Optional[str]
-    is_toggle: bool
-    context_dependent: bool
-    scope: str  # 'global', 'map', 'topic', or 'element'
-
-@dataclass
-class ConditionalValue:
-    """Represents a value for a conditional attribute."""
-    value_id: int
-    attribute_id: int
-    value: str
-    description: Optional[str]
-
-@dataclass
-class ContentCondition:
-    """Represents a condition applied to content."""
-    condition_id: int
-    content_id: str
-    attribute_id: int
-    value_id: int
-    content_type: str  # 'topic', 'map', or 'element'
-
-# Content Processing Types
-@dataclass
-class ProcessingMetadata:
-    """Metadata for content processing."""
-    processing_id: int
-    content_id: str
-    content_type: str
-    process_latex: bool = False
-    enable_cross_refs: bool = True
-    show_toc: bool = True
-    custom_settings: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.now)
-
-
-
-@dataclass
-class ParsedElement:
-    """Element returned by parser"""
-    id: str
-    topic_id: str
-    type: ElementType
-    content: str  # Raw Markdown content
-    topic_path: Path
-    source_path: Path
-    metadata: Dict[str, Any]  # Raw YAML/XML metadata
-
-@dataclass
-class ParsedMap:
-    """Container for parsed map information"""
-    title: Optional[str]
-    topics: List[ParsedElement]
-    metadata: Dict[str, Any]
-    source_path: Path
 
 @dataclass
 class ProcessedContent:
@@ -330,36 +427,49 @@ class ProcessedContent:
 
 
 @dataclass
-class DiscoveredTopic:
-    """Represents a discovered topic file"""
+class Topic:
+    """Topic for processing pipeline."""
     id: str
     path: Path
-    type: ElementType
-    href: str  # Original href from map
-    metadata: Dict[str, Any]
+    content_type: ElementType  # DITA or MARKDOWN
+    parent_map_id: Optional[str] = None
+    base_type: Optional[str] = None   # Added from TopicType
+    processing_metadata: ProcessingMetadata = field(default_factory=lambda: ProcessingMetadata(
+        id="",
+        content_type=ElementType.UNKNOWN
+    ))
+
+    # Optional rendering metadata
+    title: Optional[str] = None
+    short_desc: Optional[str] = None
+
+    def __post_init__(self):
+        self.processing_metadata.id = self.id
+        self.processing_metadata.content_type = self.content_type
+
+    @property
+    def template_path(self) -> Optional[Path]:
+        """Get template path based on content type and base type"""
+        if self.base_type:
+            return Path(f"templates/{self.base_type}/{self.content_type.value}.html")
+        return Path(f"templates/{self.content_type.value}.html")
+
+    @property
+    def is_specialized(self) -> bool:
+        """Check if topic is specialized from base type"""
+        return self.base_type is not None
 
 @dataclass
-class DiscoveredMap:
-    """Represents discovered map content"""
+class Map:
+    """Single consolidated map class"""
     id: str
     path: Path
-    title: Optional[str]
-    topics: List[DiscoveredTopic]
-    metadata: Dict[str, Any]
+    title: str
+    topics: List[str]  # Just topic IDs
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = None
 
-# Feature types
-
-
-@dataclass
-class ContentFeatures:
-    """Detected content features"""
-    has_latex: bool = False
-    has_code: bool = False
-    has_tables: bool = False
-    has_images: bool = False
-    has_xrefs: bool = False
-    has_artifacts: bool = False
-    # Future features can be added here
 
 
 
@@ -389,23 +499,6 @@ class HeadingState:
         return '.'.join(str(self.counters[f'h{l}']) for l in range(1, 7) if self.counters[f'h{l}'] > 0)
 
 
-# Reference tracking types
-@dataclass
-class HeadingReference:
-    """Heading reference information"""
-    id: str
-    text: str
-    level: int
-    topic_id: Optional[str] = None
-    map_id: Optional[str] = None
-
-@dataclass
-class CrossReference:
-    """Cross-reference information"""
-    source_id: str
-    target_id: str
-    text: Optional[str] = None
-    type: str = "internal"  # "internal", "external", "web"
 
 # Artifact types
 @dataclass
@@ -478,23 +571,8 @@ class DITAProcessingConfig:
     enable_cross_refs: bool = True
     process_latex: bool = False
 
-@dataclass
-class ProcessingResult:
-    """Result of processing operation"""
-    content: Optional[ProcessedContent] = None
-    error: Optional[ProcessingError] = None
-    metadata: Optional[Dict[str, Any]] = None
-    state: ProcessingState = ProcessingState.COMPLETED
 
-@dataclass
-class ProcessingOptions:
-    """Options for processing pipeline"""
-    process_latex: bool = True
-    number_headings: bool = True
-    enable_cross_refs: bool = True
-    process_artifacts: bool = True
-    show_toc: bool = True
-    features: ProcessingFeatures = field(default_factory=ProcessingFeatures)
+
 
 @dataclass
 class DITAParserConfig:
@@ -529,8 +607,6 @@ class ProcessorConfig:
     """Main processor configuration"""
     parser: ParserConfig
     paths: PathConfig
-    processing: ProcessingOptions
-    features: ProcessingFeatures
     latex_config: Optional[Dict[str, Any]] = field(default_factory=lambda: {
         'enabled': False,
         'settings': {
@@ -540,26 +616,6 @@ class ProcessorConfig:
         }
     })
 
-## Element tracking
-@dataclass
-class ElementAttributes:
-    """Base attributes for any element"""
-    id: str
-    classes: List[str]
-    custom_attrs: Dict[str, str]
-
-    def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        """
-        Allows dictionary-like access to custom attributes.
-
-        Args:
-            key: The key to retrieve.
-            default: The default value if the key does not exist.
-
-        Returns:
-            The value of the attribute or the default value.
-        """
-        return self.custom_attrs.get(key, default)
 
 
 
@@ -612,28 +668,12 @@ class DITAElementType(Enum):
     WARNING = "warning"
     UNKNOWN = "unknown"
 
-@dataclass
-class DITAElementContext:
-    """Context for DITA element processing"""
-    parent_id: Optional[str]
-    element_type: str
-    classes: List[str]
-    attributes: Dict[str, str]
-    topic_type: Optional[str] = None  # For tracking if inside concept/task/reference
-    is_body: bool = False  # For tracking if inside conbody/taskbody/refbody
-    topic_path: Optional[Path] = None
-
-    def replace(self, **changes) -> 'DITAElementContext':
-        """Return a new instance with specified fields replaced."""
-        return DITAElementContext(**{**self.__dict__, **changes})
 
 @dataclass
 class DITAElementInfo:
     """Information about a DITA element"""
     type: DITAElementType
     content: str
-    attributes: ElementAttributes
-    context: DITAElementContext
     children: List
     metadata: Dict[str, Any]
 
@@ -671,76 +711,6 @@ class MDElementInfo:
     """Information about a Markdown element"""
     type: MDElementType
     content: str
-    attributes: ElementAttributes
-    context: MDElementContext
     metadata: Dict[str, Any]
     level: Optional[int] = None
     specialization: Optional[Dict[str, Any]] = None
-
-@dataclass
-class TrackedElement:
-    """Element with comprehensive tracking information."""
-    # Core identification
-    id: str
-
-    # Content info
-    type: ElementType
-    path: Path
-    content: str  # Actual content or title for map titles
-
-    # Processing metadata
-    metadata: Dict[str, Any]
-
-    # Processing state tracking
-    state: ProcessingState = ProcessingState.PENDING
-    previous_state: Optional[ProcessingState] = None
-    processing_attempts: int = 0
-
-    # Context tracking
-    parent_map_id: Optional[str] = None
-    sequence_number: Optional[int] = None  # For ordering
-
-    # Timestamp tracking
-    created_at: datetime = field(default_factory=datetime.now)
-    last_updated: Optional[datetime] = None
-
-    # Error tracking
-    last_error: Optional[str] = None
-
-    def update_state(self, new_state: ProcessingState) -> None:
-        """Update element processing state with timestamp."""
-        self.previous_state = self.state
-        self.state = new_state
-        self.last_updated = datetime.now()
-
-    def increment_attempts(self) -> None:
-        """Increment processing attempts counter."""
-        self.processing_attempts += 1
-        self.last_updated = datetime.now()
-
-    def set_error(self, error: str) -> None:
-        """Record processing error."""
-        self.last_error = error
-        self.last_updated = datetime.now()
-
-    def can_process(self) -> bool:
-        """Check if element can be processed."""
-        return (
-            self.state != ProcessingState.ERROR and
-            self.processing_attempts < 3 and  # Max attempts
-            self.state != ProcessingState.COMPLETED
-        )
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization."""
-        return {
-            'id': self.id,
-            'type': self.type.value,
-            'path': str(self.path),
-            'state': self.state.value,
-            'attempts': self.processing_attempts,
-            'created': self.created_at.isoformat(),
-            'updated': self.last_updated.isoformat() if self.last_updated else None,
-            'error': self.last_error,
-            'metadata': self.metadata
-        }
