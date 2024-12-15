@@ -18,8 +18,10 @@ from app_config import DITAConfig
 
 class ContentType(Enum):
     DITA = "dita"
-    DITAMAP = "ditamap"
     MARKDOWN = "markdown"
+    MAP = "map"
+    TOPIC = "topic"
+    UNKNOWN = "unknown"
 
 @dataclass
 class MetadataField:
@@ -73,31 +75,136 @@ class MetadataHandler:
             raise
 
     def extract_metadata(
-        self,
-        file_path: PathLike,
-        content_id: str,
-        heading_id: Optional[str] = None,
-        map_metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        try:
-            if isinstance(file_path, str):
-                file_path = Path(file_path)
+            self,
+            file_path: Path,
+            content_id: str,
+            heading_id: Optional[str] = None,
+            map_metadata: Optional[Dict[str, Any]] = None
+        ) -> Dict[str, Any]:
+            """
+            Extract metadata for a given file, handling both DITA and Markdown content.
 
-            assert isinstance(file_path, Path), f"Expected Path, got {type(file_path).__name__}"
+            Args:
+                file_path: Path to the content file.
+                content_id: Unique identifier for the content.
+                heading_id: Optional heading for scoped metadata.
+                map_metadata: Parent map metadata for context.
 
-            content_type = self._determine_content_type(file_path)
+            Returns:
+                Dict containing extracted metadata.
+            """
+            try:
+                content_type = self._determine_content_type(file_path)
 
-            if content_type == ElementType.MARKDOWN:
-                return self._extract_markdown_metadata(file_path, content_id, heading_id, map_metadata)
-            elif content_type in (ElementType.DITA, ElementType.DITAMAP):
-                return self._extract_dita_metadata(file_path, content_id, heading_id, map_metadata)
-            else:
-                self.logger.warning(f"Unsupported content type for {file_path}")
+                if content_type == ContentType.MARKDOWN:
+                    metadata = self._extract_markdown_metadata(file_path, content_id, heading_id, map_metadata)
+                elif content_type in {ContentType.DITA, ContentType.MAP}:
+                    metadata = self._extract_dita_metadata(file_path, content_id, heading_id, map_metadata)
+                else:
+                    self.logger.warning(f"Unsupported content type for {file_path}")
+                    return {}
+
+                # Enrich metadata with feature flags and context
+                metadata = self._enrich_metadata(metadata, map_metadata)
+
+                return metadata
+
+            except Exception as e:
+                self.logger.error(f"Error extracting metadata from {file_path}: {str(e)}")
                 return {}
 
+    def _enrich_metadata(self, metadata: Dict[str, Any], map_metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Enrich metadata with default values and feature flags.
+
+        Args:
+            metadata: Extracted metadata.
+            map_metadata: Parent map metadata for context.
+
+        Returns:
+            Enriched metadata.
+        """
+        enriched_metadata = metadata.copy()
+
+        # Add feature flags
+        enriched_metadata.setdefault("feature_flags", {
+            "enable_toc": True,
+            "enable_cross_refs": True,
+            "enable_heading_numbering": True
+        })
+
+        # Add relational metadata defaults
+        enriched_metadata.setdefault("prerequisites", [])
+        enriched_metadata.setdefault("related_topics", [])
+
+        # Merge parent map metadata if provided
+        if map_metadata:
+            enriched_metadata["context"] = map_metadata.get("context", {})
+            enriched_metadata["feature_flags"].update(map_metadata.get("feature_flags", {}))
+
+        # Validate and finalize
+        self._validate_metadata(enriched_metadata)
+        return enriched_metadata
+
+    def _validate_metadata(self, metadata: Dict[str, Any]) -> None:
+        """
+        Validate metadata fields for consistency and completeness.
+
+        Args:
+            metadata: Metadata to validate.
+
+        Raises:
+            ValueError if validation fails.
+        """
+        required_fields = ["title", "feature_flags", "context"]
+        for field in required_fields:
+            if field not in metadata:
+                raise ValueError(f"Missing required metadata field: {field}")
+
+        # Additional validation for feature flags
+        if not isinstance(metadata.get("feature_flags"), dict):
+            raise ValueError("Feature flags must be a dictionary.")
+
+    def store_metadata(
+        self, content_id: str, metadata: Dict[str, Any]
+    ) -> None:
+        """
+        Store metadata in the database.
+
+        Args:
+            content_id: Unique identifier for the content.
+            metadata: Metadata to store.
+        """
+        try:
+            with self._conn as conn:
+                conn.execute("""
+                    INSERT INTO metadata_store (content_id, metadata)
+                    VALUES (?, ?)
+                    ON CONFLICT(content_id) DO UPDATE SET
+                    metadata = excluded.metadata
+                """, (content_id, json.dumps(metadata)))
+
         except Exception as e:
-            self.logger.error(f"Error extracting metadata from {file_path}: {str(e)}")
-            return {}
+            self.logger.error(f"Error storing metadata for {content_id}: {str(e)}")
+            raise
+
+    def _determine_content_type(self, file_path: Path) -> ContentType:
+        """
+        Determine content type based on file extension.
+
+        Args:
+            file_path: Path to the content file.
+
+        Returns:
+            ContentType enum.
+        """
+        ext = file_path.suffix.lower()
+        if ext in {".dita", ".ditamap"}:
+            return ContentType.DITA if ext == ".dita" else ContentType.MAP
+        elif ext == ".md":
+            return ContentType.MARKDOWN
+        else:
+            return ContentType.UNKNOWN
 
 
     def extract_yaml_metadata(self, content: str) -> Tuple[Dict[str, Any], str]:
@@ -160,18 +267,6 @@ class MetadataHandler:
             self.logger.error(f"Error adding conditional attribute: {str(e)}")
 
 
-    def _determine_content_type(self, file_path: Path) -> ContentType:
-        """Determine content type from file extension"""
-        suffix = file_path.suffix.lower()
-        if suffix == '.md':
-            return ContentType.MARKDOWN
-        elif suffix == '.dita':
-            return ContentType.DITA
-        elif suffix == '.ditamap':
-            return ContentType.DITAMAP
-        else:
-            raise ValueError(f"Unsupported file type: {suffix}")
-
     def _extract_dita_metadata(
         self,
         file_path: Path,
@@ -182,7 +277,7 @@ class MetadataHandler:
         try:
             tree = etree.parse(str(file_path), self.parser)
             metadata = {
-                'content_type': (ContentType.DITAMAP.value
+                'content_type': (ContentType.MAP.value
                                if file_path.suffix == '.ditamap'
                                else ContentType.DITA.value),
                 'content_id': content_id,

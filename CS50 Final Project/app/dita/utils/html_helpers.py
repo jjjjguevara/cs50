@@ -6,8 +6,13 @@ from typing import Dict, List, Optional, Any, Union, Sequence
 from pathlib import Path
 from bs4 import BeautifulSoup, Tag
 import logging
-from app.dita.models.types import ProcessedContent
+from app.dita.models.types import (
+    ProcessedContent,
+    ProcessingMetadata,
+    ProcessingContext
+)
 
+from app.dita.utils.id_handler import DITAIDHandler
 
 # Global config
 from app_config import DITAConfig
@@ -43,6 +48,27 @@ class HTMLHelper:
         self.logger = logging.getLogger(__name__)
         self.dita_root = dita_root
         self._cache: Dict[str, Any] = {}
+
+
+
+    def convert_html(self, content: str) -> str:
+        """Basic HTML conversion with proper parsing."""
+        try:
+            soup = BeautifulSoup(content, 'html.parser')
+            return str(soup)
+        except Exception as e:
+            self.logger.error(f"HTML conversion failed: {str(e)}")
+            return content
+
+    def validate_html(self, html_content: str) -> bool:
+        """Validate HTML syntax and structure."""
+        try:
+            if not html_content.strip():
+                return False
+            soup = BeautifulSoup(html_content, 'html.parser')
+            return bool(soup.find() and "<html" not in html_content.lower())
+        except Exception:
+            return False
 
 
     def render(self, content: str, metadata: Optional[Dict[str, Any]] = None) -> str:
@@ -229,13 +255,7 @@ class HTMLHelper:
             self.logger.error(f"Error ensuring proper nesting: {str(e)}")
             return content
 
-    def validate_html(self, html_content: str) -> bool:
-            """Validate HTML content."""
-            try:
-                soup = BeautifulSoup(html_content, 'html.parser')
-                return bool(soup.find())
-            except Exception:
-                return False
+
 
     def add_classes(self, tag: Tag, classes: List[str]) -> None:
         """
@@ -367,3 +387,90 @@ class HTMLHelper:
         except Exception as e:
             self.logger.error(f"HTML helper cleanup failed: {str(e)}")
             raise
+
+
+    #########
+    # Content Objects
+    #########
+
+    def generate_toc(self, metadata: ProcessingMetadata) -> str:
+        """
+        Generate a Table of Contents (TOC) from ProcessingMetadata.
+
+        Args:
+            metadata: The ProcessingMetadata object containing heading references.
+
+        Returns:
+            str: A structured HTML string for the TOC.
+        """
+        try:
+            toc_html = "<nav class='toc'><ul>"
+            for heading_id, heading_data in metadata.references["headings"].items():
+                level = heading_data["level"]
+                text = heading_data["text"]
+                toc_html += f"<li class='toc-level-{level}'><a href='#{heading_id}'>{text}</a></li>"
+            toc_html += "</ul></nav>"
+            return toc_html
+        except Exception as e:
+            self.logger.error(f"Error generating TOC: {str(e)}")
+            return "<!-- TOC generation failed -->"
+
+    def generate_xref(self, source_id: str, target_ref: str, id_handler: DITAIDHandler) -> str:
+        """
+        Generate an HTML anchor for a cross-reference.
+
+        Args:
+            source_id: The source topic ID.
+            target_ref: The target reference (e.g., topic#heading).
+            id_handler: An instance of the DITAIDHandler.
+
+        Returns:
+            str: An HTML anchor tag.
+        """
+        try:
+            href = id_handler.resolve_xref(source_id, target_ref)
+            return f"<a href='{href}'>{target_ref}</a>"
+        except Exception as e:
+            self.logger.error(f"Error generating xref for {target_ref}: {str(e)}")
+            return f"<a href='#'>{target_ref}</a>"
+
+
+    def generate_heading_anchor(self, heading_id: str, text: str, level: int) -> str:
+        """
+        Generate an HTML anchor for a heading.
+
+        Args:
+            heading_id: The unique ID of the heading.
+            text: The heading text.
+            level: The heading level (1-6).
+
+        Returns:
+            str: An HTML string for the heading anchor.
+        """
+        try:
+            return f"<h{level} id='{heading_id}'>{text}</h{level}>"
+        except Exception as e:
+            self.logger.error(f"Error generating heading anchor for {heading_id}: {str(e)}")
+            return f"<h{level}>{text}</h{level}>"
+
+
+    #########
+    # Helper methods
+    #########
+
+    def sanitize_html(self, html_content: str) -> str:
+        """
+        Sanitize HTML content to prevent security issues or invalid HTML.
+
+        Args:
+            html_content: The raw HTML string.
+
+        Returns:
+            str: A sanitized HTML string.
+        """
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+            return soup.prettify()
+        except Exception as e:
+            self.logger.error(f"Error sanitizing HTML: {str(e)}")
+            return html_content

@@ -24,9 +24,22 @@ class ConfigManager:
     """Manages DITA configuration and context management."""
 
     def __init__(self):
-        self._config: Optional[DITAConfig] = None
-        self._context_manager: Optional['ContextManager'] = None
         self.logger = logging.getLogger(__name__)
+        self.feature_flags = {
+            "enable_toc": True,
+            "enable_heading_numbering": True,
+            "enable_cross_refs": True,
+        }
+        self.validation_patterns = {
+            "map": r"^map-[a-zA-Z0-9_\-]+$",
+            "topic": r"^topic-[a-zA-Z0-9_\-]+$",
+            "heading": r"^heading-[a-zA-Z0-9_\-]+-h[1-6]$",
+            "artifact": r"^artifact-[a-zA-Z0-9_\-]+-[a-zA-Z0-9_\-]+$",
+        }
+        self.default_metadata = {
+            "language": "en",
+            "display_flags": {"visible": True, "enabled": True, "expanded": True},
+        }
 
     def initialize(self) -> None:
         """Initialize both configuration and context management."""
@@ -39,13 +52,14 @@ class ConfigManager:
             if not self._context_manager:
                 metadata_db_path = self._get_metadata_db_path()
                 self._ensure_metadata_db(metadata_db_path)
-                self._context_manager = ContextManager(metadata_db_path)
+                self._context_manager = ContextManager(str(metadata_db_path))  # Convert Path to str
 
             self.logger.info("Configuration and context management initialized successfully")
 
         except Exception as e:
             self.logger.error(f"Initialization failed: {str(e)}")
             raise
+
 
     def load_config(self) -> 'DITAConfig':
         """
@@ -164,6 +178,29 @@ class ConfigManager:
         if not self._config:
             self._config = self.load_config()
         return self._config
+
+
+    def get_feature_flag(self, flag: str) -> bool:
+            """Get the value of a feature flag."""
+            return self.feature_flags.get(flag, False)
+
+    def get_validation_pattern(self, element_type: str) -> str:
+        """Get the validation pattern for a specific element type."""
+        return self.validation_patterns.get(element_type, r"^[a-zA-Z0-9_\-]+$")
+
+    def get_default_metadata(self) -> Dict[str, Any]:
+        """Get the default metadata configuration."""
+        return self.default_metadata
+
+    def update_feature_flag(self, flag: str, value: bool) -> None:
+        """Update a feature flag dynamically."""
+        self.feature_flags[flag] = value
+        self.logger.debug(f"Feature flag {flag} updated to {value}")
+
+    def update_validation_pattern(self, element_type: str, pattern: str) -> None:
+        """Update a validation pattern dynamically."""
+        self.validation_patterns[element_type] = pattern
+        self.logger.debug(f"Validation pattern for {element_type} updated to {pattern}")
 
     def _get_metadata_db_path(self) -> Path:
             """Get the metadata database path from config or environment."""
@@ -289,19 +326,23 @@ class ConfigManager:
                 self.logger.error(f"Configuration validation failed: {str(e)}")
                 return False
 
+
     def _validate_processing_features(self, config: DITAConfig) -> bool:
         """Validate feature configuration."""
         try:
             # Get features from config
-            features = config.features if hasattr(config, 'features') else {}
+            features = getattr(config, "features", {})
+            if not isinstance(features, dict):
+                self.logger.error("Invalid features configuration: must be a dictionary")
+                return False
 
-            # Required features - must be present and be boolean
+            # Required features - must be present and boolean
             required_features = {
                 "process_latex": True,
                 "number_headings": True,
                 "enable_cross_refs": True,
                 "process_artifacts": True,
-                "show_toc": True
+                "show_toc": True,
             }
 
             # Validate required features exist and are proper type
@@ -315,25 +356,36 @@ class ConfigManager:
 
             # LaTeX-specific validation
             if features.get("process_latex"):
-                latex_config = config.latex_config if hasattr(config, 'latex_config') else {}
-                if not latex_config:
-                    self.logger.error("LaTeX configuration missing but processing enabled")
-                    return False
+                latex_config = getattr(config, "latex_config", {})
 
-                # Validate LaTeX config
+                # Define LaTeX settings validation rules
                 required_latex_settings = {
                     "macros": dict,
                     "throw_on_error": bool,
-                    "output_mode": str
+                    "output_mode": str,
                 }
 
-                for setting, expected_type in required_latex_settings.items():
-                    if setting not in latex_config:
-                        self.logger.error(f"Missing required LaTeX setting: {setting}")
-                        return False
-                    if not isinstance(latex_config[setting], expected_type):
-                        self.logger.error(f"Invalid type for LaTeX setting {setting}")
-                        return False
+                if isinstance(latex_config, dict):
+                    # Validate LaTeX config dictionary
+                    for setting, expected_type in required_latex_settings.items():
+                        if setting not in latex_config:
+                            self.logger.error(f"Missing required LaTeX setting: {setting}")
+                            return False
+                        if not isinstance(latex_config[setting], expected_type):
+                            self.logger.error(f"Invalid type for LaTeX setting {setting}: expected {expected_type}")
+                            return False
+                elif hasattr(latex_config, "__dict__"):
+                    # Validate if LaTeXConfig is a custom object with attributes
+                    for setting, expected_type in required_latex_settings.items():
+                        if not hasattr(latex_config, setting):
+                            self.logger.error(f"Missing required LaTeX setting: {setting}")
+                            return False
+                        if not isinstance(getattr(latex_config, setting), expected_type):
+                            self.logger.error(f"Invalid type for LaTeX setting {setting}: expected {expected_type}")
+                            return False
+                else:
+                    self.logger.error("Invalid LaTeX configuration: must be a dictionary or a valid LaTeXConfig object")
+                    return False
 
             # Store validated features back in config
             config.features = features
@@ -342,7 +394,6 @@ class ConfigManager:
         except Exception as e:
             self.logger.error(f"Feature validation failed: {str(e)}")
             return False
-
 
 
     def setup_paths(self, config: 'DITAConfig') -> None:

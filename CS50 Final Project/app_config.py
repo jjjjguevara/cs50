@@ -34,8 +34,8 @@ class DITAConfig:
     Main configuration class for DITA processing.
     """
     def __init__(
-        self,
         # Ensure topics_dir is either None or a Path object
+        self,
         topics_dir: Optional[Path] = None,
         maps_dir: Optional[Path] = None,
         artifacts_dir: Optional[Path] = None,
@@ -68,6 +68,16 @@ class DITAConfig:
             "process_artifacts": False,
             "show_toc": True
         }
+
+        # ID validation patterns
+        self.validation_patterns = {
+                    "map": r"^map-[a-zA-Z0-9_\-]+$",
+                    "topic": r"^topic-[a-zA-Z0-9_\-]+$",
+                    "heading": r"^heading-[a-zA-Z0-9_\-]+-h[1-6]$",
+                    "artifact": r"^artifact-[a-zA-Z0-9_\-]+-[a-zA-Z0-9_\-]+$",
+                }
+        self.reset_generated_ids = True
+
 
         # LaTeX configuration
         self.latex_config = latex_config or LaTeXConfig()

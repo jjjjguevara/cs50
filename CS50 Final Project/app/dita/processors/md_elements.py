@@ -215,6 +215,10 @@ class MarkdownElementProcessor:
                 id_handler=self.id_handler
             )
 
+            # Preserve feature flags
+            if map_metadata and 'features' in map_metadata:
+                element.metadata['features'] = map_metadata['features']
+
             # Set content
             element.content = self._get_element_content(elem)
 

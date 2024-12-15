@@ -47,7 +47,8 @@ CREATE TABLE content_items (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Topics table with type tracking
+
+-- Revised topics table with feature flags and flexible metadata
 CREATE TABLE topics (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -60,11 +61,15 @@ CREATE TABLE topics (
     specialization_type TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    -- Additional indexing fields
     published_version TEXT,
     status TEXT CHECK (status IN ('draft', 'review', 'published')),
-    language TEXT DEFAULT 'en'
+    language TEXT DEFAULT 'en',
+    feature_flags JSON DEFAULT NULL,   -- Feature toggles (e.g., enable_cross_refs)
+    prerequisites JSON DEFAULT NULL,   -- Prerequisite topics
+    related_topics JSON DEFAULT NULL,  -- Relationships with other topics
+    custom_metadata JSON DEFAULT NULL  -- For future extensibility
 );
+
 
 -- Context Tracking
 CREATE TABLE context_hierarchy (
@@ -135,7 +140,8 @@ CREATE TABLE processing_contexts (
     completed_at TIMESTAMP
 );
 
--- Modified maps table with additional context fields
+
+-- Revised maps table with feature flags and relational metadata
 CREATE TABLE maps (
     map_id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -150,7 +156,11 @@ CREATE TABLE maps (
     toc_enabled BOOLEAN DEFAULT TRUE,
     index_numbers_enabled BOOLEAN DEFAULT TRUE,
     context_root TEXT, -- Base context path
-    processing_context_id INTEGER REFERENCES processing_contexts (context_id)
+    processing_context_id INTEGER REFERENCES processing_contexts (context_id),
+    feature_flags JSON DEFAULT NULL,   -- Dynamic feature toggles (e.g., TOC, heading numbering)
+    prerequisites JSON DEFAULT NULL,   -- Prerequisite maps/topics
+    related_topics JSON DEFAULT NULL,  -- Relationships with other maps/topics
+    custom_metadata JSON DEFAULT NULL  -- For future extensibility
 );
 
 -- Replace the three dataclasses with a simpler flags system:
@@ -199,6 +209,7 @@ CREATE TABLE heading_index (
     FOREIGN KEY (map_id) REFERENCES maps(id)
 );
 
+-- Table for content references, extended with metadata and relation_type
 CREATE TABLE content_references (
     ref_id TEXT PRIMARY KEY,
     source_id TEXT NOT NULL,
@@ -207,6 +218,8 @@ CREATE TABLE content_references (
     text TEXT,
     href TEXT NOT NULL,
     valid BOOLEAN DEFAULT true,  -- For reference validation
+    relation_type TEXT,          -- Tracks relation (e.g., prerequisite, related)
+    metadata JSON DEFAULT NULL,  -- Flexible metadata for reference details
     FOREIGN KEY (source_id) REFERENCES topics(id),
     -- target_id foreign key intentionally omitted for external refs
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

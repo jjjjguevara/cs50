@@ -4,7 +4,7 @@ import sqlite3
 from contextlib import contextmanager
 import logging
 import json
-from typing import List, Dict, Optional, Generator
+from typing import List, Dict, Optional, Generator, Any
 from app.dita.utils.id_handler import DITAIDHandler
 from app.dita.utils.metadata import MetadataHandler
 from ..models.types import (
@@ -15,7 +15,8 @@ from ..models.types import (
     ProcessingPhase,
     ProcessingState,
     ProcessedContent,
-    ProcessingError
+    ProcessingError,
+    ProcessingMetadata
 )
 from ..utils.heading import HeadingHandler
 from app_config import DITAConfig
@@ -26,36 +27,64 @@ from lxml import etree
 class DITAParser:
     """Parser for DITA maps and topics, handling headings and metadata extraction."""
 
-    def __init__(self, db_path: Path, root_path: Path, config: Optional[DITAConfig] = None):
+    def __init__(
+        self,
+        db_path: Path,
+        root_path: Path,
+        config: Optional[DITAConfig] = None,
+        metadata: Optional[ProcessingMetadata] = None,
+        id_handler: Optional[DITAIDHandler] = None,
+    ):
         """
         Initialize the DITAParser with an optional configuration.
 
         Args:
+            db_path: Path to the SQLite database.
+            root_path: Root path for DITA content.
             config: Optional configuration object for the parser.
+            metadata: Optional processing metadata for element tracking.
+            id_handler: Optional ID handler instance for generating IDs.
         """
         self.logger = logging.getLogger(__name__)
         self.config = config or DITAConfig()
         self.root_path = root_path
         self.db_path = db_path
+
+        # Initialize metadata
+        self.metadata = metadata or ProcessingMetadata(
+            id="parser-metadata",
+            content_type=ElementType.DITAMAP,
+            features={
+                "index_numbers": True,
+                "toc": True,
+                "enable_cross_refs": True,
+                "number_headings": True,
+            },
+        )
+
+        # Initialize ID handler
+        self.id_handler = id_handler or DITAIDHandler()
+
+        # Initialize metadata and heading handlers
+        self.metadata_handler = MetadataHandler()
+        self.heading_handler = HeadingHandler(processing_metadata=self.metadata)
+
+        # Initialize the database connection
         self._init_db()
-        self.heading_handler = HeadingHandler()
-        self.id_handler = DITAIDHandler()
-        self.metadata = MetadataHandler()
-        self.heading_handler = HeadingHandler()
+
 
 
     def _init_db(self) -> None:
-            """Initialize database connection and schema."""
-            try:
-                with self._get_db() as conn:
-                    # Read and execute schema
-                    schema_path = Path(__file__).parent / "metadata.sql"
-                    schema = schema_path.read_text()
-                    conn.executescript(schema)
-                    self.logger.debug("Database schema initialized")
-            except Exception as e:
-                self.logger.error(f"Database initialization failed: {str(e)}")
-                raise
+        """Initialize database connection and schema."""
+        try:
+            with self._get_db() as conn:
+                schema_path = Path(__file__).parent / "metadata.sql"
+                schema = schema_path.read_text()
+                conn.executescript(schema)
+                self.logger.debug("Database schema initialized")
+        except Exception as e:
+            self.logger.error(f"Database initialization failed: {str(e)}")
+            raise
 
     @contextmanager
     def _get_db(self) -> Generator[sqlite3.Connection, None, None]:
@@ -71,259 +100,109 @@ class DITAParser:
         finally:
             conn.close()
 
-    def _store_map_metadata(self, map_element: TrackedElement) -> None:
-            """Store map metadata in database."""
+    def parse_ditamap(self, map_path: Path) -> TrackedElement:
+            """Parse a DITA map and extract metadata."""
             try:
-                with self._get_db() as conn:
-                    # Insert into maps table
-                    conn.execute("""
-                        INSERT INTO maps (
-                            map_id, title, file_path, version, status,
-                            language, toc_enabled, index_numbers_enabled,
-                            context_root, created_at, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(map_id) DO UPDATE SET
-                            title=excluded.title,
-                            updated_at=excluded.updated_at
-                    """, (
-                        map_element.id,
-                        map_element.title,
-                        str(map_element.path),
-                        map_element.metadata.get('version', '1.0'),
-                        map_element.metadata.get('status', 'draft'),
-                        map_element.metadata.get('language', 'en'),
-                        map_element.metadata.get('toc_enabled', True),
-                        map_element.metadata.get('index_numbers_enabled', True),
-                        str(map_element.path.parent),
-                        map_element.created_at.isoformat(),
-                        map_element.last_updated.isoformat() if map_element.last_updated else None
-                    ))
+                self.logger.debug(f"Parsing DITA map: {map_path}")
+                if not map_path.exists():
+                    raise FileNotFoundError(f"DITA map not found: {map_path}")
 
-                    # Store processing context
-                    conn.execute("""
-                        INSERT INTO processing_contexts (
-                            content_id, content_type, phase, state,
-                            features, created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?)
-                    """, (
-                        map_element.id,
-                        'map',
-                        map_element.phase.value,
-                        map_element.state.value,
-                        json.dumps(map_element.metadata.get('features', {})),
-                        map_element.created_at.isoformat()
-                    ))
+                # Generate map ID and initialize metadata
+                map_element = TrackedElement.create_map(
+                    path=map_path,
+                    title=self._extract_map_title(map_path),
+                    id_handler=self.id_handler
+                )
+                map_metadata = self.metadata_handler.extract_metadata(map_path, map_element.id)
 
-                    # Store feature flags
-                    for name, value in map_element.metadata.items():
-                        if name.startswith('feature_'):
-                            conn.execute("""
-                                INSERT INTO content_flags (
-                                    content_id, name, value, scope
-                                ) VALUES (?, ?, ?, ?)
-                            """, (
-                                map_element.id,
-                                name.replace('feature_', ''),
-                                str(value),
-                                'map'
-                            ))
+                # Enrich metadata with relational context
+                map_metadata = self._enrich_map_metadata(map_metadata)
+                map_element.metadata = map_metadata
 
+                # Store metadata persistently
+                self._store_map_metadata(map_element)
+
+                return map_element
+
+            except Exception as e:
+                self.logger.error(f"Error parsing DITA map: {str(e)}")
+                raise
+
+    def parse_topic(self, topic_path: Path, map_metadata: Dict[str, Any]) -> TrackedElement:
+        """Parse a DITA topic and extract metadata."""
+        try:
+            self.logger.debug(f"Parsing DITA topic: {topic_path}")
+            if not topic_path.exists():
+                raise FileNotFoundError(f"DITA topic not found: {topic_path}")
+
+            # Generate topic ID and initialize metadata
+            topic_element = TrackedElement.from_discovery(
+                path=topic_path,
+                element_type=ElementType.DITA,
+                id_handler=self.id_handler
+            )
+            topic_metadata = self.metadata_handler.extract_metadata(topic_path, topic_element.id, map_metadata=map_metadata)
+
+            # Enrich metadata with relational context
+            topic_metadata = self._enrich_topic_metadata(topic_metadata, map_metadata)
+            topic_element.metadata = topic_metadata
+
+            # Store metadata persistently
+            self._store_topic_metadata(topic_element)
+
+            return topic_element
+
+        except Exception as e:
+            self.logger.error(f"Error parsing DITA topic: {str(e)}")
+            raise
+
+    def _store_map_metadata(self, map_element: TrackedElement) -> None:
+            """Store enriched map metadata in the database."""
+            try:
+                self.metadata_handler.store_metadata(map_element.id, map_element.metadata)
             except Exception as e:
                 self.logger.error(f"Error storing map metadata: {str(e)}")
                 raise
 
     def _store_topic_metadata(self, topic_element: TrackedElement) -> None:
-        """Store topic metadata in database."""
+        """Store enriched topic metadata in the database."""
         try:
-            with self._get_db() as conn:
-                # Get topic type ID
-                cur = conn.execute("""
-                    SELECT type_id FROM topic_types
-                    WHERE name = ?
-                """, (topic_element.metadata.get('topic_type', 'topic'),))
-                type_id = cur.fetchone()[0]
-
-                # Insert into topics table
-                conn.execute("""
-                    INSERT INTO topics (
-                        id, title, path, type_id, content_type,
-                        short_desc, parent_topic_id, root_map_id,
-                        specialization_type, created_at, updated_at,
-                        published_version, status, language
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                        updated_at=excluded.updated_at,
-                        status=excluded.status
-                """, (
-                    topic_element.id,
-                    topic_element.title,
-                    str(topic_element.path),
-                    type_id,
-                    topic_element.type.value,
-                    topic_element.metadata.get('short_desc'),
-                    topic_element.metadata.get('parent_topic_id'),
-                    topic_element.parent_map_id,
-                    topic_element.metadata.get('specialization_type'),
-                    topic_element.created_at.isoformat(),
-                    topic_element.last_updated.isoformat() if topic_element.last_updated else None,
-                    topic_element.metadata.get('version'),
-                    topic_element.metadata.get('status', 'draft'),
-                    topic_element.metadata.get('language', 'en')
-                ))
-
-                # Store context hierarchy
-                if topic_element.parent_map_id:
-                    conn.execute("""
-                        INSERT INTO context_hierarchy (
-                            map_id, topic_id, parent_id, level,
-                            sequence_num, context_path
-                        ) VALUES (?, ?, ?, ?, ?, ?)
-                    """, (
-                        topic_element.parent_map_id,
-                        topic_element.id,
-                        topic_element.metadata.get('parent_topic_id'),
-                        topic_element.metadata.get('level', 1),
-                        topic_element.sequence_number or 0,
-                        f"{topic_element.parent_map_id}/{topic_element.id}"
-                    ))
-
-                # Store references
-                if refs := topic_element.metadata.get('references', []):
-                    for ref in refs:
-                        conn.execute("""
-                            INSERT INTO content_references (
-                                ref_id, source_id, target_id,
-                                ref_type, text, href
-                            ) VALUES (?, ?, ?, ?, ?, ?)
-                        """, (
-                            self.id_handler.generate_id(f"ref-{ref['target']}"),
-                            topic_element.id,
-                            ref['target'],
-                            ref.get('type', 'internal'),
-                            ref.get('text'),
-                            ref['href']
-                        ))
-
+            self.metadata_handler.store_metadata(topic_element.id, topic_element.metadata)
         except Exception as e:
             self.logger.error(f"Error storing topic metadata: {str(e)}")
             raise
 
-
-    def parse_ditamap(self, map_path: Path) -> TrackedElement:
-        """Parse a DITA map into a tracked element."""
-        try:
-            self.logger.debug(f"Parsing DITA map: {map_path}")
-
-            if not map_path.exists() or not map_path.is_file():
-                raise FileNotFoundError(f"DITA map not found: {map_path}")
-
-            # Create initial map element
-            map_element = TrackedElement.create_map(
-                path=map_path,
-                title="Untitled",  # Will be updated
-                id_handler=self.id_handler
-            )
-
-            # Load and parse XML content
-            dita_map_content = map_path.read_text(encoding="utf-8")
-            root = ET.fromstring(dita_map_content)
-
-            # Extract title
-            if title_elem := root.find("title"):
-                map_element.title = title_elem.text
-
-            # Extract metadata including feature flags
-            map_element.metadata.update({
-                "content_type": "ditamap",
-                "processed_at": datetime.now().isoformat(),
-                "version": "1.0",  # Default version
-                "language": "en",   # Default language
-                "status": "draft",  # Default status
+    def _enrich_map_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+            """Enrich map metadata with relational and feature information."""
+            metadata.setdefault("related_topics", [])
+            metadata.setdefault("prerequisites", [])
+            metadata.setdefault("feature_flags", {
+                "enable_toc": True,
+                "enable_cross_refs": True
             })
+            return metadata
 
-            # Process metadata element
-            if metadata_elem := root.find("metadata"):
-                for othermeta in metadata_elem.findall("othermeta"):
-                    name = othermeta.get("name")
-                    content = othermeta.get("content")
-                    if name and content:
-                        map_element.metadata[name] = content
+    def _enrich_topic_metadata(self, metadata: Dict[str, Any], map_metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Enrich topic metadata with relational and feature information."""
+        metadata.setdefault("related_topics", map_metadata.get("related_topics", []))
+        metadata.setdefault("prerequisites", map_metadata.get("prerequisites", []))
+        metadata.setdefault("feature_flags", map_metadata.get("feature_flags", {}))
+        return metadata
 
-            # Parse topics
-            for topicref in root.findall(".//topicref"):
-                if href := topicref.get("href"):
-                    topic_id = topicref.get("id") or Path(href).stem
-                    topic_path = map_path.parent / href
 
-                    # Create topic element
-                    topic_element = TrackedElement.from_discovery(
-                        path=topic_path,
-                        element_type=self._determine_element_type(href),
-                        id_handler=self.id_handler,
-                        topic_id=topic_id
-                    )
-                    topic_element.parent_map_id = map_element.id
-                    topic_element.href = href
-
-                    # Track in map
-                    map_element.topics.append(topic_element.id)
-                    map_element.by_type.setdefault(
-                        topic_element.type.value,
-                        []
-                    ).append(topic_element.id)
-
-                    # Store in database
-                    self._store_topic_metadata(topic_element)
-
-            # Store map metadata in database
-            self._store_map_metadata(map_element)
-
-            map_element.phase = ProcessingPhase.VALIDATION
-            return map_element
-
-        except Exception as e:
-            self.logger.error(f"Error parsing DITA map: {str(e)}", exc_info=True)
-            raise ProcessingError(
-                error_type="parsing",
-                message=str(e),
-                context=str(map_path)
-            )
-
-    def parse_topic(self, topic_path: Path) -> TrackedElement:
-        """Parse a topic file into a TrackedElement."""
+    def _extract_map_title(self, map_path: Path) -> str:
+        """Extract the title of a DITA map from its content."""
         try:
-            # Create topic element
-            topic_element = TrackedElement.from_discovery(
-                path=topic_path,
-                element_type=self._determine_element_type(str(topic_path)),
-                id_handler=self.id_handler
-            )
-
-            # Read content
-            topic_element.content = topic_path.read_text()
-
-            # Extract metadata
-            topic_element.metadata.update({
-                'has_latex': self._detect_latex(topic_element.content),
-                'content_type': topic_element.type.value,
-                'status': 'draft',
-                'language': 'en',
-                'version': '1.0'
-            })
-
-            # Add LaTeX info if needed
-            if topic_element.metadata['has_latex']:
-                topic_element.metadata['latex_blocks'] = self._count_latex_blocks(topic_element.content)
-
-            # Store in database
-            self._store_topic_metadata(topic_element)
-
-            topic_element.phase = ProcessingPhase.VALIDATION
-            return topic_element
-
+            # Parse the DITA map file
+            with map_path.open(encoding="utf-8") as file:
+                tree = etree.parse(file)
+                title_element = tree.find(".//title")  # Locate the title element
+                if title_element is not None and title_element.text:
+                    return title_element.text.strip()  # Safely strip if text exists
+            return "Untitled Map"  # Default title if no title element or text found
         except Exception as e:
-            self.logger.error(f"Error parsing topic {topic_path}: {str(e)}")
-            raise
+            self.logger.error(f"Error extracting title from {map_path}: {str(e)}")
+            return "Untitled Map"
 
     def _determine_element_type(self, path: str) -> ElementType:
         """Determine element type from file path."""
@@ -362,16 +241,16 @@ class DITAParser:
             element = TrackedElement.from_discovery(
                 path=file_path_obj,
                 element_type=ElementType.MARKDOWN,
-                id_handler=self.id_handler,
-                topic_id=file_path_obj.stem
+                id_handler=self.id_handler
             )
+            element.topic_id = file_path_obj.stem  # Assign topic ID separately
 
             # Read and parse content
             with open(file_path_obj, 'r', encoding='utf-8') as f:
                 file_content = f.read()
 
             # Extract YAML metadata
-            metadata, content = self.metadata.extract_yaml_metadata(file_content)
+            metadata, content = self.metadata_handler.extract_yaml_metadata(file_content)
             element.content = content
             element.metadata.update(metadata)
 
@@ -416,9 +295,9 @@ class DITAParser:
                     topic = TrackedElement.from_discovery(
                         path=topic_path,
                         element_type=self._determine_element_type(href),
-                        id_handler=self.id_handler,
-                        topic_id=topic_id
+                        id_handler=self.id_handler
                     )
+                    topic.topic_id = topic_id  # Assign topic ID separately
 
                     # Set relationship to map
                     topic.parent_map_id = map_path.stem
@@ -429,7 +308,7 @@ class DITAParser:
                     topic.metadata.update({
                         'type': topicref.get('type', 'topic'),
                         'scope': topicref.get('scope', 'local'),
-                        'format': topicref.get('format'),
+                        'format': topicref.get('format', None),
                         'processing-role': topicref.get('processing-role', 'normal')
                     })
 

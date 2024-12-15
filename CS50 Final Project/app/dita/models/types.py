@@ -84,11 +84,11 @@ class TrackedElement:
 
     # Map/Topic specific
     title: Optional[str] = None
-    topic_id: Optional[str] = None # Context tracking
-    parent_map_id: Optional[str] = None # Context trackind
+    topic_id: Optional[str] = None  # Context tracking
+    parent_map_id: Optional[str] = None  # Context tracking
     href: Optional[str] = None  # For topic references in maps
     topics: List[str] = field(default_factory=list)  # For maps only
-    sequence_number: Optional[int] = None # For ordering
+    sequence_number: Optional[int] = None  # For ordering
 
     # Hierarchy tracking
     order: List[str] = field(default_factory=list)
@@ -97,7 +97,7 @@ class TrackedElement:
 
     # Error tracking
     last_error: Optional[str] = None
-    last_updated: Optional[datetime] = None
+    # last_updated: Optional[datetime] = None  # Deprecated: Use metadata or database for persistent tracking
     created_at: datetime = field(default_factory=datetime.now)
 
     # Processing state
@@ -107,12 +107,12 @@ class TrackedElement:
     processing_attempts: int = 0
 
     # Timestamps & Error tracking
-    created_at: datetime = field(default_factory=datetime.now)
-    last_updated: Optional[datetime] = None
-    last_error: Optional[str] = None
+    # created_at: datetime = field(default_factory=datetime.now)  # Already defined above
+    # last_updated: Optional[datetime] = None  # Deprecated (handled dynamically elsewhere)
+    # last_error: Optional[str] = None  # Redundant; already declared above
 
     # Metadata & Rendering
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)  # Persistent metadata
     html_metadata: Dict[str, Any] = field(default_factory=lambda: {
         "attributes": {},
         "classes": [],
@@ -124,6 +124,12 @@ class TrackedElement:
         "features": {}
     })
 
+    # New Fields
+    context: Dict[str, Any] = field(default_factory=dict)  # Processing context (e.g., TOC, cross-references)
+    feature_flags: Dict[str, bool] = field(default_factory=dict)  # Feature toggles like heading numbering, TOC
+    custom_metadata: Dict[str, Any] = field(default_factory=dict)  # Future extensibility for user-defined metadata
+
+    # Methods
     def parse_content(self) -> None:
         """Load and parse content (replaces ParsedElement functionality)"""
         if self.phase != ProcessingPhase.DISCOVERY:
@@ -144,7 +150,6 @@ class TrackedElement:
     def get_attribute(self, key: str) -> Optional[str]:
         return self.html_metadata["attributes"].get(key)
 
-
     def add_class(self, class_name: str) -> None:
         if class_name not in self.html_metadata["classes"]:
             self.html_metadata["classes"].append(class_name)
@@ -153,23 +158,23 @@ class TrackedElement:
         """Advance to next processing phase."""
         self.phase = new_phase
         self.state = ProcessingState.PENDING
-        self.last_updated = datetime.now()
+        self.metadata["last_updated"] = datetime.now()  # Use metadata for transient timestamps
 
     def update_state(self, new_state: ProcessingState) -> None:
         """Update processing state."""
         self.previous_state = self.state
         self.state = new_state
-        self.last_updated = datetime.now()
+        self.metadata["last_updated"] = datetime.now()  # Use metadata for transient timestamps
 
     def increment_attempts(self) -> None:
         """Increment processing attempts counter."""
         self.processing_attempts += 1
-        self.last_updated = datetime.now()
+        self.metadata["last_updated"] = datetime.now()  # Use metadata for transient timestamps
 
     def set_error(self, error: str) -> None:
         """Record processing error."""
         self.last_error = error
-        self.last_updated = datetime.now()
+        self.metadata["last_updated"] = datetime.now()  # Use metadata for transient timestamps
 
     def can_process(self) -> bool:
         """Check if element can be processed in current phase."""
@@ -179,87 +184,46 @@ class TrackedElement:
             self.state != ProcessingState.COMPLETED
         )
 
+    @classmethod
+    def create_map(cls, path: Path, title: str, id_handler: DITAIDHandler) -> "TrackedElement":
+        """
+        Create a TrackedElement for a DITA map.
+
+        Args:
+            path: Path to the DITA map file.
+            title: Title of the map.
+            id_handler: The DITAIDHandler instance for ID generation.
+
+        Returns:
+            A `TrackedElement` representing the map.
+        """
+        try:
+            map_id = id_handler.generate_id(
+                base=path.stem,
+                element_type="map"  # Prepend "map" for consistent ID generation
+            )
+            return cls(
+                id=map_id,
+                type=ElementType.DITAMAP,
+                path=path,
+                source_path=path,
+                content="",  # Content will be parsed later
+                title=title
+            )
+        except Exception as e:
+            raise ValueError(f"Error creating map TrackedElement: {str(e)}")
+
 
     @classmethod
-    def from_discovery(cls, path: Path, element_type: ElementType, id_handler: 'DITAIDHandler', topic_id: Optional[str] = None) -> "TrackedElement":
-        """Create element in DISCOVERY phase (replaces DiscoveredTopic)"""
+    def from_discovery(cls, path: Path, element_type: ElementType, id_handler: DITAIDHandler) -> "TrackedElement":
+        """Create a TrackedElement during the discovery phase."""
         return cls(
             id=id_handler.generate_id(path.stem),
             type=element_type,
-            content="",  # Will be loaded during parsing
             path=path,
             source_path=path,
-            topic_id=topic_id
+            content=""  # Content will be loaded later
         )
-
-    @classmethod
-    def create_map(cls, path: Path, title: str, id_handler: DITAIDHandler) -> "TrackedElement":
-            """Create map element"""
-            return cls(
-                id=id_handler.generate_id(path.stem, prefix="map"),  # Use prefix for maps
-                type=ElementType.DITAMAP,
-                content="",
-                path=path,
-                source_path=path,
-                title=title
-            )
-    def add_child_element(self, element_type: ElementType, content: str, id_handler: DITAIDHandler) -> "TrackedElement":
-            """Add child element with proper ID handling"""
-            child = TrackedElement(
-                id=id_handler.generate_id(content[:20], prefix=f"{self.id}-child"),  # Use parent ID as prefix
-                type=element_type,
-                content=content,
-                path=self.path,
-                source_path=self.source_path,
-                parent_map_id=self.id
-            )
-            self.hierarchy[self.id].append(child.id)
-            return child
-
-    @property
-    def is_parsed(self) -> bool:
-        """Check if element has completed discovery phase."""
-        phase_order = {
-            ProcessingPhase.DISCOVERY: 0,
-            ProcessingPhase.VALIDATION: 1,
-            ProcessingPhase.TRANSFORMATION: 2,
-            ProcessingPhase.ENRICHMENT: 3,
-            ProcessingPhase.ASSEMBLY: 4
-        }
-        return phase_order[self.phase] > phase_order[ProcessingPhase.DISCOVERY]
-
-    # Could also add helper for checking any phase
-    def is_past_phase(self, check_phase: ProcessingPhase) -> bool:
-        """Check if element has completed a specific phase."""
-        phase_order = {
-            ProcessingPhase.DISCOVERY: 0,
-            ProcessingPhase.VALIDATION: 1,
-            ProcessingPhase.TRANSFORMATION: 2,
-            ProcessingPhase.ENRICHMENT: 3,
-            ProcessingPhase.ASSEMBLY: 4
-        }
-        return phase_order[self.phase] > phase_order[check_phase]
-
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for serialization."""
-        return {
-            'id': self.id,
-            'type': self.type.value,
-            'path': str(self.path),
-            'state': self.state.value,
-            'attempts': self.processing_attempts,
-            'created': self.created_at.isoformat(),
-            'updated': self.last_updated.isoformat() if self.last_updated else None,
-            'error': self.last_error,
-            'metadata': self.metadata
-        }
-
-
-
-
-
-
 
 
 @dataclass
@@ -313,10 +277,10 @@ class ProcessingMetadata:
     # Processing flags
     features: Dict[str, bool] = field(default_factory=lambda: {
         "index_numbers": True,
+        "anchor_links": True,
         "toc": True,
         "latex": False,
         "artifacts": False,
-        "number_headings": True,
         "enable_cross_refs": True
     })
 
@@ -377,23 +341,26 @@ class ProcessingMetadata:
 @dataclass
 class ProcessingContext:
     """Core processing context with minimal metadata."""
-    # Map level info
+    # Map-level metadata
     map_id: str
     features: Dict[str, bool] = field(default_factory=lambda: {
-        "process_latex": True,
-        "number_headings": True,
+        "index_numbers": True,
+        "anchor_links": True,
+        "toc": True,
+        "latex": False,
+        "artifacts": False,
         "enable_cross_refs": True,
-        "process_artifacts": True,
-        "show_toc": True
     })
 
     # Current processing state
     current_topic_id: Optional[str] = None
     topic_order: List[str] = field(default_factory=list)
 
-    # Context metadata
+    # Metadata
     map_metadata: Dict[str, Any] = field(default_factory=dict)
-    topic_metadata: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    topic_metadata: Dict[str, Dict[str, Any]] = field(default_factory=lambda: {
+        "headings": {},  # Default headings metadata
+    })
 
     def register_element(self, element: TrackedElement, id_handler: DITAIDHandler) -> None:
         """Register element with proper ID handling"""
@@ -478,9 +445,7 @@ class Map:
 class HeadingState:
     """State for heading tracking."""
     current_h1: int = 0
-    counters: Dict[str, int] = field(default_factory=lambda: {
-        'h1': 0, 'h2': 0, 'h3': 0, 'h4': 0, 'h5': 0, 'h6': 0
-    })
+    counters: Dict[str, int] = field(default_factory=lambda: {f"h{i}": 0 for i in range(1, 7)})
     used_ids: Set[str] = field(default_factory=set)
 
     def increment(self, level: int) -> None:
@@ -521,19 +486,21 @@ class ProcessedArtifact:
 # LaTeX processing types
 @dataclass
 class LaTeXEquation:
-    """LaTeX equation information"""
+    """Represents a LaTeX equation."""
     id: str
     content: str
     is_block: bool
-    metadata: Optional[Dict[str, Any]] = None
+    placeholder: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class ProcessedEquation:
-    """Processed LaTeX equation"""
     id: str
-    html: str
     original: str
+    rendered: str
+    placeholder: str
     is_block: bool
+
 
 # Error types
 @dataclass
