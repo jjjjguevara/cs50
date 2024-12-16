@@ -1,4 +1,5 @@
 # app/dita/transformers/base_transformer.py
+from abc import ABC, abstractmethod
 import logging
 import inspect
 from functools import partial
@@ -36,7 +37,7 @@ from app.dita.utils.latex.latex_processor import LaTeXProcessor
 from app.dita.utils.latex.latex_validator import LaTeXValidator
 
 
-class BaseTransformer:
+class BaseTransformer(ABC):
     def __init__(
         self,
         dita_root: Optional[Path] = None,
@@ -64,23 +65,25 @@ class BaseTransformer:
         """
         self.logger = logging.getLogger(__name__)
 
+
         # Configuration and metadata
+        self.dita_root = dita_root
         self.config = config or DITAConfig()  # Initialize config from config_manager
         self.processing_metadata = processing_metadata or ProcessingMetadata(
             id="base-transformer-metadata",
             content_type=ElementType.DITAMAP,
             features={
-                "process_latex": self.config.features.get("process_latex", True),
+                "latex": self.config.features.get("latex", True),
                 "anchor_links": self.config.features.get("anchor_links", True),
                 "index_numbers": self.config.features.get("index_numbers", True),
-                "enable_cross_refs": self.config.features.get("enable_cross_refs", True),
-                "show_toc": self.config.features.get("show_toc", True),
+                "enable_xrefs": self.config.features.get("enable_xrefs", True),
+                "toc": self.config.features.get("toc", True),
             },
         )
 
         # Utilities
         self.id_handler = id_handler or DITAIDHandler()
-        self.metadata_extractor = metadata_extractor or MetadataHandler()
+        self.metadata_handler = MetadataHandler()
         self.html_helper = html_helper or HTMLHelper(dita_root)
         self.heading_handler = heading_handler or HeadingHandler(processing_metadata=self.processing_metadata)
 
@@ -89,156 +92,255 @@ class BaseTransformer:
         self.latex_processor = LaTeXProcessor()
         self.latex_validator = latex_validator or LaTeXValidator()
 
+        # Content transformation strategies
+        self._element_transformers = {
+        #     # Block Elements
+        #     "heading": self._transform_heading,
+        #     "paragraph": self._transform_paragraph,
+        #     "blockquote": self._transform_blockquote,
+        #     "code_block": self._transform_code_block,
+        #     "pre": self._transform_code_block,
+        #     "table": self._transform_table,
+        #     "figure": self._transform_figure,
 
-    def transform(
-        self,
-        element: TrackedElement,
-        context: ProcessingContext,
-        html_converter: Optional[Callable[[str, ProcessingContext], str]] = None
-    ) -> ProcessedContent:
-        """
-        Centralized transformation method for various element types.
+        #     # Lists
+        #     "ul": self._transform_unordered_list,
+        #     "ol": self._transform_ordered_list,
+        #     "li": self._transform_list_item,
+        #     "dl": self._transform_definition_list,
+        #     "dt": self._transform_term,
+        #     "dd": self._transform_definition,
 
-        Args:
-            element: The element to be transformed.
-            context: The processing context for the transformation.
-            html_converter: Optional function to convert content to HTML.
+        #     # Inline Elements
+        #     "link": self._transform_link,
+        #     "image": self._transform_image,
+        #     "code": self._transform_code_inline,
+        #     "strong": self._transform_bold,
+        #     "em": self._transform_italic,
+        #     "u": self._transform_underline,
 
-        Returns:
-            ProcessedContent: The transformed HTML and metadata.
-        """
-        try:
-            # Metadata extraction
-            metadata = self.metadata_extractor.extract_metadata(
-                file_path=element.path, content_id=element.id
-            )
+        #     # DITA Specific
+        #     "concept": self._transform_concept,
+        #     "task": self._transform_task,
+        #     "reference": self._transform_reference,
+        #     "topicref": self._transform_topicref
+         }
 
-            # HTML conversion
-            html_content = (
-                html_converter(element.content, context)
-                if html_converter
-                else self._default_html_converter(element.content, context)
-            )
-
-            # Parse and process HTML
-            soup = BeautifulSoup(html_content, "html.parser")
-            self.process_elements(soup, element, context)
-
-            # Apply registered strategies
-            html_content = self._apply_strategies(
-                html=str(soup), element=element, context=context, metadata=metadata
-            )
-
-            # Finalize HTML content
-            final_html = self.html_helper.process_final_content(html_content)
-
-            # Update element state
-            element.state = ProcessingState.COMPLETED
-            element.phase = ProcessingPhase.ASSEMBLY
-
-            return ProcessedContent(
-                html=final_html, element_id=element.id, metadata=metadata
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error transforming element {element.id}: {str(e)}")
-            raise
-
-
-    import inspect
-
-    def _apply_strategies(
-        self,
-        html: str,
-        element: TrackedElement,
-        context: ProcessingContext,
-        metadata: Dict[str, Any]
-    ) -> str:
-        """
-        Apply active transformation strategies to the content.
-
-        Args:
-            html: Raw HTML content to transform.
-            element: The element being processed.
-            context: The processing context.
-            metadata: Metadata for the element.
-
-        Returns:
-            str: Transformed HTML content.
-        """
-        try:
-            soup = BeautifulSoup(html, "html.parser")
-            strategies = self._get_active_strategies(context, metadata)
-
-            # Available arguments for strategies
-            available_args = {
-                "soup": soup,
-                "element": element,
-                "context": context,
-                "metadata": metadata
-            }
-
-            # Execute each strategy
-            for strategy in strategies:
-                try:
-                    strategy_params = inspect.signature(strategy).parameters
-                    required_args = {
-                        name: available_args[name]
-                        for name in strategy_params
-                        if name in available_args
-                    }
-                    strategy(**required_args)
-                    self.logger.debug(f"Applied strategy: {strategy.__name__}")
-                except Exception as e:
-                    self.logger.error(f"Error applying strategy {strategy.__name__}: {e}")
-                    raise
-
-            return str(soup)
-
-        except Exception as e:
-            self.logger.error(f"Error applying strategies: {str(e)}")
-            raise
-
-
-
-
-    def _get_active_strategies(
-        self,
-        context: ProcessingContext,
-        metadata: Dict[str, Any]
-    ) -> List[Callable]:
-        """
-        Get list of active transformation strategies.
-
-        Args:
-            context: The processing context for the transformation.
-            metadata: Metadata associated with the element.
-
-        Returns:
-            List[Callable]: List of strategy methods to apply.
-        """
-        strategies = []
-
-        strategy_registry = {
-            "_inject_latex": lambda: context.features.get("latex", False),
-            "_append_heading_attributes": lambda: (
-                context.features.get("index_numbers", True) or context.features.get("anchor_links", True)
-            ),
-            "_append_toc": lambda: context.features.get("toc", False),
-            "_append_bibliography": lambda: "bibliography" in metadata,
-            "_append_glossary": lambda: "glossary" in metadata,
+        # Contextual/feature strategies (inject/append/swap)
+        self._strategy_registry = {
+           "_inject_latex": lambda c, m: c.features.get("latex", False),
+           "_inject_media": lambda c, m: c.features.get("media", False),
+           "_inject_topic_section": lambda c, m: c.features.get("topic_section", False),
+           "_append_heading_attributes": lambda c, m: (
+               c.features.get("index_numbers", True) or
+               c.features.get("anchor_links", True)
+           ),
+           "_append_toc": lambda c, m: c.features.get("toc", False),
+           "_append_bibliography": lambda c, m: "bibliography" in m,
+           "_append_glossary": lambda c, m: "glossary" in m,
+           "_swap_topic_version": lambda c, m: c.features.get("swap_topic_version", False),
+           "_swap_topic_type": lambda c, m: c.features.get("swap_topic_type", False)
         }
 
-        for strategy_name, condition in strategy_registry.items():
-            if condition():
-                strategy = getattr(self, strategy_name, None)
-                if strategy:
-                    strategies.append(strategy)
+        # Core element processing rules for DITA specializations
+        self._processing_rules = {
+            # Structure elements
+            "concept": {
+                "html_tag": "article",
+                "classes": ["dita-concept", "article-content"],
+                "attributes": {"role": "article"}
+            },
+            "task": {
+                "html_tag": "article",
+                "classes": ["dita-task", "article-content"],
+                "attributes": {"role": "article"}
+            },
+            "reference": {
+                "html_tag": "article",
+                "classes": ["dita-reference", "article-content"],
+                "attributes": {"role": "article"}
+            },
 
-        return strategies
+            # Block elements
+            "section": {
+                "html_tag": "section",
+                "classes": ["dita-section"],
+                "attributes": {"role": "region"}
+            },
+            "paragraph": {
+                "html_tag": "p",
+                "classes": ["dita-p"]
+            },
+            "note": {
+                "html_tag": "div",
+                "classes": ["dita-note", "alert"],
+                "attributes": {"role": "alert"},
+                "type_classes": {
+                    "warning": "alert-warning",
+                    "danger": "alert-danger",
+                    "tip": "alert-info"
+                }
+            },
+            "code_block": {
+                "html_tag": "pre",
+                "classes": ["code-block", "highlight"],
+                "attributes": {
+                    "spellcheck": "false",
+                    "translate": "no"
+                }
+            },
 
+            # Lists
+            "unordered_list": {
+                "html_tag": "ul",
+                "classes": ["dita-ul"]
+            },
+            "ordered_list": {
+                "html_tag": "ol",
+                "classes": ["dita-ol"]
+            },
+            "list_item": {
+                "html_tag": "li",
+                "classes": ["dita-li"]
+            },
 
+            # Tables
+            "table": {
+                "html_tag": "table",
+                "classes": ["table", "table-bordered"],
+                "attributes": {"role": "grid"}
+            },
 
+            # Media
+            "image": {
+                "html_tag": "img",
+                "classes": ["img-fluid"],
+                "required_attrs": ["src", "alt"],
+                "attributes": {
+                    "loading": "lazy",
+                    "decoding": "async"
+                }
+            },
+            "figure": {
+                "html_tag": "figure",
+                "classes": ["figure"],
+                "inner_tag": "figcaption"
+            },
+
+            # Links
+            "xref": {
+                "html_tag": "a",
+                "classes": ["dita-xref"],
+                "required_attrs": ["href"]
+            },
+            "link": {
+                "html_tag": "a",
+                "classes": ["dita-link"],
+                "attributes": {
+                    "target": "_blank",
+                    "rel": "noopener noreferrer"
+                }
+            },
+
+            # Inline
+            "bold": {
+                "html_tag": "strong",
+                "classes": ["dita-b"]
+            },
+            "italic": {
+                "html_tag": "em",
+                "classes": ["dita-i"]
+            },
+            "underline": {
+                "html_tag": "u",
+                "classes": ["dita-u"]
+            }
+        }
+
+    def transform(self, element: TrackedElement, context: ProcessingContext) -> ProcessedContent:
+       """Transform content with processing strategies."""
+       try:
+           html_content = self._convert_to_html(element, context)
+
+           # Transform with element transformer
+           if element.type in self._element_transformers:
+               html_content = self._element_transformers[element.type](html_content)
+
+           # Apply feature strategies
+           html_content = self._apply_strategies(
+               html=html_content,
+               element=element,
+               context=context,
+               metadata=element.metadata
+           )
+
+           return ProcessedContent(
+               html=html_content,
+               element_id=element.id,
+               metadata=element.metadata
+           )
+
+       except Exception as e:
+           self.logger.error(f"Transform failed: {str(e)}")
+           raise
+
+    @abstractmethod
+    def _convert_to_html(self, element: TrackedElement, context: ProcessingContext) -> str:
+       """Convert element content to HTML. To be implemented by subclasses."""
+       pass
+
+    def _apply_strategies(
+       self,
+       html: str,
+       element: TrackedElement,
+       context: ProcessingContext,
+       metadata: Dict[str, Any]
+    ) -> str:
+       """Apply feature transformation strategies."""
+       try:
+           soup = BeautifulSoup(html, "html.parser")
+
+           for strategy in self._get_active_strategies(context, metadata):
+               soup = strategy(soup, element, context)
+
+           return str(soup)
+
+       except Exception as e:
+           self.logger.error(f"Strategy application failed: {str(e)}")
+           return html
+
+    def _get_active_strategies(
+       self,
+       context: ProcessingContext,
+       metadata: Dict[str, Any]
+    ) -> List[Callable]:
+       try:
+           # Define priorities as dict mapping
+           priorities = {
+               "_inject_": 1,
+               "_append_": 2,
+               "_swap_": 3
+           }
+
+           active_strategies = []
+
+           # Get enabled strategies
+           for strategy_name, condition in self._strategy_registry.items():
+               if condition(context, metadata):
+                   strategy = getattr(self, strategy_name, None)
+                   if strategy:
+                       active_strategies.append((
+                           strategy,
+                           next((p for prefix, p in priorities.items()
+                                if strategy.__name__.startswith(prefix)), 99)
+                       ))
+
+           # Sort by priority and return strategies
+           return [s for s, _ in sorted(active_strategies, key=lambda x: x[1])]
+
+       except Exception as e:
+           self.logger.error(f"Error getting active strategies: {str(e)}")
+           return []
 
     def process_elements(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> None:
         """
@@ -367,6 +469,202 @@ class BaseTransformer:
             self.logger.error(f"Error applying heading attributes: {str(e)}")
             raise
 
+
+    def _append_toc(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> BeautifulSoup:
+       """Append Table of Contents based on heading metadata."""
+       try:
+           # Get TOC metadata using metadata handler
+           toc_metadata = self.metadata_handler.get_strategy_metadata(
+               strategy="_append_toc",
+               content_id=element.id
+           )
+
+           if not toc_metadata.get("data"):
+               return soup
+
+           # Create TOC container
+           toc_nav = soup.new_tag("nav", attrs={
+               "class": "table-of-contents",
+               "aria-label": "Table of contents"
+           })
+
+           # Create TOC list
+           toc_list = soup.new_tag("ul")
+
+           # Track heading levels for nesting
+           current_level = 0
+           current_list = toc_list
+           list_stack = []
+
+           for heading in toc_metadata["data"]:
+               heading_level = heading["level"]
+
+               # Handle nesting
+               if heading_level > current_level:
+                   list_stack.append(current_list)
+                   current_list = soup.new_tag("ul")
+                   last_item = list_stack[-1].find_all("li", recursive=False)[-1]
+                   last_item.append(current_list)
+               elif heading_level < current_level:
+                   for _ in range(current_level - heading_level):
+                       if list_stack:
+                           current_list = list_stack.pop()
+
+               # Create heading entry
+               item = soup.new_tag("li")
+               link = soup.new_tag("a", href=f"#{heading['id']}")
+               link.string = heading["text"]
+               item.append(link)
+               current_list.append(item)
+
+               current_level = heading_level
+
+           toc_nav.append(toc_list)
+
+           # Insert TOC at start of body
+           if body := soup.find("body"):
+               body.insert(0, toc_nav)
+           else:
+               soup.insert(0, toc_nav)
+
+           return soup
+
+       except Exception as e:
+           self.logger.error(f"Error appending TOC: {str(e)}")
+           return soup
+
+    def _inject_media(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> BeautifulSoup:
+        """
+        Inject media elements with proper paths and attributes from keyref definitions.
+        Media files are expected in topic's /media subdirectory unless explicitly defined.
+        """
+        try:
+            media_metadata = self.metadata_handler.get_strategy_metadata(
+                strategy="_inject_media",
+                content_id=element.id
+            )
+
+            # Default attributes
+            default_attrs = {
+                'img': {
+                    'loading': 'lazy',
+                    'decoding': 'async',
+                    'class': 'img-fluid',
+                    'alt': 'Image placeholder',  # Accessibility default
+                    'width': 'auto',
+                    'height': 'auto'
+                },
+                'video': {
+                    'controls': '',
+                    'preload': 'metadata',
+                    'class': 'media-responsive',
+                    'width': 'auto',
+                    'height': 'auto'
+                },
+                'audio': {
+                    'controls': '',
+                    'preload': 'metadata',
+                    'class': 'media-responsive'
+                }
+            }
+
+            for media_tag in ['img', 'video', 'audio']:
+                for media_elem in soup.find_all(media_tag):
+                    # Find matching metadata if exists
+                    metadata = next(
+                        (m for m in media_metadata.get("data", [])
+                         if m.get('element_id') == media_elem.get('id')),
+                        {}
+                    )
+
+                    # Apply default attributes first
+                    for attr, value in default_attrs[media_tag].items():
+                        if not media_elem.get(attr):
+                            media_elem[attr] = value
+
+                    # Handle src/href
+                    href = metadata.get('href', media_elem.get('src', ''))
+                    if href:
+                        if not href.startswith(('http://', 'https://', '/')):
+                            # Resolve relative to media directory
+                            topic_path = Path(element.path)
+                            media_dir = topic_path.parent / 'media'
+                            media_path = (media_dir / href).resolve()
+
+                            if media_path.exists():
+                                if self.dita_root:
+                                    try:
+                                        href = f'/static/topics/{media_path.relative_to(self.dita_root)}'
+                                    except ValueError:
+                                        self.logger.warning(f"Media path {media_path} not under DITA root")
+                            else:
+                                self.logger.warning(f"Media file not found: {media_path}")
+                                href = '/static/placeholder.png' if media_tag == 'img' else ''
+
+                        media_elem['src'] = href
+
+                    # Apply metadata attributes with validation
+                    if media_elem.name == 'img':
+                        if alt := (metadata.get('alt') or media_elem.get('alt')):
+                            media_elem['alt'] = alt
+                        if title := (metadata.get('linktext') or media_elem.get('title')):
+                            media_elem['title'] = title
+
+                    # Apply common attributes with validation
+                    for attr in ['placement', 'scale', 'align', 'width', 'height']:
+                        if value := metadata.get(attr):
+                            # Validate numeric attributes
+                            if attr in ['width', 'height', 'scale']:
+                                try:
+                                    float(value.rstrip('px%'))
+                                    media_elem[attr] = value
+                                except ValueError:
+                                    continue
+                            else:
+                                media_elem[f'data-{attr}'] = value
+
+                    # Handle classes
+                    classes = set(filter(None, [
+                        media_elem.get('class', ''),
+                        default_attrs[media_tag]['class'],
+                        metadata.get('outputclass', '')
+                    ]))
+                    media_elem['class'] = ' '.join(classes)
+
+                    # Create figure wrapper for images with captions
+                    if (media_elem.name == 'img' and
+                        (alt := media_elem.get('alt')) and
+                        not media_elem.find_parent('figure')):
+                        figure = soup.new_tag('figure', attrs={'class': 'figure'})
+                        figcaption = soup.new_tag('figcaption', attrs={'class': 'figure-caption'})
+                        figcaption.string = alt
+                        media_elem.wrap(figure)
+                        figure.append(figcaption)
+
+            return soup
+
+        except Exception as e:
+            self.logger.error(f"Error injecting media: {str(e)}")
+            return soup
+
+
+    # def _append_bibliography(self, html_content: str, metadata: Dict[str, Any]) -> str:
+    #     bibliography_data = metadata.get('bibliography', [])
+    #     bibliography_html = self.html_helper.generate_bibliography(bibliography_data)
+    #     return f"{html_content}\n{bibliography_html}"
+
+    # def _append_glossary(self, html_content: str, metadata: Dict[str, Any]) -> str:
+    #     glossary_data = metadata.get('glossary', [])
+    #     glossary_html = self.html_helper.generate_glossary(glossary_data)
+    #     return f"{html_content}\n{glossary_html}"
+
+    # def _inject_topic_version(self, html_content: str, version: str) -> str:
+    #     # Implementation to inject specific topic version
+    #     ...
+
+    # def _inject_topic_section(self, html_content: str, section: str) -> str:
+    #     # Implementation to inject specific topic section
+    #     ...
 
 
     ##################

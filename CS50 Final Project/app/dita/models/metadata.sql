@@ -196,6 +196,36 @@ CREATE TABLE conditional_values (
     UNIQUE (attribute_id, value)
 );
 
+-- Key definitions
+CREATE TABLE key_definitions (
+    key_id TEXT PRIMARY KEY,
+    map_id TEXT NOT NULL,
+    keys TEXT NOT NULL,
+    href TEXT NOT NULL,
+    alt TEXT,
+    placement TEXT,
+    scale TEXT,
+    props TEXT,
+    audience TEXT,
+    platform TEXT,
+    product TEXT,
+    otherprops TEXT,
+    conref TEXT,
+    keyref TEXT,
+    rev TEXT,
+    outputclass TEXT,
+    align TEXT,
+    scalefit TEXT,
+    width TEXT,
+    height TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (map_id) REFERENCES maps(map_id)
+);
+
+CREATE INDEX idx_keydef_map ON key_definitions(map_id);
+CREATE INDEX idx_keydef_keys ON key_definitions(keys);
+
+
 -- references.sql
 CREATE TABLE heading_index (
     id TEXT PRIMARY KEY,

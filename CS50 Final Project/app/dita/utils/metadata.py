@@ -3,6 +3,8 @@ from typing import Dict, List, Optional, Union, Any, Tuple
 import logging
 import yaml
 import sqlite3
+from uuid import uuid4
+
 from lxml import etree
 from lxml.etree import _Element
 import frontmatter
@@ -45,6 +47,46 @@ class MetadataHandler:
             load_dtd=False,
             no_network=True
         )
+
+        # Map transformation strategies to metadata retrievers
+        self._metadata_registry = {
+                   "_inject_latex": lambda c, m: {
+                       "requires": ["math_content"],
+                       "feature": "latex"
+                   },
+                   "_inject_media": lambda c, m: {
+                       "requires": ["media_content", "media_type"],
+                       "feature": "media"
+                   },
+                   "_inject_topic_section": lambda c, m: {
+                       "requires": ["topic_content", "specialization"],
+                       "feature": "topic_section"
+                   },
+                   "_append_heading_attributes": lambda c, m: {
+                       "requires": ["headings", "sequence"],
+                       "feature": ["index_numbers", "anchor_links"]
+                   },
+                   "_append_toc": lambda c, m: {
+                       "requires": ["headings", "hierarchy"],
+                       "feature": "toc"
+                   },
+                   "_append_bibliography": lambda c, m: {
+                       "requires": ["citations"],
+                       "feature": "bibliography"
+                   },
+                   "_append_glossary": lambda c, m: {
+                       "requires": ["glossary_entries"],
+                       "feature": "glossary"
+                   },
+                   "_swap_topic_version": lambda c, m: {
+                       "requires": ["version_info"],
+                       "feature": "swap_topic_version"
+                   },
+                   "_swap_topic_type": lambda c, m: {
+                       "requires": ["type_info"],
+                       "feature": "swap_topic_type"
+                   }
+               }
 
     def _init_db_connection(self) -> sqlite3.Connection:
             """Initialize SQLite connection with proper settings."""
@@ -112,6 +154,115 @@ class MetadataHandler:
             except Exception as e:
                 self.logger.error(f"Error extracting metadata from {file_path}: {str(e)}")
                 return {}
+
+
+    def get_strategy_metadata(self, strategy: str, content_id: str) -> Dict[str, Any]:
+       """Retrieves required metadata based on BaseTransformer strategy."""
+
+       strategy_queries = {
+           # Inject strategies
+           "latex": """
+               SELECT content_id, math_content
+               FROM topic_elements
+               WHERE element_type = 'latex' AND content_id = ?
+           """,
+
+            # Media and key definitions
+           "media": """
+                SELECT
+                    te.element_id,
+                    te.content_hash,
+                    ec.context_type,
+                    te.topic_id,
+                    kd.href,
+                    kd.alt,
+                    kd.placement,
+                    kd.scale,
+                    kd.props,
+                    kd.audience,
+                    kd.platform,
+                    kd.product,
+                    kd.otherprops,
+                    kd.outputclass,
+                    kd.align,
+                    kd.scalefit,
+                    kd.width,
+                    kd.height
+                FROM topic_elements te
+                JOIN element_context ec ON te.element_id = ec.element_id
+                LEFT JOIN topics t ON te.topic_id = t.id
+                LEFT JOIN key_definitions kd ON te.keyref = kd.keys
+                    AND t.root_map_id = kd.map_id
+                WHERE te.element_type IN ('image', 'video', 'audio')
+                AND te.topic_id = ?
+            """,
+
+           "topic_section": """
+               SELECT t.id, t.title, t.content_type, t.specialization_type,
+                      tm.features, tm.prerequisites
+               FROM topics t
+               LEFT JOIN content_metadata tm ON t.id = tm.content_id
+               WHERE t.id = ?
+           """,
+
+           # Append strategies
+           "heading_attributes": """
+               SELECT hi.id, hi.text, hi.level, hi.sequence_number,
+                      hi.path_fragment
+               FROM heading_index hi
+               WHERE hi.topic_id = ?
+               ORDER BY hi.sequence_number
+           """,
+
+           "toc": """
+               SELECT hi.id, hi.text, hi.level
+               FROM heading_index hi
+               WHERE hi.map_id = (
+                   SELECT root_map_id FROM topics WHERE id = ?
+               )
+               ORDER BY hi.sequence_number
+           """,
+
+           "bibliography": """
+               SELECT citation_data
+               FROM citations
+               WHERE topic_id = ?
+               ORDER BY citation_data->>'$.author'
+           """,
+
+           "glossary": """
+               SELECT term, definition
+               FROM topic_elements
+               WHERE topic_id = ? AND element_type = 'dlentry'
+           """,
+
+           # Swap strategies
+           "topic_version": """
+               SELECT version, revision_history
+               FROM content_items
+               WHERE id = ?
+           """,
+
+           "topic_type": """
+               SELECT t.type_id, tt.name, tt.base_type
+               FROM topics t
+               JOIN topic_types tt ON t.type_id = tt.type_id
+               WHERE t.id = ?
+           """
+       }
+
+       query = strategy_queries.get(strategy.lstrip("_"))
+       if not query:
+           return {}
+
+       with self._conn as conn:
+           cur = conn.execute(query, (content_id,))
+           result = cur.fetchall()
+           return {
+               "content_id": content_id,
+               "strategy": strategy,
+               "data": [dict(row) for row in result]
+           }
 
     def _enrich_metadata(self, metadata: Dict[str, Any], map_metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """

@@ -101,32 +101,38 @@ class DITAParser:
             conn.close()
 
     def parse_ditamap(self, map_path: Path) -> TrackedElement:
-            """Parse a DITA map and extract metadata."""
-            try:
-                self.logger.debug(f"Parsing DITA map: {map_path}")
-                if not map_path.exists():
-                    raise FileNotFoundError(f"DITA map not found: {map_path}")
+       """Parse a DITA map and extract metadata and key definitions."""
+       try:
+           self.logger.debug(f"Parsing DITA map: {map_path}")
+           if not map_path.exists():
+               raise FileNotFoundError(f"DITA map not found: {map_path}")
 
-                # Generate map ID and initialize metadata
-                map_element = TrackedElement.create_map(
-                    path=map_path,
-                    title=self._extract_map_title(map_path),
-                    id_handler=self.id_handler
-                )
-                map_metadata = self.metadata_handler.extract_metadata(map_path, map_element.id)
+           # Generate map ID and initialize metadata
+           map_element = TrackedElement.create_map(
+               path=map_path,
+               title=self._extract_map_title(map_path),
+               id_handler=self.id_handler
+           )
 
-                # Enrich metadata with relational context
-                map_metadata = self._enrich_map_metadata(map_metadata)
-                map_element.metadata = map_metadata
+           # Extract base metadata
+           map_metadata = self.metadata_handler.extract_metadata(map_path, map_element.id)
 
-                # Store metadata persistently
-                self._store_map_metadata(map_element)
+           # Extract and store key definitions
+           key_definitions = self._extract_key_definitions(map_element)
+           map_metadata["key_definitions"] = key_definitions
 
-                return map_element
+           # Enrich metadata with relational context and keys
+           map_metadata = self._enrich_map_metadata(map_metadata)
+           map_element.metadata = map_metadata
 
-            except Exception as e:
-                self.logger.error(f"Error parsing DITA map: {str(e)}")
-                raise
+           # Store complete metadata
+           self._store_map_metadata(map_element)
+
+           return map_element
+
+       except Exception as e:
+           self.logger.error(f"Error parsing DITA map: {str(e)}")
+           raise
 
     def parse_topic(self, topic_path: Path, map_metadata: Dict[str, Any]) -> TrackedElement:
         """Parse a DITA topic and extract metadata."""
@@ -155,6 +161,51 @@ class DITAParser:
         except Exception as e:
             self.logger.error(f"Error parsing DITA topic: {str(e)}")
             raise
+
+    def _extract_key_definitions(self, map_element: TrackedElement) -> Dict[str, Any]:
+        """Extract key definitions from DITA map."""
+        try:
+            tree = etree.parse(str(map_element.path))
+            keydefs = {}
+
+            for keydef in tree.xpath(".//keydef"):
+                key = keydef.get("keys")
+                if not key:
+                    continue
+
+                keydefs[key] = {
+                    "href": keydef.get("href"),
+                    "alt": keydef.get("alt"),
+                    "placement": keydef.get("placement"),
+                    "scale": keydef.get("scale"),
+                    "props": keydef.get("props"),
+                    "audience": keydef.get("audience"),
+                    "platform": keydef.get("platform"),
+                    "product": keydef.get("product"),
+                    "otherprops": keydef.get("otherprops"),
+                    "conref": keydef.get("conref"),
+                    "keyref": keydef.get("keyref"),
+                    "rev": keydef.get("rev"),
+                    "outputclass": keydef.get("outputclass"),
+                    "align": keydef.get("align"),
+                    "scalefit": keydef.get("scalefit"),
+                    "width": keydef.get("width"),
+                    "height": keydef.get("height")
+                }
+
+                # Extract topicmeta if present
+                topicmeta = keydef.find("topicmeta")
+                if topicmeta is not None:
+                    keydefs[key].update({
+                        "linktext": getattr(topicmeta.find("linktext"), "text", None),
+                        "searchtitle": getattr(topicmeta.find("searchtitle"), "text", None)
+                    })
+
+            return keydefs
+
+        except Exception as e:
+            self.logger.error(f"Error extracting key definitions: {str(e)}")
+            return {}
 
     def _store_map_metadata(self, map_element: TrackedElement) -> None:
             """Store enriched map metadata in the database."""

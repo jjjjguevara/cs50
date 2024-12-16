@@ -49,90 +49,6 @@ class HTMLHelper:
         self.dita_root = dita_root
         self._cache: Dict[str, Any] = {}
 
-
-
-    def convert_html(self, content: str) -> str:
-        """Basic HTML conversion with proper parsing."""
-        try:
-            soup = BeautifulSoup(content, 'html.parser')
-            return str(soup)
-        except Exception as e:
-            self.logger.error(f"HTML conversion failed: {str(e)}")
-            return content
-
-    def validate_html(self, html_content: str) -> bool:
-        """Validate HTML syntax and structure."""
-        try:
-            if not html_content.strip():
-                return False
-            soup = BeautifulSoup(html_content, 'html.parser')
-            return bool(soup.find() and "<html" not in html_content.lower())
-        except Exception:
-            return False
-
-
-    def render(self, content: str, metadata: Optional[Dict[str, Any]] = None) -> str:
-        """
-        Transform raw XML content into styled HTML, enriched with metadata.
-
-        Args:
-            content: The raw XML or intermediate HTML content.
-            metadata: Optional metadata to append to the HTML output.
-
-        Returns:
-            Styled and enriched HTML as a string.
-        """
-        try:
-            # Parse content with BeautifulSoup
-            soup = BeautifulSoup(content, "lxml-xml")  # Use XML parser for DITA content
-
-            # Transform <title> tags to <h1> for HTML display
-            for title in soup.find_all("title"):
-                h1 = soup.new_tag("h1")
-                h1.string = title.text
-                title.replace_with(h1)
-
-            # Replace <topicgroup> with styled sections
-            for group in soup.find_all("topicgroup"):
-                div = soup.new_tag("div", **{"class": "topic-group"})
-                navtitle = group.find("navtitle")
-                if navtitle:
-                    h2 = soup.new_tag("h2")
-                    h2.string = navtitle.text
-                    div.append(h2)
-                ul = soup.new_tag("ul")
-                for ref in group.find_all("topicref"):
-                    li = soup.new_tag("li")
-                    a = soup.new_tag("a", href=ref.get("href", "#"))
-                    a.string = ref.get("href", "Unnamed Topic")
-                    li.append(a)
-                    ul.append(li)
-                div.append(ul)
-                group.replace_with(div)
-
-            # Handle metadata (if provided and <body> exists)
-            if metadata and soup.body:
-                metadata_div = soup.new_tag("div", **{"class": "metadata-section"})
-                for key, value in metadata.items():
-                    meta_item = soup.new_tag("div", **{"class": "metadata-item"})
-                    meta_item.string = f"{key.capitalize()}: {value}"
-                    metadata_div.append(meta_item)
-                soup.body.insert(0, metadata_div)  # Add metadata at the top of <body>
-
-            # Safely handle optional <metadata>, ensuring the tag exists
-            metadata_tag = soup.find("metadata")
-            if metadata_tag and metadata_tag.name == "metadata":
-                metadata_tag.decompose()
-
-            # Return final sanitized and enriched HTML
-            return str(soup)
-
-        except Exception as e:
-            self.logger.error(f"Error rendering content: {str(e)}")
-            raise
-
-
-
     def configure_helper(self, config: DITAConfig) -> None:
         """
         Configure HTML helper with provided settings.
@@ -155,6 +71,113 @@ class HTMLHelper:
         except Exception as e:
             self.logger.error(f"HTML helper configuration failed: {str(e)}")
             raise
+
+
+
+    def create_element(self, tag: str, attrs: Dict[str, Any], content: str) -> str:
+        """Create HTML element with attributes and content."""
+        try:
+            # Create new tag
+            soup = BeautifulSoup("", "html.parser")
+            element = soup.new_tag(tag)
+
+            # Add attributes
+            for key, value in attrs.items():
+                if key == "class":
+                    element["class"] = value if isinstance(value, str) else " ".join(value)
+                else:
+                    element[key] = value
+
+            # Add content
+            if content:
+                element.string = content
+
+            return str(element)
+
+        except Exception as e:
+            self.logger.error(f"Error creating element: {str(e)}")
+            return ""
+
+    def create_container(self, tag: str, children: List[str], attrs: Dict[str, Any]) -> str:
+        """Create container element with child elements."""
+        try:
+            # Create base container tag
+            soup = BeautifulSoup("", "html.parser")
+            container = soup.new_tag(tag)
+
+            # Add attributes
+            for key, value in attrs.items():
+                if key == "class":
+                    container["class"] = value if isinstance(value, str) else " ".join(value)
+                else:
+                    container[key] = value
+
+            # Add children
+            for child in children:
+                child_soup = BeautifulSoup(child, "html.parser")
+                if child_soup.body:
+                    container.append(child_soup.body.decode_contents())
+                else:
+                    container.append(child_soup.decode_contents())
+
+            return str(container)
+
+        except Exception as e:
+            self.logger.error(f"Error creating container: {str(e)}")
+            return ""
+
+    def assemble_topic(self, elements: List[str], metadata: Dict[str, Any]) -> str:
+        """Assemble topic HTML with metadata."""
+        try:
+            soup = BeautifulSoup("", "html.parser")
+
+            # Create article container
+            article = soup.new_tag("article", attrs={
+                "class": "topic-content",
+                "data-topic-id": metadata.get("id", ""),
+                "data-topic-type": metadata.get("type", "topic")
+            })
+            soup.append(article)
+
+            # Add metadata section
+            meta_div = soup.new_tag("div", attrs={"class": "topic-metadata"})
+            for key, value in metadata.items():
+                meta_div["data-" + key] = str(value)
+            article.append(meta_div)
+
+            # Add content elements
+            for element in elements:
+                elem_soup = BeautifulSoup(element, "html.parser")
+                if elem_soup.body:
+                    article.append(elem_soup.body.decode_contents())
+                else:
+                    article.append(elem_soup.decode_contents())
+
+            return str(soup)
+
+        except Exception as e:
+            self.logger.error(f"Error assembling topic: {str(e)}")
+            return ""
+
+
+    def convert_html(self, content: str) -> str:
+        """Basic HTML conversion with proper parsing."""
+        try:
+            soup = BeautifulSoup(content, 'html.parser')
+            return str(soup)
+        except Exception as e:
+            self.logger.error(f"HTML conversion failed: {str(e)}")
+            return content
+
+    def validate_html(self, html_content: str) -> bool:
+        """Validate HTML syntax and structure."""
+        try:
+            if not html_content.strip():
+                return False
+            soup = BeautifulSoup(html_content, 'html.parser')
+            return bool(soup.find() and "<html" not in html_content.lower())
+        except Exception:
+            return False
 
 
     def escape_html(self, content: str) -> str:
@@ -212,134 +235,7 @@ class HTMLHelper:
             self.logger.error(f"Error finding target element: {str(e)}")
             return None
 
-    def _clean_whitespace(self, content: str) -> str:
-        """
-        Clean excess whitespace from HTML content.
 
-        Args:
-            content: Content to clean
-
-        Returns:
-            Cleaned content
-        """
-        try:
-            # Remove multiple spaces
-            content = re.sub(r'\s+', ' ', content)
-
-            # Clean space around tags
-            content = re.sub(r'>\s+<', '><', content)
-
-            # Clean empty lines
-            content = re.sub(r'\n\s*\n', '\n', content)
-
-            return content.strip()
-
-        except Exception as e:
-            self.logger.error(f"Error cleaning whitespace: {str(e)}")
-            return content
-
-    def _ensure_proper_nesting(self, content: str) -> str:
-        """
-        Ensure proper HTML tag nesting.
-
-        Args:
-            content: HTML content to check
-
-        Returns:
-            Properly nested HTML
-        """
-        try:
-            soup = BeautifulSoup(content, 'html.parser')
-            return str(soup)
-        except Exception as e:
-            self.logger.error(f"Error ensuring proper nesting: {str(e)}")
-            return content
-
-
-
-    def add_classes(self, tag: Tag, classes: List[str]) -> None:
-        """
-        Add classes to HTML tag.
-
-        Args:
-            tag: BeautifulSoup tag
-            classes: List of classes to add
-        """
-        try:
-            existing_classes = tag.get('class', [])
-            if isinstance(existing_classes, str):
-                existing_classes = existing_classes.split()
-
-            # Add new classes
-            tag['class'] = list(set(existing_classes + classes))
-
-        except Exception as e:
-            self.logger.error(f"Error adding classes: {str(e)}")
-
-    def remove_classes(self, tag: Tag, classes: List[str]) -> None:
-        """
-        Remove classes from HTML tag.
-
-        Args:
-            tag: BeautifulSoup tag
-            classes: List of classes to remove
-        """
-        try:
-            existing_classes = tag.get('class', [])
-            if isinstance(existing_classes, str):
-                existing_classes = existing_classes.split()
-
-            # Remove specified classes
-            remaining_classes = [c for c in existing_classes if c not in classes]
-            if remaining_classes:
-                tag['class'] = remaining_classes
-            else:
-                del tag['class']
-
-        except Exception as e:
-            self.logger.error(f"Error removing classes: {str(e)}")
-
-
-    def render_headings(self, content: str, toc_enabled: bool) -> str:
-        """
-        Enhance content with heading links or numbering.
-        """
-        soup = BeautifulSoup(content, 'html.parser')
-
-        # Handle cases where soup.body is None
-        if soup.body is None:
-            self.logger.warning("Content does not have a <body> tag")
-            return content
-
-        if toc_enabled:
-            toc = soup.new_tag('div', id='table-of-contents')
-            toc.append(soup.new_tag('h2', string='Table of Contents'))
-
-            for heading in soup.find_all(['h1', 'h2', 'h3']):
-                toc.append(soup.new_tag('a', href=f"#{heading['id']}", string=heading.text))
-            soup.body.insert(0, toc)
-
-        return str(soup)
-
-
-    def wrap_content(self, content: str, wrapper_tag: str, classes: Optional[List[str]] = None) -> str:
-        """
-        Wrap content in HTML tag.
-
-        Args:
-            content: Content to wrap
-            wrapper_tag: HTML tag to wrap with
-            classes: Optional classes to add
-
-        Returns:
-            Wrapped content
-        """
-        try:
-            class_attr = f' class="{" ".join(classes)}"' if classes else ''
-            return f'<{wrapper_tag}{class_attr}>{content}</{wrapper_tag}>'
-        except Exception as e:
-            self.logger.error(f"Error wrapping content: {str(e)}")
-            return content
 
     def resolve_image_path(self, src: str, topic_path: Path) -> str:
         """Resolve image path relative to topic file."""
@@ -433,44 +329,3 @@ class HTMLHelper:
         except Exception as e:
             self.logger.error(f"Error generating xref for {target_ref}: {str(e)}")
             return f"<a href='#'>{target_ref}</a>"
-
-
-    def generate_heading_anchor(self, heading_id: str, text: str, level: int) -> str:
-        """
-        Generate an HTML anchor for a heading.
-
-        Args:
-            heading_id: The unique ID of the heading.
-            text: The heading text.
-            level: The heading level (1-6).
-
-        Returns:
-            str: An HTML string for the heading anchor.
-        """
-        try:
-            return f"<h{level} id='{heading_id}'>{text}</h{level}>"
-        except Exception as e:
-            self.logger.error(f"Error generating heading anchor for {heading_id}: {str(e)}")
-            return f"<h{level}>{text}</h{level}>"
-
-
-    #########
-    # Helper methods
-    #########
-
-    def sanitize_html(self, html_content: str) -> str:
-        """
-        Sanitize HTML content to prevent security issues or invalid HTML.
-
-        Args:
-            html_content: The raw HTML string.
-
-        Returns:
-            str: A sanitized HTML string.
-        """
-        try:
-            soup = BeautifulSoup(html_content, "html.parser")
-            return soup.prettify()
-        except Exception as e:
-            self.logger.error(f"Error sanitizing HTML: {str(e)}")
-            return html_content

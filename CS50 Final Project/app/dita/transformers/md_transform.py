@@ -39,7 +39,7 @@ class MarkdownTransformer(BaseTransformer):
         self.logger = logging.getLogger(__name__)
         self.root_path = root_path
         self.html_helper = HTMLHelper(root_path)
-        self.heading_handler = HeadingHandler()
+        self.heading_handler = HeadingHandler(processing_metadata=self.processing_metadata)
         self.metadata_handler = MetadataHandler()
 
         # Initialize content processor first
@@ -69,7 +69,8 @@ class MarkdownTransformer(BaseTransformer):
             MDElementType.ORDERED_LIST: self._transform_list,
             MDElementType.UNORDERED_LIST: self._transform_list,
             MDElementType.LIST_ITEM: self._transform_list,
-            MDElementType.HEADING: self._transform_heading,
+            # MDElementType.HEADING: self._transform_heading,
+            MDElementType.CALLOUT: self._transform_blockquote,
             MDElementType.BLOCKQUOTE: self._transform_blockquote,
             MDElementType.CODE_BLOCK: self._transform_code_block,
             MDElementType.PARAGRAPH: self._transform_paragraph,
@@ -162,39 +163,6 @@ class MarkdownTransformer(BaseTransformer):
                metadata={}
            )
 
-    def _apply_strategies(self, html: str, element: TrackedElement,
-                         context: ProcessingContext, metadata: Dict[str, Any]) -> str:
-        """Apply registered transformation strategies."""
-        for strategy in self._get_active_strategies(context, metadata):
-            html = strategy(html)
-        return html
-
-    def _get_active_strategies(self, context: ProcessingContext,
-                             metadata: Dict[str, Any]) -> List[Callable[[str], str]]:
-       """Get list of active transformation strategies."""
-       strategies: List[Callable[[str], str]] = []
-
-       # Define strategy registry with activation conditions
-       strategy_registry = {
-           "_inject_latex": lambda: context.features.get("process_latex"),
-           "_inject_image": lambda: True,  # Always process images
-           "_append_toc": lambda: context.features.get("show_toc"),
-           "_append_bibliography": lambda: 'bibliography' in metadata,
-           "_append_glossary": lambda: 'glossary' in metadata,
-           "_inject_topic_version": lambda: 'topic_version' in metadata,
-           "_inject_topic_section": lambda: 'topic_section' in metadata,
-       }
-
-       # Build active strategies list
-       for strategy_name, condition in strategy_registry.items():
-           if condition():
-               strategy = getattr(self, strategy_name)
-               if strategy_name in {"_inject_topic_version", "_inject_topic_section"}:
-                   strategy = partial(strategy, metadata=metadata)
-               strategies.append(strategy)
-
-       return strategies
-
     def _transform_markdown_to_html(
         self,
         element: TrackedElement,
@@ -265,99 +233,6 @@ class MarkdownTransformer(BaseTransformer):
                 context=str(element.path)
             )
 
-    ##########################################################################
-    # Injection strategies (for transform_topic)
-    ##########################################################################
-
-    def _inject_latex(self, html: str, element: TrackedElement) -> str:
-        """LaTeX injection strategy."""
-        try:
-            if element.metadata.get('has_latex'):
-                soup = BeautifulSoup(html, 'html.parser')
-                equations = self._extract_latex_equations(html)
-                processed = self.latex_processor.process_equations(equations)
-
-                for processed_eq in processed:
-                    # Convert ProcessedEquation back to LaTeXEquation for rendering
-                    latex_eq = LaTeXEquation(
-                        id=processed_eq.id,
-                        content=processed_eq.original.strip('$'),
-                        is_block='$$' in processed_eq.original,
-                        metadata=element.metadata.get('latex_info', {})
-                    )
-                    rendered = self.katex_renderer.render_equation(latex_eq)
-
-                    # Find and replace in soup
-                    eq_elem = soup.find(attrs={'data-equation-id': processed_eq.id})
-                    if eq_elem:
-                        new_elem = BeautifulSoup(rendered, 'html.parser')
-                        eq_elem.replace_with(new_elem)
-
-                return str(soup)
-            return html
-        except Exception as e:
-            self.logger.error(f"Error injecting LaTeX: {str(e)}")
-            return html
-
-    def _inject_image(self, html: str, element: TrackedElement) -> str:
-        """Image injection strategy using existing pipeline."""
-        try:
-            # Parse HTML content
-            soup = BeautifulSoup(html, 'html.parser')
-
-            # First process all images using our processor
-            self._process_images(soup, element.path)
-
-            # Then transform any image elements that need transformation
-            for img in soup.find_all('img'):
-                # Create tracked element for the image
-                image_element = TrackedElement.from_discovery(
-                    path=element.path,
-                    element_type=ElementType.IMAGE,
-                    id_handler=self.id_handler
-                )
-
-                # Copy attributes and metadata
-                image_element.html_metadata["attributes"] = {
-                    "src": img.get('src', ''),
-                    "alt": img.get('alt', ''),
-                    "title": img.get('title', '')
-                }
-                image_element.html_metadata["classes"] = img.get('class', '').split()
-
-                # Transform the image
-                transformed_html = self._transform_image(image_element)
-                if transformed_html:
-                    new_elem = BeautifulSoup(transformed_html, 'html.parser')
-                    img.replace_with(new_elem)
-
-            return str(soup)
-        except Exception as e:
-            self.logger.error(f"Error injecting images: {str(e)}")
-            return html
-
-    # def _append_toc(self, html_content: str) -> str:
-    #     toc_html = self.html_helper.generate_toc(html_content)
-    #     return f"{toc_html}\n{html_content}"
-
-    # def _append_bibliography(self, html_content: str, metadata: Dict[str, Any]) -> str:
-    #     bibliography_data = metadata.get('bibliography', [])
-    #     bibliography_html = self.html_helper.generate_bibliography(bibliography_data)
-    #     return f"{html_content}\n{bibliography_html}"
-
-    # def _append_glossary(self, html_content: str, metadata: Dict[str, Any]) -> str:
-    #     glossary_data = metadata.get('glossary', [])
-    #     glossary_html = self.html_helper.generate_glossary(glossary_data)
-    #     return f"{html_content}\n{glossary_html}"
-
-    # def _inject_topic_version(self, html_content: str, version: str) -> str:
-    #     # Implementation to inject specific topic version
-    #     ...
-
-    # def _inject_topic_section(self, html_content: str, section: str) -> str:
-    #     # Implementation to inject specific topic section
-    #     ...
-
 
     ##########################################################################
     # Transformer methods and final processing
@@ -416,113 +291,7 @@ class MarkdownTransformer(BaseTransformer):
                 context=str(parsed_element.path)
             )
 
-    def _apply_heading_attributes(
-        self,
-        element: Tag,
-        level: int,
-        tracked_element: TrackedElement,
-        context: ProcessingContext
-    ) -> None:
-        """
-        Apply heading-specific attributes and numbering.
 
-        Args:
-            element: The heading element
-            level: Heading level (1-6)
-            tracked_element: Processed element information
-            context: Current processing context
-        """
-        try:
-            # Check if index numbers are enabled
-            index_numbers_enabled = tracked_element.metadata.get('features', {}).get('index_numbers', True)
-
-            # Get heading ID and numbered text
-            heading_id, heading_text = self.heading_handler.process_heading(
-                text=element.get_text().strip(),
-                level=level,
-                is_topic_title=(level == 1 and tracked_element.metadata.get('is_title', False)),
-                apply_numbering=index_numbers_enabled
-            )
-
-            # Update element attributes
-            element['id'] = heading_id
-            element.string = heading_text
-
-            # Add heading classes
-            default_classes = ['heading', f'heading-{level}']
-            if tracked_element.html_metadata["classes"]:
-                default_classes.extend(tracked_element.html_metadata["classes"])
-            if index_numbers_enabled:
-                default_classes.append('numbered')
-            element['class'] = ' '.join(default_classes)
-
-            # Create and add anchor link
-            soup = BeautifulSoup('', 'html.parser')
-            anchor = soup.new_tag('a', href=f"#{heading_id}", attrs={'class': 'heading-anchor'})
-            anchor.string = '¶'
-            element.append(anchor)
-
-            # Store heading info in topic metadata
-            if context.current_topic_id:
-                heading_data = {
-                    "text": heading_text,
-                    "level": level,
-                    "id": heading_id,
-                    "topic_id": tracked_element.topic_id,
-                    "map_id": tracked_element.parent_map_id,
-                    "is_numbered": index_numbers_enabled
-                }
-                # Add to topic metadata
-                topic_meta = context.topic_metadata.setdefault(context.current_topic_id, {})
-                topic_meta.setdefault("headings", {})[heading_id] = heading_data
-
-        except Exception as e:
-            self.logger.error(f"Error applying heading attributes: {str(e)}")
-            raise
-
-    def _transform_heading(self, tracked_element: TrackedElement) -> str:
-        """
-        Transform a heading element to HTML.
-
-        Args:
-            tracked_element: Processed element information
-
-        Returns:
-            str: Transformed HTML
-        """
-        try:
-            level = tracked_element.metadata.get("heading_level", 1)
-            heading_id = tracked_element.html_metadata["attributes"].get("id", "")
-            content = tracked_element.content
-
-            # Check index numbers feature
-            features = tracked_element.metadata.get('features', {})
-            index_numbers_enabled = features.get('index_numbers', True)
-
-            # Build classes list
-            classes = ['heading', f'heading-{level}']
-            if tracked_element.html_metadata["classes"]:
-                classes.extend(tracked_element.html_metadata["classes"])
-            if index_numbers_enabled:
-                classes.append('numbered')
-                heading_text = self.heading_handler.process_heading(
-                    text=content,
-                    level=level,
-                    apply_numbering=True
-                )[1]
-            else:
-                heading_text = content
-
-            return (
-                f'<h{level} id="{heading_id}" class="{" ".join(classes)}">'
-                f'{heading_text}'
-                f'<a href="#{heading_id}" class="heading-anchor">¶</a>'
-                f'</h{level}>'
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error transforming heading: {str(e)}")
-            return f'<div class="error">Error transforming heading: {str(e)}</div>'
 
     def _transform_paragraph(self, tracked_element: TrackedElement) -> str:
         """
@@ -1007,133 +776,3 @@ class MarkdownTransformer(BaseTransformer):
             self._glossary_entries.extend(metadata['glossary'])
 
         return ""
-
-
-
-    ##########################################################################
-    # LaTeX processing methods
-    ##########################################################################
-
-
-    def _extract_latex_equations(self, content: str) -> List[LaTeXEquation]:
-        """
-        Extract LaTeX equations from content.
-
-        Args:
-            content: Content to process
-
-        Returns:
-            List[LaTeXEquation]: Extracted equations
-        """
-        try:
-            equations = []
-
-            # Extract block equations
-            block_pattern = r'\$\$(.*?)\$\$'
-            for i, match in enumerate(re.finditer(block_pattern, content, re.DOTALL)):
-                equations.append(LaTeXEquation(
-                    id=f'eq-block-{i}',
-                    content=match.group(1).strip(),
-                    is_block=True,
-                    metadata={}
-                ))
-
-            # Extract inline equations
-            inline_pattern = r'(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)'
-            for i, match in enumerate(re.finditer(inline_pattern, content)):
-                equations.append(LaTeXEquation(
-                    id=f'eq-inline-{i}',
-                    content=match.group(1).strip(),
-                    is_block=False,
-                    metadata={}
-                ))
-
-            return equations
-
-        except Exception as e:
-            self.logger.error(f"Error extracting LaTeX equations: {str(e)}")
-            return []
-
-    def _apply_latex_attributes(self, element: Tag, tracked_element: TrackedElement) -> None:
-       """
-       Apply LaTeX-specific attributes to equation elements.
-
-       Args:
-           element: BeautifulSoup tag representing equation
-           tracked_element: Processed element information
-       """
-       try:
-           # Determine if block equation based on element type
-           is_block = tracked_element.metadata.get('latex_info', {}).get('is_block', False)
-           display_class = 'katex-display' if is_block else 'katex-inline'
-
-           # Set element classes
-           classes = [display_class]
-           if tracked_element.html_metadata["classes"]:
-               classes.extend(tracked_element.html_metadata["classes"])
-           element['class'] = ' '.join(classes)
-
-           # Get equation content
-           content = element.string or ''
-
-           # Add proper delimiters if missing
-           if is_block and not content.startswith('$$'):
-               content = f'$${content}$$'
-           elif not is_block and not content.startswith('$'):
-               content = f'${content}$'
-
-           # Create LaTeX equation object
-           equation = LaTeXEquation(
-               id=tracked_element.id,
-               content=content.strip('$'),
-               is_block=is_block,
-               metadata=tracked_element.metadata.get('latex_info', {})
-           )
-
-           # Store equation in tracked element metadata
-           tracked_element.metadata['latex_equation'] = equation
-
-           # Set element attributes for processing
-           element['data-latex-original'] = content
-           element['data-equation-id'] = equation.id
-           element['data-latex-type'] = 'block' if is_block else 'inline'
-
-           # Store any additional attributes
-           for key, value in tracked_element.html_metadata["attributes"].items():
-               if key not in {'class', 'data-latex-original', 'data-equation-id', 'data-latex-type'}:
-                   element[key] = value
-
-       except Exception as e:
-           self.logger.error(f"Error applying LaTeX attributes: {str(e)}")
-           raise
-
-
-    def _process_latex_equations(self, soup: BeautifulSoup, latex_equations: List[ProcessedEquation]) -> None:
-        """Process LaTeX equations for KaTeX rendering."""
-        try:
-            if not hasattr(self, '_latex_equations') or not self._latex_equations:
-                return
-
-            # Process collected equations through LaTeX pipeline
-            processed_equations = self.latex_processor.process_equations(self._latex_equations)
-
-            # Replace equations in soup with rendered versions
-            for processed in processed_equations:
-                element = soup.find(attrs={'data-equation-id': processed.id})
-                if element:
-                    # Create LaTeXEquation from processed data
-                    latex_equation = LaTeXEquation(
-                        id=processed.id,
-                        content=processed.original,
-                        is_block=processed.is_block,
-                        metadata={}
-                    )
-                    rendered = self.katex_renderer.render_equation(latex_equation)
-                    new_element = BeautifulSoup(rendered, 'html.parser')
-                    element.replace_with(new_element)
-
-            # Clear processed equations
-            self._latex_equations = []
-
-        except Exception as e:
-            self.logger.error(f"Error processing LaTeX equations: {str(e)}")

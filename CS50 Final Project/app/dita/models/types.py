@@ -281,7 +281,7 @@ class ProcessingMetadata:
         "toc": True,
         "latex": False,
         "artifacts": False,
-        "enable_cross_refs": True
+        "xrefs": True
     })
 
     # Context for rendering
