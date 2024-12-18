@@ -69,17 +69,6 @@ class BaseTransformer(ABC):
         # Configuration and metadata
         self.dita_root = dita_root
         self.config = config or DITAConfig()  # Initialize config from config_manager
-        self.processing_metadata = processing_metadata or ProcessingMetadata(
-            id="base-transformer-metadata",
-            content_type=ElementType.DITAMAP,
-            features={
-                "latex": self.config.features.get("latex", True),
-                "anchor_links": self.config.features.get("anchor_links", True),
-                "index_numbers": self.config.features.get("index_numbers", True),
-                "enable_xrefs": self.config.features.get("enable_xrefs", True),
-                "toc": self.config.features.get("toc", True),
-            },
-        )
 
         # Utilities
         self.id_handler = id_handler or DITAIDHandler()
@@ -94,167 +83,270 @@ class BaseTransformer(ABC):
 
         # Content transformation strategies
         self._element_transformers = {
-        #     # Block Elements
-        #     "heading": self._transform_heading,
-        #     "paragraph": self._transform_paragraph,
-        #     "blockquote": self._transform_blockquote,
-        #     "code_block": self._transform_code_block,
-        #     "pre": self._transform_code_block,
-        #     "table": self._transform_table,
-        #     "figure": self._transform_figure,
 
-        #     # Lists
-        #     "ul": self._transform_unordered_list,
-        #     "ol": self._transform_ordered_list,
-        #     "li": self._transform_list_item,
-        #     "dl": self._transform_definition_list,
-        #     "dt": self._transform_term,
-        #     "dd": self._transform_definition,
+            # Titles
+            ElementType.HEADING: self._transform_titles,
+            ElementType.MAP_TITLE: self._transform_titles,
 
-        #     # Inline Elements
-        #     "link": self._transform_link,
-        #     "image": self._transform_image,
-        #     "code": self._transform_code_inline,
-        #     "strong": self._transform_bold,
-        #     "em": self._transform_italic,
-        #     "u": self._transform_underline,
+            # Tables and figures
+            ElementType.TABLE: self._transform_table,
+            ElementType.FIGURE: self.inject_image,
 
-        #     # DITA Specific
-        #     "concept": self._transform_concept,
-        #     "task": self._transform_task,
-        #     "reference": self._transform_reference,
-        #     "topicref": self._transform_topicref
-         }
-
-        # Contextual/feature strategies (inject/append/swap)
-        self._strategy_registry = {
-           "_inject_latex": lambda c, m: c.features.get("latex", False),
-           "_inject_media": lambda c, m: c.features.get("media", False),
-           "_inject_topic_section": lambda c, m: c.features.get("topic_section", False),
-           "_append_heading_attributes": lambda c, m: (
-               c.features.get("index_numbers", True) or
-               c.features.get("anchor_links", True)
-           ),
-           "_append_toc": lambda c, m: c.features.get("toc", False),
-           "_append_bibliography": lambda c, m: "bibliography" in m,
-           "_append_glossary": lambda c, m: "glossary" in m,
-           "_swap_topic_version": lambda c, m: c.features.get("swap_topic_version", False),
-           "_swap_topic_type": lambda c, m: c.features.get("swap_topic_type", False)
-        }
-
-        # Core element processing rules for DITA specializations
-        self._processing_rules = {
-            # Structure elements
-            "concept": {
-                "html_tag": "article",
-                "classes": ["dita-concept", "article-content"],
-                "attributes": {"role": "article"}
-            },
-            "task": {
-                "html_tag": "article",
-                "classes": ["dita-task", "article-content"],
-                "attributes": {"role": "article"}
-            },
-            "reference": {
-                "html_tag": "article",
-                "classes": ["dita-reference", "article-content"],
-                "attributes": {"role": "article"}
-            },
-
-            # Block elements
-            "section": {
-                "html_tag": "section",
-                "classes": ["dita-section"],
-                "attributes": {"role": "region"}
-            },
-            "paragraph": {
-                "html_tag": "p",
-                "classes": ["dita-p"]
-            },
-            "note": {
-                "html_tag": "div",
-                "classes": ["dita-note", "alert"],
-                "attributes": {"role": "alert"},
-                "type_classes": {
-                    "warning": "alert-warning",
-                    "danger": "alert-danger",
-                    "tip": "alert-info"
-                }
-            },
-            "code_block": {
-                "html_tag": "pre",
-                "classes": ["code-block", "highlight"],
-                "attributes": {
-                    "spellcheck": "false",
-                    "translate": "no"
-                }
-            },
+            # Block Elements
+            ElementType.PARAGRAPH: self._transform_block,
+            ElementType.NOTE: self._transform_block,
+            ElementType.CODE_BLOCK: self._transform_block,
+            ElementType.BLOCKQUOTE: self._transform_block,
+            ElementType.CODE_PHRASE: self._transform_block,
 
             # Lists
-            "unordered_list": {
-                "html_tag": "ul",
-                "classes": ["dita-ul"]
+            ElementType.UNORDERED_LIST: self._transform_list,
+            ElementType.ORDERED_LIST: self._transform_list,
+            ElementType.TODO_LIST: self._transform_list,
+            ElementType.LIST_ITEM: self._transform_list,
+
+
+            # Links and References
+            ElementType.XREF: self._transform_link,
+            ElementType.LINK: self._transform_link,
+
+            # Inline Elements
+            ElementType.BOLD: self._transform_emphasis,
+            ElementType.ITALIC: self._transform_emphasis,
+            ElementType.UNDERLINE: self._transform_emphasis,
+            ElementType.CODE_PHRASE: self._transform_emphasis,
+
+
+            # DITA Specific
+            ElementType.TOPIC: self._transform_topic,
+            ElementType.TASKBODY: self._transform_taskbody,
+            ElementType.SHORTDESC: self._transform_shortdesc,
+            ElementType.ABSTRACT: self._transform_abstract,
+            ElementType.PREREQ: self._transform_prereq,
+            ElementType.STEPS: self._transform_steps,
+            ElementType.SUBSTEPS: self._transform_substeps,
+
+
+            # Metadata & Structure
+            ElementType.METADATA: self._transform_metadata,
+            ElementType.TOPICREF: self._transform_topicref,
+
+            # Fallback
+            ElementType.UNKNOWN: self._transform_unknown
+
+        }
+
+        # Contextual/feature strategies (inject/add/swap)
+        self._strategy_registry = {
+            "inject_image": lambda c, m: c.features.get("image", False),
+            "inject_video": lambda c, m: c.features.get("video", False),
+            "inject_audio": lambda c, m: c.features.get("audio", False),
+            "inject_iframe": lambda c, m: c.features.get("iframe", False),
+            "add_latex": lambda c, m: c.features.get("latex", False),
+            "add_topic_section": lambda c, m: c.features.get("topic_section", False),
+            "add_heading_attributes": lambda c, m: (
+                c.features.get("index_numbers", True) or
+                c.features.get("anchor_links", True)
+            ),
+            "add_toc": lambda c, m: c.features.get("toc", False),
+            "add_bibliography": lambda c, m: "bibliography" in m,
+            "add_glossary": lambda c, m: "glossary" in m,
+            "swap_topic_version": lambda c, m: c.features.get("swap_topic_version", False),
+            "swap_topic_type": lambda c, m: c.features.get("swap_topic_type", False)
+        }
+
+
+        """
+        Processing rules for DITA and Markdown element specialization.
+        A processing rule is a dictionary that defines how an element should be transformed to HTML.
+        It contains the following keys:
+        - html_tag: The HTML tag to use for the element.
+        - default_classes: A list of default classes to apply to the element.
+        - attributes: A dictionary of attributes to apply to the element.
+        - context_type: The context type for the element.
+        - specializations: A dictionary of specializations and their processing rules.
+        """
+        self._processing_rules = {
+
+            # Titles
+            ElementType.MAP_TITLE: {
+                   'html_tag': 'h1',
+                   'default_classes': ['map-title', 'main-title', 'text-3xl', 'font-bold', 'mb-6'],
+                   'attributes': {
+                       'role': 'heading',
+                       'aria-level': '1'
+                   },
+                   'context_type': 'title'
+               },
+            ElementType.HEADING: {
+                'html_tag': 'h{level}',  # Level from metadata
+                'default_classes': ['heading', 'topic-heading'],
+                'level_classes': {
+                    1: ['text-2xl', 'font-bold', 'mb-4'],
+                    2: ['text-xl', 'font-bold', 'mb-3'],
+                    3: ['text-lg', 'font-semibold', 'mb-2'],
+                    4: ['text-base', 'font-semibold', 'mb-2'],
+                    5: ['text-sm', 'font-medium', 'mb-1'],
+                    6: ['text-sm', 'font-medium', 'mb-1']
+                },
+                'attributes': {
+                    'role': 'heading'
+                },
+                'context_type': 'heading'
             },
-            "ordered_list": {
-                "html_tag": "ol",
-                "classes": ["dita-ol"]
+
+            # Block Elements
+            ElementType.PARAGRAPH: {
+                'html_tag': 'p',
+                'default_classes': ['prose'],
+                'context_type': 'block'
             },
-            "list_item": {
-                "html_tag": "li",
-                "classes": ["dita-li"]
+            ElementType.NOTE: {
+                'html_tag': 'div',
+                'default_classes': ['note', 'alert'],
+                'type_classes': {
+                    'warning': 'alert-warning',
+                    'danger': 'alert-danger',
+                    'tip': 'alert-info',
+                    'note': 'alert-secondary',
+                    'callout': 'callout'
+                },
+                'attributes': {'role': 'note'},
+                'context_type': 'block'
+            },
+            ElementType.CODE_BLOCK: {
+                'html_tag': 'pre',
+                'default_classes': ['code-block', 'highlight'],
+                'attributes': {
+                    'spellcheck': 'false',
+                    'translate': 'no'
+                },
+                'inner_tag': 'code',
+                'inner_classes': ['language-{language}'],
+                'context_type': 'block'
+            },
+            ElementType.BLOCKQUOTE: {
+                'html_tag': 'blockquote',
+                'default_classes': ['quote'],
+                'context_type': 'block'
+            },
+            ElementType.CODE_PHRASE: {
+                'html_tag': 'code',
+                'default_classes': ['code-inline'],
+                'context_type': 'inline'
             },
 
             # Tables
-            "table": {
-                "html_tag": "table",
-                "classes": ["table", "table-bordered"],
-                "attributes": {"role": "grid"}
-            },
-
-            # Media
-            "image": {
-                "html_tag": "img",
-                "classes": ["img-fluid"],
-                "required_attrs": ["src", "alt"],
-                "attributes": {
-                    "loading": "lazy",
-                    "decoding": "async"
+            ElementType.TABLE: {
+                'html_tag': 'table',
+                'default_classes': ['table', 'table-bordered'],
+                'attributes': {'role': 'grid'},
+                'specializations': {
+                    'bibliography': {
+                        'extra_classes': ['bibliography-table'],
+                        'extra_attrs': {
+                            'data-citation-format': '{citation_format}',
+                            'data-sort': '{sort_by}',
+                            'aria-label': 'Bibliography entries'
+                        }
+                    },
+                    'glossary': {
+                        'extra_classes': ['glossary-table'],
+                        'extra_attrs': {
+                            'data-sort': '{sort_by}',
+                            'data-show-refs': '{show_references}',
+                            'aria-label': 'Glossary terms and definitions'
+                        }
+                    },
+                    'metadata': {
+                        'extra_classes': ['metadata-table'],
+                        'extra_attrs': {
+                            'data-visibility': '{visibility}',
+                            'data-collapsible': '{collapsible}',
+                            'aria-label': 'Article metadata'
+                        }
+                    }
                 }
             },
-            "figure": {
-                "html_tag": "figure",
-                "classes": ["figure"],
-                "inner_tag": "figcaption"
+            ElementType.TABLE_HEADER: {
+                'html_tag': 'th',
+                'default_classes': ['table-header'],
+                'attributes': {'scope': 'col'}
+            },
+            ElementType.TABLE_ROW: {
+                'html_tag': 'tr',
+                'default_classes': ['table-row']
+            },
+            ElementType.TABLE_CELL: {
+                'html_tag': 'td',
+                'default_classes': ['table-cell']
             },
 
+
             # Links
-            "xref": {
+            ElementType.LINK: {
+                'html_tag': 'a',
+                'default_classes': ['link'],
+                'external_attrs': {
+                    'target': '_blank',
+                    'rel': 'noopener noreferrer'
+                },
+                'context_type': 'inline'
+            },
+            ElementType.XREF: {
                 "html_tag": "a",
                 "classes": ["dita-xref"],
                 "required_attrs": ["href"]
             },
-            "link": {
-                "html_tag": "a",
-                "classes": ["dita-link"],
-                "attributes": {
-                    "target": "_blank",
-                    "rel": "noopener noreferrer"
-                }
+
+            # Lists
+            ElementType.UNORDERED_LIST: {
+                'html_tag': 'ul',
+                'default_classes': ['list-unordered'],
+                'context_type': 'block'
+            },
+            ElementType.ORDERED_LIST: {
+                'html_tag': 'ol',
+                'default_classes': ['list-ordered'],
+                'context_type': 'block'
+            },
+            ElementType.TODO_LIST: {
+                'html_tag': 'li',
+                'default_classes': ['todo-item', 'flex', 'items-center', 'gap-2'],
+                'inner_tag': 'input',
+                'inner_attrs': {
+                    'type': 'checkbox',
+                    'disabled': ''
+                },
+                'context_type': 'block'
             },
 
-            # Inline
-            "bold": {
-                "html_tag": "strong",
-                "classes": ["dita-b"]
+            # Emphasis elements
+            ElementType.BOLD: {
+                'html_tag': 'strong',
+                'default_classes': ['font-bold'],
+                'context_type': 'emphasis'
             },
-            "italic": {
-                "html_tag": "em",
-                "classes": ["dita-i"]
+            ElementType.ITALIC: {
+                'html_tag': 'em',
+                'default_classes': ['italic'],
+                'context_type': 'emphasis'
             },
-            "underline": {
-                "html_tag": "u",
-                "classes": ["dita-u"]
-            }
+            ElementType.UNDERLINE: {
+                'html_tag': 'u',
+                'default_classes': ['underline'],
+                'context_type': 'emphasis'
+            },
+            ElementType.HIGHLIGHT: {
+                'html_tag': 'mark',
+                'default_classes': ['bg-yellow-200'],
+                'context_type': 'emphasis'
+            },
+            ElementType.STRIKETHROUGH: {
+                'html_tag': 'del',
+                'default_classes': ['line-through'],
+                'context_type': 'emphasis'
+            },
         }
 
     def transform(self, element: TrackedElement, context: ProcessingContext) -> ProcessedContent:
@@ -375,7 +467,7 @@ class BaseTransformer(ABC):
     # Injection strategies (for transform) #
     ########################################
 
-    def _inject_latex(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> None:
+    def add_latex(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> None:
         """
         Inject LaTeX equations into the HTML content.
 
@@ -413,7 +505,7 @@ class BaseTransformer(ABC):
 
 
 
-    def _append_heading_attributes(
+    def add_heading_attributes(
         self, soup: BeautifulSoup, tracked_element: TrackedElement, context: ProcessingContext
     ) -> None:
         """
@@ -470,7 +562,7 @@ class BaseTransformer(ABC):
             raise
 
 
-    def _append_toc(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> BeautifulSoup:
+    def add_toc(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> BeautifulSoup:
        """Append Table of Contents based on heading metadata."""
        try:
            # Get TOC metadata using metadata handler
@@ -533,143 +625,524 @@ class BaseTransformer(ABC):
            self.logger.error(f"Error appending TOC: {str(e)}")
            return soup
 
-    def _inject_media(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> BeautifulSoup:
-        """
-        Inject media elements with proper paths and attributes from keyref definitions.
-        Media files are expected in topic's /media subdirectory unless explicitly defined.
-        """
+
+    def inject_image(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> BeautifulSoup:
+        """Inject image elements with attributes and figure wrappers."""
         try:
-            media_metadata = self.metadata_handler.get_strategy_metadata(
-                strategy="_inject_media",
+            metadata = self.metadata_handler.get_strategy_metadata(
+                strategy="_inject_image",
                 content_id=element.id
             )
 
-            # Default attributes
             default_attrs = {
-                'img': {
-                    'loading': 'lazy',
-                    'decoding': 'async',
-                    'class': 'img-fluid',
-                    'alt': 'Image placeholder',  # Accessibility default
-                    'width': 'auto',
-                    'height': 'auto'
-                },
-                'video': {
-                    'controls': '',
-                    'preload': 'metadata',
-                    'class': 'media-responsive',
-                    'width': 'auto',
-                    'height': 'auto'
-                },
-                'audio': {
-                    'controls': '',
-                    'preload': 'metadata',
-                    'class': 'media-responsive'
-                }
+                'loading': 'lazy',
+                'decoding': 'async',
+                'class': 'img-fluid',
+                'alt': 'Image placeholder',
+                'width': 'auto',
+                'height': 'auto'
             }
 
-            for media_tag in ['img', 'video', 'audio']:
-                for media_elem in soup.find_all(media_tag):
-                    # Find matching metadata if exists
-                    metadata = next(
-                        (m for m in media_metadata.get("data", [])
-                         if m.get('element_id') == media_elem.get('id')),
-                        {}
-                    )
+            for img in soup.find_all('img'):
+                img_meta = next(
+                    (m for m in metadata.get("data", [])
+                     if m.get('element_id') == img.get('id')),
+                    {}
+                )
 
-                    # Apply default attributes first
-                    for attr, value in default_attrs[media_tag].items():
-                        if not media_elem.get(attr):
-                            media_elem[attr] = value
+                # Apply defaults
+                for attr, value in default_attrs.items():
+                    if not img.get(attr):
+                        img[attr] = value
 
-                    # Handle src/href
-                    href = metadata.get('href', media_elem.get('src', ''))
-                    if href:
-                        if not href.startswith(('http://', 'https://', '/')):
-                            # Resolve relative to media directory
-                            topic_path = Path(element.path)
-                            media_dir = topic_path.parent / 'media'
-                            media_path = (media_dir / href).resolve()
+                # Set src with path resolution
+                if href := (img_meta.get('href') or img.get('src')):
+                    img['src'] = self._get_media_path(href, element) or '/static/placeholder.png'
 
-                            if media_path.exists():
-                                if self.dita_root:
-                                    try:
-                                        href = f'/static/topics/{media_path.relative_to(self.dita_root)}'
-                                    except ValueError:
-                                        self.logger.warning(f"Media path {media_path} not under DITA root")
-                            else:
-                                self.logger.warning(f"Media file not found: {media_path}")
-                                href = '/static/placeholder.png' if media_tag == 'img' else ''
+                # Apply metadata with validation
+                for attr in ['alt', 'title', 'width', 'height', 'align']:
+                    if value := img_meta.get(attr):
+                        if attr in ['width', 'height']:
+                            try:
+                                float(value.rstrip('px%'))
+                                img[attr] = value
+                            except ValueError:
+                                continue
+                        else:
+                            img[attr] = value
 
-                        media_elem['src'] = href
-
-                    # Apply metadata attributes with validation
-                    if media_elem.name == 'img':
-                        if alt := (metadata.get('alt') or media_elem.get('alt')):
-                            media_elem['alt'] = alt
-                        if title := (metadata.get('linktext') or media_elem.get('title')):
-                            media_elem['title'] = title
-
-                    # Apply common attributes with validation
-                    for attr in ['placement', 'scale', 'align', 'width', 'height']:
-                        if value := metadata.get(attr):
-                            # Validate numeric attributes
-                            if attr in ['width', 'height', 'scale']:
-                                try:
-                                    float(value.rstrip('px%'))
-                                    media_elem[attr] = value
-                                except ValueError:
-                                    continue
-                            else:
-                                media_elem[f'data-{attr}'] = value
-
-                    # Handle classes
-                    classes = set(filter(None, [
-                        media_elem.get('class', ''),
-                        default_attrs[media_tag]['class'],
-                        metadata.get('outputclass', '')
-                    ]))
-                    media_elem['class'] = ' '.join(classes)
-
-                    # Create figure wrapper for images with captions
-                    if (media_elem.name == 'img' and
-                        (alt := media_elem.get('alt')) and
-                        not media_elem.find_parent('figure')):
-                        figure = soup.new_tag('figure', attrs={'class': 'figure'})
-                        figcaption = soup.new_tag('figcaption', attrs={'class': 'figure-caption'})
-                        figcaption.string = alt
-                        media_elem.wrap(figure)
-                        figure.append(figcaption)
+                # Handle figure wrapper
+                if (alt := img.get('alt')) and not img.find_parent('figure'):
+                    figure = soup.new_tag('figure', attrs={'class': 'figure'})
+                    figcaption = soup.new_tag('figcaption', attrs={'class': 'figure-caption'})
+                    figcaption.string = alt
+                    img.wrap(figure)
+                    figure.append(figcaption)
 
             return soup
 
         except Exception as e:
-            self.logger.error(f"Error injecting media: {str(e)}")
+            self.logger.error(f"Error injecting images: {str(e)}")
             return soup
 
+    def inject_video(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> BeautifulSoup:
+       """Inject video elements with controls and attributes."""
+       try:
+           metadata = self.metadata_handler.get_strategy_metadata(
+               strategy="_inject_video",
+               content_id=element.id
+           )
 
-    # def _append_bibliography(self, html_content: str, metadata: Dict[str, Any]) -> str:
+           default_attrs = {
+               'controls': '',
+               'preload': 'metadata',
+               'class': 'media-responsive',
+               'width': 'auto',
+               'height': 'auto'
+           }
+
+           for video in soup.find_all('video'):
+               video_meta = next(
+                   (m for m in metadata.get("data", [])
+                    if m.get('element_id') == video.get('id')),
+                   {}
+               )
+
+               # Apply defaults
+               for attr, value in default_attrs.items():
+                   if not video.get(attr):
+                       video[attr] = value
+
+               # Set src with path resolution
+               if href := (video_meta.get('href') or video.get('src')):
+                   video['src'] = self._get_media_path(href, element)
+
+               # Apply metadata attributes
+               for attr in ['width', 'height', 'poster', 'preload']:
+                   if value := video_meta.get(attr):
+                       video[attr] = value
+
+               # Handle boolean attributes
+               for attr in ['controls', 'autoplay', 'loop', 'muted']:
+                   if video_meta.get(attr):
+                       video[attr] = ''
+
+           return soup
+
+       except Exception as e:
+           self.logger.error(f"Error injecting videos: {str(e)}")
+           return soup
+
+    def inject_audio(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> BeautifulSoup:
+       """Inject audio elements with controls and attributes."""
+       try:
+           metadata = self.metadata_handler.get_strategy_metadata(
+               strategy="_inject_audio",
+               content_id=element.id
+           )
+
+           default_attrs = {
+               'controls': '',
+               'preload': 'metadata',
+               'class': 'media-responsive'
+           }
+
+           for audio in soup.find_all('audio'):
+               audio_meta = next(
+                   (m for m in metadata.get("data", [])
+                    if m.get('element_id') == audio.get('id')),
+                   {}
+               )
+
+               # Apply defaults
+               for attr, value in default_attrs.items():
+                   if not audio.get(attr):
+                       audio[attr] = value
+
+               # Set src with path resolution
+               if href := (audio_meta.get('href') or audio.get('src')):
+                   audio['src'] = self._get_media_path(href, element)
+
+               # Handle boolean attributes
+               for attr in ['controls', 'autoplay', 'loop', 'muted']:
+                   if audio_meta.get(attr):
+                       audio[attr] = ''
+
+               # Apply metadata attributes
+               if preload := audio_meta.get('preload'):
+                   audio['preload'] = preload
+
+           return soup
+
+       except Exception as e:
+           self.logger.error(f"Error injecting audio: {str(e)}")
+           return soup
+
+    def inject_iframe(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> BeautifulSoup:
+       """Inject iframe elements with security attributes."""
+       try:
+           metadata = self.metadata_handler.get_strategy_metadata(
+               strategy="_inject_iframe",
+               content_id=element.id
+           )
+
+           default_attrs = {
+               'class': 'responsive-iframe',
+               'width': '100%',
+               'height': '400',
+               'loading': 'lazy',
+               'sandbox': 'allow-scripts allow-same-origin',
+               'referrerpolicy': 'no-referrer'
+           }
+
+           for iframe in soup.find_all('iframe'):
+               iframe_meta = next(
+                   (m for m in metadata.get("data", [])
+                    if m.get('element_id') == iframe.get('id')),
+                   {}
+               )
+
+               # Apply defaults
+               for attr, value in default_attrs.items():
+                   if not iframe.get(attr):
+                       iframe[attr] = value
+
+               # Set src
+               if href := (iframe_meta.get('href') or iframe.get('src')):
+                   # Don't use _get_media_path since iframes typically use external URLs
+                   iframe['src'] = href
+
+               # Apply metadata attributes with validation
+               for attr in ['width', 'height', 'sandbox', 'allow']:
+                   if value := iframe_meta.get(attr):
+                       iframe[attr] = value
+
+               # Create wrapper for responsive behavior
+               if not iframe.find_parent(class_='iframe-container'):
+                   wrapper = soup.new_tag('div', attrs={
+                       'class': 'iframe-container',
+                       'style': 'position:relative;padding-bottom:56.25%;'
+                   })
+                   iframe.wrap(wrapper)
+
+           return soup
+
+       except Exception as e:
+           self.logger.error(f"Error injecting iframes: {str(e)}")
+           return soup
+
+    # def add_bibliography(self, html_content: str, metadata: Dict[str, Any]) -> str:
     #     bibliography_data = metadata.get('bibliography', [])
     #     bibliography_html = self.html_helper.generate_bibliography(bibliography_data)
     #     return f"{html_content}\n{bibliography_html}"
 
-    # def _append_glossary(self, html_content: str, metadata: Dict[str, Any]) -> str:
+    # def add_glossary(self, html_content: str, metadata: Dict[str, Any]) -> str:
     #     glossary_data = metadata.get('glossary', [])
     #     glossary_html = self.html_helper.generate_glossary(glossary_data)
     #     return f"{html_content}\n{glossary_html}"
 
-    # def _inject_topic_version(self, html_content: str, version: str) -> str:
-    #     # Implementation to inject specific topic version
-    #     ...
-
-    # def _inject_topic_section(self, html_content: str, section: str) -> str:
+    # def add_topic_section(self, html_content: str, section: str) -> str:
     #     # Implementation to inject specific topic section
     #     ...
 
 
+    # def swap_topic_version(self, html_content: str, version: str) -> str:
+    #     # Implementation to inject specific topic version
+    #     ...
+
+    ##############################
+    # Common transformer methods #
+    ##############################
+
+    def _transform_titles(self, element: TrackedElement) -> str:
+       """Transform titles and headings preserving hierarchy."""
+       try:
+           rules = self._processing_rules.get(element.type)
+           if not rules:
+               return element.content
+
+           # Handle map titles
+           if element.type == ElementType.MAP_TITLE:
+               return self.html_helper.create_element(
+                   tag=rules['html_tag'],
+                   attrs={
+                       'class': ' '.join(rules['default_classes']),
+                       **rules['attributes']
+                   },
+                   content=element.content
+               )
+
+           # Handle headings
+           level = element.metadata.get('heading_level', 1)
+
+           # Get level-specific classes
+           classes = [
+               *rules['default_classes'],
+               *rules['level_classes'].get(level, [])
+           ]
+
+           # Build attributes
+           attrs = {
+               'class': ' '.join(classes),
+               **rules['attributes'],
+               'aria-level': str(level)
+           }
+
+           # Allow transformation strategies to add numbers/anchors later
+           if element.metadata.get('section_id'):
+               attrs['data-section'] = element.metadata['section_id']
+
+           return self.html_helper.create_element(
+               tag=rules['html_tag'].format(level=level),
+               attrs=attrs,
+               content=element.content
+           )
+
+       except Exception as e:
+           self.logger.error(f"Error transforming title/heading: {str(e)}")
+           return element.content
+
+    def _transform_block(self, element: TrackedElement) -> str:
+       """Transform block-level elements using processing rules."""
+       try:
+           rules = self._processing_rules.get(element.type)
+           if not rules:
+               return element.content
+
+           # Handle specific block types
+           if element.type == ElementType.NOTE:
+               # Handle note types including callouts
+               specialization = element.metadata.get('specialization')
+               type_class = rules['type_classes'].get(specialization, rules['type_classes']['note'])
+               classes = [*rules['default_classes'], type_class]
+
+               # Add DITA specialization if present
+               if specialization:
+                   classes.append(f"note-{specialization}")
+
+           elif element.type == ElementType.CODE_BLOCK:
+               # Handle code blocks with language
+               language = element.metadata.get('language', '')
+               inner_classes = [c.format(language=language) for c in rules['inner_classes']]
+
+               inner_content = self.html_helper.create_element(
+                   tag=rules['inner_tag'],
+                   attrs={'class': ' '.join(inner_classes)},
+                   content=element.content
+               )
+               return self.html_helper.create_element(
+                   tag=rules['html_tag'],
+                   attrs={
+                       'class': ' '.join(rules['default_classes']),
+                       **rules['attributes']
+                   },
+                   content=inner_content
+               )
+
+           elif element.type == ElementType.CODE_PHRASE:
+               # Handle inline code
+               return self.html_helper.create_element(
+                   tag=rules['html_tag'],
+                   attrs={'class': ' '.join(rules['default_classes'])},
+                   content=element.content
+               )
+
+           # Default block handling
+           return self.html_helper.create_element(
+               tag=rules['html_tag'],
+               attrs={
+                   'class': ' '.join(rules['default_classes']),
+                   **rules.get('attributes', {})
+               },
+               content=element.content
+           )
+
+       except Exception as e:
+           self.logger.error(f"Error transforming block element: {str(e)}")
+           return element.content
+
+    def _transform_link(self, element: TrackedElement) -> str:
+       """Transform pre-parsed link element to HTML using processing rules."""
+       try:
+           rules = self._processing_rules.get(element.type)
+           if not rules:
+               return element.content
+
+           link_info = element.metadata["link_info"]
+           href = link_info["href"]
+
+           # Build classes
+           classes = [
+               *rules['default_classes'],
+               link_info["link_type"],
+               "external" if href.startswith(('http://', 'https://', 'ftp://', 'mailto:')) else "internal"
+           ]
+
+           attrs = {
+               'class': ' '.join(filter(None, classes)),
+               'href': href
+           }
+
+           # Add external attributes if external
+           if "external" in attrs['class']:
+               attrs.update(rules['external_attrs'])
+
+           return self.html_helper.create_element(
+               tag=rules['html_tag'],
+               attrs=attrs,
+               content=element.content
+           )
+
+       except Exception as e:
+           self.logger.error(f"Error transforming link: {str(e)}")
+           return element.content or ""
+
+    def _transform_list(self, element: TrackedElement) -> str:
+       """Transform list elements using processing rules."""
+       try:
+           rules = self._processing_rules.get(element.type)
+           if not rules:
+               return element.content
+
+           if element.type == ElementType.TODO_LIST:
+               # Create checkbox input
+               inner_attrs = rules['inner_attrs'].copy()
+               if element.metadata.get("checked"):
+                   inner_attrs['checked'] = ''
+
+               checkbox = self.html_helper.create_element(
+                   tag=rules['inner_tag'],
+                   attrs=inner_attrs,
+                   content=""
+               )
+
+               return self.html_helper.create_element(
+                   tag=rules['html_tag'],
+                   attrs={'class': ' '.join(rules['default_classes'])},
+                   content=f"{checkbox}{element.content}"
+               )
+
+           return self.html_helper.create_element(
+               tag=rules['html_tag'],
+               attrs={'class': ' '.join(rules['default_classes'])},
+               content=element.content
+           )
+
+       except Exception as e:
+           self.logger.error(f"Error transforming list: {str(e)}")
+           return element.content
+
+    def _transform_emphasis(self, element: TrackedElement) -> str:
+       """Transform emphasis elements with nested emphasis support."""
+       try:
+           rules = self._processing_rules.get(element.type)
+           if not rules:
+               return element.content
+
+           # Handle nested emphasis by preserving inner HTML
+           content = element.content
+           if element.metadata.get("has_nested_emphasis"):
+               nested_elements = element.metadata.get("nested_elements", [])
+               for nested in nested_elements:
+                   nested_html = self._transform_emphasis(nested)
+                   content = content.replace(f"{{emphasis-{nested.id}}}", nested_html)
+
+           return self.html_helper.create_element(
+               tag=rules['html_tag'],
+               attrs={'class': ' '.join(rules['default_classes'])},
+               content=content
+           )
+
+       except Exception as e:
+           self.logger.error(f"Error transforming emphasis: {str(e)}")
+           return element.content
+
+    def _transform_table(self, element: TrackedElement) -> str:
+        """Transform table elements using processing rules."""
+        try:
+            rules = self._processing_rules.get(element.type)
+            if not rules:
+                return element.content
+
+            # Get table info from metadata
+            table_info = element.metadata.get('table_info', {})
+
+            # Start with default classes
+            classes = rules['default_classes'].copy()
+
+            # Handle table specializations
+            if element.type == ElementType.TABLE:
+                specialization = table_info.get('type', 'default')
+                if spec_rules := rules['specializations'].get(specialization):
+                    # Add specialization classes
+                    classes.extend(spec_rules['extra_classes'])
+
+                    # Build specialization attributes
+                    spec_attrs = {}
+                    for attr, value_template in spec_rules['extra_attrs'].items():
+                        value = value_template.format(
+                            citation_format=table_info.get('citation_format', 'apa'),
+                            sort_by=table_info.get('sort_by', 'author'),
+                            show_references=str(table_info.get('show_references', True)).lower(),
+                            visibility=table_info.get('visibility', 'visible'),
+                            collapsible=str(table_info.get('collapsible', False)).lower()
+                        )
+                        spec_attrs[attr] = value
+
+                    # Add table metadata
+                    if table_info.get('has_header'):
+                        spec_attrs['data-has-header'] = 'true'
+                    if rows := table_info.get('rows'):
+                        spec_attrs['data-rows'] = str(rows)
+                    if cols := table_info.get('columns'):
+                        spec_attrs['data-columns'] = str(cols)
+
+                    # Update attributes
+                    attrs = {**rules.get('attributes', {}), **spec_attrs}
+                else:
+                    attrs = rules.get('attributes', {})
+            else:
+                # For other table elements, just use default attributes
+                attrs = rules.get('attributes', {})
+
+            # Add classes to attributes
+            attrs['class'] = ' '.join(classes)
+
+            return self.html_helper.create_element(
+                tag=rules['html_tag'],
+                attrs=attrs,
+                content=element.content
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error transforming table element: {str(e)}")
+            return element.content
+
     ##################
     # Helper methods
     #################
+
+    def _get_media_path(self, href: str, element: TrackedElement) -> str:
+        """Resolve media path relative to topic directory."""
+        try:
+            if href.startswith(('http://', 'https://', '/')):
+                return href
+
+            topic_path = Path(element.path)
+            media_dir = topic_path.parent / 'media'
+            media_path = (media_dir / href).resolve()
+
+            if media_path.exists() and self.dita_root:
+                try:
+                    return f'/static/topics/{media_path.relative_to(self.dita_root)}'
+                except ValueError:
+                    self.logger.warning(f"Media path {media_path} not under DITA root")
+
+            self.logger.warning(f"Media file not found: {media_path}")
+            return ''
+        except Exception as e:
+            self.logger.error(f"Error resolving media path: {str(e)}")
+            return ''
 
     def _finalize_html(self, soup: BeautifulSoup, element: TrackedElement, context: ProcessingContext) -> None:
         """
@@ -688,7 +1161,7 @@ class BaseTransformer(ABC):
         self.logger.debug("Finalizing HTML content")
 
 
-    #####################
+    ####################
     # LaTeX processing #
     ####################
 

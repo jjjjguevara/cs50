@@ -84,6 +84,20 @@ CREATE TABLE context_hierarchy (
     UNIQUE (map_id, context_path)
 );
 
+-- Heading Metadata
+CREATE TABLE heading_hierarchy (
+    hierarchy_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    heading_id TEXT NOT NULL,
+    parent_id TEXT,
+    level INTEGER NOT NULL,
+    sequence_num INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (heading_id) REFERENCES heading_index(id),
+    FOREIGN KEY (parent_id) REFERENCES heading_index(id)
+);
+
+CREATE INDEX idx_heading_hierarchy ON heading_hierarchy(heading_id, parent_id);
+
 -- Topic Relationships (beyond simple hierarchy)
 CREATE TABLE topic_relationships (
     relationship_id INTEGER PRIMARY KEY AUTOINCREMENT,

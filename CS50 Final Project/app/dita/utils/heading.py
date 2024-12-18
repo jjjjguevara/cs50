@@ -2,23 +2,41 @@ from typing import Dict, Set, List, Optional, Tuple, Any
 import logging
 import re
 from dataclasses import dataclass, field
-from app.dita.models.types import HeadingState, ProcessingError, ProcessingMetadata
+from app.dita.models.types import (
+    HeadingState,
+    ProcessingError,
+    ProcessingPhase,
+    ProcessingState,
+    TrackedElement,
+    ElementType
+)
+from app.dita.event_manager import EventManager, EventType
+from app.dita.utils.id_handler import DITAIDHandler
 
 
 class HeadingHandler:
     """Manages heading state and hierarchy across content types."""
 
-    def __init__(self, processing_metadata: ProcessingMetadata):
+    def __init__(
+            self,
+            event_manager: EventManager,
+        ):
             """
-            Initialize the HeadingHandler with ProcessingMetadata.
+            Initialize HeadingHandler with event management.
 
             Args:
-                processing_metadata: The shared metadata object for rendering and transformation.
+                event_manager: Event management system
+                index_numbers_enabled: Whether to enable heading numbering
             """
             self.logger = logging.getLogger(__name__)
+            self.event_manager = event_manager
             self._state = HeadingState()
-            self.processing_metadata = processing_metadata
-            self.index_numbers_enabled = processing_metadata.features.get("number_headings", True)
+            self.id_handler = DITAIDHandler()
+
+            # Track heading hierarchy
+            self._heading_elements: Dict[str, TrackedElement] = {}
+            self._heading_hierarchy: Dict[str, str] = {}  # child_id -> parent_id
+            self._current_level = 0
 
             # Initialize missing attributes
             self._saved_states: List[HeadingState] = []  # To store saved heading states
@@ -66,124 +84,34 @@ class HeadingHandler:
         self._state = HeadingState()
         self.logger.debug("Initialized fresh heading state.")
 
-    def save_state(self) -> None:
-        """Save the current heading state for restoration later."""
-        self._saved_states.append(HeadingState(
-            current_h1=self._state.current_h1,
-            counters=self._state.counters.copy()
-        ))
-        self.logger.debug("Saved heading state.")
-
-    def restore_state(self) -> None:
-        """Restore the last saved heading state."""
-        if not self._saved_states:
-            self.logger.warning("No saved states available for restoration.")
-            return
-        self._state = self._saved_states.pop()
-        self.logger.debug("Restored a saved heading state.")
-
-
-    # Numbering and Hierarchy
-
-    def update_hierarchy(self, level: int, is_topic_title: bool = False) -> None:
-        """
-        Update the heading hierarchy for numbering.
-
-        Args:
-            level: The level of the heading (1-6).
-            is_topic_title: Whether this heading is the topic title.
-        """
-        try:
-            # If this is a topic title, reset the hierarchy
-            if is_topic_title:
-                self._state.counters = {f"h{i}": 0 for i in range(1, 7)}
-                self._state.counters["h1"] = 1  # Topic titles start with 1
-                self._state.current_h1 = 1
-                return
-
-            # Adjust counters for the heading level
-            for i in range(level, 7):
-                self._state.counters[f"h{i}"] = 0  # Reset deeper levels
-            self._state.counters[f"h{level}"] += 1  # Increment current level
-
-            # Update current H1 if this is a top-level heading
-            if level == 1:
-                self._state.current_h1 = self._state.counters["h1"]
-
-        except Exception as e:
-            self.logger.error(f"Error updating heading hierarchy for level {level}: {str(e)}")
-            raise
-
-    def get_current_number(self, level: int) -> Optional[str]:
-        """
-        Get the hierarchy-based numbering for the specified heading level.
-
-        Args:
-            level: The level of the heading (1-6).
-
-        Returns:
-            A string representing the heading number (e.g., "1.1.2.") or None if invalid.
-        """
-        try:
-            if not 1 <= level <= 6:
-                self.logger.warning(f"Invalid heading level: {level}")
-                return None
-
-            # Build the numbering string up to the specified level
-            number_parts = [
-                str(self._state.counters[f"h{i}"])
-                for i in range(1, level + 1)
-                if self._state.counters[f"h{i}"] > 0
-            ]
-
-            return ".".join(number_parts) + "." if number_parts else None
-
-        except Exception as e:
-            self.logger.error(f"Error retrieving heading number for level {level}: {str(e)}")
-            raise
-
     def reset_section(self) -> None:
         """Reset counters for a new section while maintaining the current H1."""
         current_h1 = self._state.current_h1
         self._state = HeadingState(current_h1=current_h1)
         self.logger.debug(f"Reset heading counters while maintaining H1={current_h1}.")
 
-    def start_new_topic(self) -> None:
-        """Start a new topic, resetting the hierarchy and counters."""
-        self.init_state()  # Reset the state
-        self._state.counters["h1"] = 1  # Start numbering at 1 for the new topic
-        self._state.current_h1 = 1
-        self.logger.debug(f"Started a new topic with H1={self._state.current_h1}.")
-
-    def validate_hierarchy(self, level: int, is_topic_title: bool = False) -> bool:
+    def validate_hierarchy(self, level: int) -> bool:
         """
         Validate and adjust the heading hierarchy.
 
         Args:
-            level: The level of the heading (1-6).
-            is_topic_title: Whether this heading is the topic title.
+            level: The level of the heading (1-6)
 
         Returns:
-            True if the hierarchy is valid or adjusted; otherwise, False.
+            bool: True if the hierarchy is valid or adjusted
         """
         try:
             if not 1 <= level <= 6:
                 self.logger.error(f"Invalid heading level: {level}")
                 return False
 
-            if is_topic_title:
-                self.start_new_topic()
-                return True
-
-            # Adjust hierarchy using `update_hierarchy`
-            self.update_hierarchy(level, is_topic_title=False)
+            # Adjust hierarchy
+            self.update_hierarchy(level)
             return True
 
         except Exception as e:
-            self.logger.error(f"Error validating hierarchy for level {level}: {str(e)}")
+            self.logger.error(f"Error validating hierarchy: {str(e)}")
             return False
-
-
 
     # Metadata Extraction
     def extract_heading_metadata(self) -> Dict[str, Any]:
@@ -205,34 +133,174 @@ class HeadingHandler:
         Generate a unique ID for a heading.
 
         Args:
-            text: The heading text.
-            level: The heading level (1-6).
+            text: The heading text
+            level: The heading level (1-6)
 
         Returns:
-            str: A unique heading ID.
+            str: A unique heading ID
         """
-        base_id = re.sub(r"[^\w\-]+", "-", text.lower()).strip("-")
-        heading_id = f"{base_id}-h{level}"
-        self.processing_metadata.add_heading(heading_id, text, level)
-        self.logger.debug(f"Generated heading ID: {heading_id}")
-        return heading_id
+        try:
+            # Generate base ID
+            base_id = re.sub(r"[^\w\-]+", "-", text.lower()).strip("-")
+            heading_id = f"{base_id}-h{level}"
 
+            # Ensure uniqueness
+            if heading_id in self.used_ids:
+                counter = 1
+                while f"{heading_id}-{counter}" in self.used_ids:
+                    counter += 1
+                heading_id = f"{heading_id}-{counter}"
 
-    def set_numbering_enabled(self, enabled: bool):
-            """
-            Enable or disable numbering for headings.
+            self.used_ids.add(heading_id)
+            return heading_id
 
-            Args:
-                enabled (bool): Whether numbering should be enabled.
-            """
-            self.numbering_enabled = enabled
-            self.used_ids.clear()
-            logging.getLogger(__name__).debug(f"Heading numbering set to {'enabled' if enabled else 'disabled'}.")
+        except Exception as e:
+            self.logger.error(f"Error generating heading ID: {str(e)}")
+            return self.id_handler.generate_id(f"heading-{level}")
 
+    def track_heading(
+        self,
+        element: TrackedElement,
+        level: int,
+        is_topic_title: bool = False
+    ) -> None:
+        """
+        Track a heading element in the hierarchy.
 
+        Args:
+            element: The heading TrackedElement
+            level: Heading level (1-6)
+            is_topic_title: Whether this is a topic title
+        """
+        try:
+            # Update state
+            if is_topic_title:
+                self.start_new_topic()
+            else:
+                self.update_hierarchy(level)
+
+            # Store heading
+            self._heading_elements[element.id] = element
+
+            # Generate heading ID and number
+            heading_id = self.generate_heading_id(element.content, level)
+            heading_number = self.get_current_number(level)
+
+            # Update heading metadata
+            element.metadata.update({
+                "heading_id": heading_id,
+                "heading_level": level,
+                "heading_number": heading_number,
+                "is_topic_title": is_topic_title
+            })
+
+            # Track hierarchy
+            if level > 1 and self._heading_elements:
+                # Find parent heading
+                for h_id, h_elem in reversed(list(self._heading_elements.items())):
+                    h_level = h_elem.metadata.get("heading_level", 1)
+                    if h_level < level:
+                        self._heading_hierarchy[element.id] = h_id
+                        break
+
+            # Emit event for state change
+            self.event_manager.emit(
+                EventType.STATE_CHANGE,
+                element_id=element.id,
+                old_state=element.state,
+                new_state=ProcessingState.PROCESSING
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error tracking heading: {str(e)}")
+            raise
+
+    def get_parent_heading(self, heading_id: str) -> Optional[TrackedElement]:
+        """Get parent heading for a given heading ID."""
+        parent_id = self._heading_hierarchy.get(heading_id)
+        return self._heading_elements.get(parent_id) if parent_id else None
+
+    def get_heading_chain(self, heading_id: str) -> List[TrackedElement]:
+        """Get the full chain of parent headings."""
+        chain = []
+        current_id = heading_id
+        while current_id and current_id in self._heading_hierarchy:
+            parent_id = self._heading_hierarchy[current_id]
+            if parent := self._heading_elements.get(parent_id):
+                chain.append(parent)
+                current_id = parent_id
+            else:
+                break
+        return chain
+
+    def update_hierarchy(self, level: int) -> None:
+        """Update heading counters for a new heading level."""
+        try:
+            # Reset deeper levels
+            for i in range(level + 1, 7):
+                self._state.counters[f"h{i}"] = 0
+
+            # Increment current level
+            self._state.counters[f"h{level}"] += 1
+
+            # Update H1 tracking
+            if level == 1:
+                self._state.current_h1 = self._state.counters["h1"]
+
+            self._current_level = level
+
+        except Exception as e:
+            self.logger.error(f"Error updating hierarchy: {str(e)}")
+            raise
+
+    def get_current_number(self, level: int) -> Optional[str]:
+        """Get the current heading number for a level."""
+        try:
+            if not 1 <= level <= 6:
+                return None
+
+            numbers = []
+            for i in range(1, level + 1):
+                if count := self._state.counters.get(f"h{i}", 0):
+                    numbers.append(str(count))
+
+            return ".".join(numbers) + "." if numbers else None
+
+        except Exception as e:
+            self.logger.error(f"Error getting heading number: {str(e)}")
+            return None
+
+    def start_new_topic(self) -> None:
+        """Reset state for a new topic."""
+        self._state = HeadingState()
+        self._state.counters["h1"] = 1
+        self._state.current_h1 = 1
+        self._current_level = 0
+        self.logger.debug("Started new topic heading state")
+
+    def save_state(self) -> None:
+        """Save current state for later restoration."""
+        self._saved_states.append(HeadingState(
+            current_h1=self._state.current_h1,
+            counters=self._state.counters.copy()
+        ))
+
+    def restore_state(self) -> None:
+        """Restore the last saved state."""
+        if self._saved_states:
+            self._state = self._saved_states.pop()
+            self.logger.debug("Restored previous heading state")
 
     def cleanup(self) -> None:
-        """Clean up the handler by resetting the state."""
-        self.init_state()
-        self._saved_states.clear()
-        self.logger.debug("Cleaned up HeadingHandler state.")
+        """Clean up handler resources and state."""
+        try:
+            self._state = HeadingState()
+            self._heading_elements.clear()
+            self._heading_hierarchy.clear()
+            self._saved_states.clear()
+            self._current_level = 0
+            self.logger.debug("Heading handler cleanup completed")
+
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {str(e)}")
+            raise

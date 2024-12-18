@@ -50,43 +50,55 @@ class MetadataHandler:
 
         # Map transformation strategies to metadata retrievers
         self._metadata_registry = {
-                   "_inject_latex": lambda c, m: {
-                       "requires": ["math_content"],
-                       "feature": "latex"
-                   },
-                   "_inject_media": lambda c, m: {
-                       "requires": ["media_content", "media_type"],
-                       "feature": "media"
-                   },
-                   "_inject_topic_section": lambda c, m: {
-                       "requires": ["topic_content", "specialization"],
-                       "feature": "topic_section"
-                   },
-                   "_append_heading_attributes": lambda c, m: {
-                       "requires": ["headings", "sequence"],
-                       "feature": ["index_numbers", "anchor_links"]
-                   },
-                   "_append_toc": lambda c, m: {
-                       "requires": ["headings", "hierarchy"],
-                       "feature": "toc"
-                   },
-                   "_append_bibliography": lambda c, m: {
-                       "requires": ["citations"],
-                       "feature": "bibliography"
-                   },
-                   "_append_glossary": lambda c, m: {
-                       "requires": ["glossary_entries"],
-                       "feature": "glossary"
-                   },
-                   "_swap_topic_version": lambda c, m: {
-                       "requires": ["version_info"],
-                       "feature": "swap_topic_version"
-                   },
-                   "_swap_topic_type": lambda c, m: {
-                       "requires": ["type_info"],
-                       "feature": "swap_topic_type"
-                   }
-               }
+            "inject_latex": lambda c, m: {
+                "requires": ["math_content"],
+                "feature": "latex"
+            },
+            "inject_image": lambda c, m: {
+                "requires": ["href", "alt", "placement", "scale", "width", "height", "align"],
+                "feature": "image"
+            },
+            "inject_video": lambda c, m: {
+                "requires": ["href", "width", "height", "controls", "autoplay", "loop", "poster"],
+                "feature": "video"
+            },
+            "inject_audio": lambda c, m: {
+                "requires": ["href", "controls", "autoplay", "loop", "preload"],
+                "feature": "audio"
+            },
+            "inject_iframe": lambda c, m: {
+                "requires": ["href", "width", "height", "sandbox", "allow"],
+                "feature": "iframe"
+            },
+            "inject_topic_section": lambda c, m: {
+                "requires": ["topic_content", "specialization"],
+                "feature": "topic_section"
+            },
+            "add_heading_attributes": lambda c, m: {
+                "requires": ["headings", "sequence"],
+                "feature": ["index_numbers", "anchor_links"]
+            },
+            "add_toc": lambda c, m: {
+                "requires": ["headings", "hierarchy"],
+                "feature": "toc"
+            },
+            "add_bibliography": lambda c, m: {
+                "requires": ["citations"],
+                "feature": "bibliography"
+            },
+            "add_glossary": lambda c, m: {
+                "requires": ["glossary_entries"],
+                "feature": "glossary"
+            },
+            "swap_topic_version": lambda c, m: {
+                "requires": ["version_info"],
+                "feature": "swap_topic_version"
+            },
+            "swap_topic_type": lambda c, m: {
+                "requires": ["type_info"],
+                "feature": "swap_topic_type"
+            }
+        }
 
     def _init_db_connection(self) -> sqlite3.Connection:
             """Initialize SQLite connection with proper settings."""
@@ -168,33 +180,45 @@ class MetadataHandler:
            """,
 
             # Media and key definitions
-           "media": """
-                SELECT
-                    te.element_id,
-                    te.content_hash,
-                    ec.context_type,
-                    te.topic_id,
-                    kd.href,
-                    kd.alt,
-                    kd.placement,
-                    kd.scale,
-                    kd.props,
-                    kd.audience,
-                    kd.platform,
-                    kd.product,
-                    kd.otherprops,
-                    kd.outputclass,
-                    kd.align,
-                    kd.scalefit,
-                    kd.width,
-                    kd.height
+            "image": """
+                SELECT te.element_id, te.content_hash,
+                        kd.href, kd.alt, kd.placement, kd.scale,
+                        kd.width, kd.height, kd.align, kd.outputclass
                 FROM topic_elements te
                 JOIN element_context ec ON te.element_id = ec.element_id
-                LEFT JOIN topics t ON te.topic_id = t.id
                 LEFT JOIN key_definitions kd ON te.keyref = kd.keys
-                    AND t.root_map_id = kd.map_id
-                WHERE te.element_type IN ('image', 'video', 'audio')
-                AND te.topic_id = ?
+                WHERE te.element_type = 'image' AND te.topic_id = ?
+            """,
+
+            "video": """
+                SELECT te.element_id, te.content_hash,
+                        kd.href, kd.width, kd.height,
+                        kd.controls, kd.autoplay, kd.loop,
+                        kd.poster, kd.preload, kd.outputclass
+                FROM topic_elements te
+                JOIN element_context ec ON te.element_id = ec.element_id
+                LEFT JOIN key_definitions kd ON te.keyref = kd.keys
+                WHERE te.element_type = 'video' AND te.topic_id = ?
+            """,
+
+            "audio": """
+                SELECT te.element_id, te.content_hash,
+                        kd.href, kd.controls, kd.autoplay,
+                        kd.loop, kd.preload, kd.outputclass
+                FROM topic_elements te
+                JOIN element_context ec ON te.element_id = ec.element_id
+                LEFT JOIN key_definitions kd ON te.keyref = kd.keys
+                WHERE te.element_type = 'audio' AND te.topic_id = ?
+            """,
+
+            "iframe": """
+                SELECT te.element_id, te.content_hash,
+                        kd.href, kd.width, kd.height,
+                        kd.sandbox, kd.allow, kd.outputclass
+                FROM topic_elements te
+                JOIN element_context ec ON te.element_id = ec.element_id
+                LEFT JOIN key_definitions kd ON te.keyref = kd.keys
+                WHERE te.element_type = 'iframe' AND te.topic_id = ?
             """,
 
            "topic_section": """
