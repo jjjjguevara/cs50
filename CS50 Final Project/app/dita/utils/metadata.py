@@ -1,104 +1,605 @@
+# app/dita/utils/metadata.py
+
+from typing import(
+    ContextManager,
+    Generator,
+    Optional,
+    Callable,
+    TypeVar,
+    Tuple,
+    Dict,
+    List,
+    Any,
+    Set,
+)
+from datetime import datetime
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+import sqlite3
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Any, Tuple
 import logging
 import yaml
-import sqlite3
 from uuid import uuid4
+
 
 from lxml import etree
 from lxml.etree import _Element
 import frontmatter
-import yaml
 import json
 import re
-from datetime import datetime
-from dataclasses import dataclass
 from enum import Enum
-from app.dita.models.types import PathLike, ElementType
+from app.dita.models.types import(
+    PathLike,
+    ElementType,
+    ProcessingPhase,
+    ProcessingState,
+    ContentType,
+    MetadataField,
+    MetadataTransaction,
+    ValidationSeverity,
+    ValidationMessage,
+    ValidationResult,
+    YAMLFrontmatter,
+    KeyDefinition,
+    LogContext
+)
+
+T = TypeVar('T')
+
 # Global config
 from app_config import DITAConfig
 
-class ContentType(Enum):
-    DITA = "dita"
-    MARKDOWN = "markdown"
-    MAP = "map"
-    TOPIC = "topic"
-    UNKNOWN = "unknown"
+from app.dita.utils.cache import ContentCache
+from app.dita.event_manager import EventManager, EventType
 
-@dataclass
-class MetadataField:
-    name: str
-    value: Any
-    content_type: ContentType
-    source_id: str
-    heading_id: Optional[str] = None
-    timestamp: datetime = datetime.now()
+
+
+class MetadataSchema:
+    """Base class for metadata schemas."""
+    def __init__(self, schema_type: str):
+        self.schema_type = schema_type
+        self.required_fields: Set[str] = set()
+        self.field_types: Dict[str, type] = {}
+        self.validators: Dict[str, List[Callable]] = {}
+
+    def add_field(
+        self,
+        name: str,
+        field_type: type,
+        required: bool = False,
+        validators: Optional[List[Callable]] = None
+    ) -> None:
+        """Add field to schema."""
+        self.field_types[name] = field_type
+        if required:
+            self.required_fields.add(name)
+        if validators:
+            self.validators[name] = validators
+
+
 
 class MetadataHandler:
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        self._conn = self._init_db_connection()
-        self._metadata_cache: Dict[str, Dict[str, Any]] = {}
-        self.parser = etree.XMLParser(
-            recover=True,
-            remove_blank_text=True,
-            resolve_entities=False,
-            dtd_validation=False,
-            load_dtd=False,
-            no_network=True
-        )
+    def __init__(
+        self,
+        event_manager: EventManager,
+        content_cache: ContentCache,
+        config: Optional[DITAConfig] = None
+    ):
+        """
+        Initialize metadata handler with event management and caching.
 
-        # Map transformation strategies to metadata retrievers
-        self._metadata_registry = {
-            "inject_latex": lambda c, m: {
-                "requires": ["math_content"],
-                "feature": "latex"
-            },
-            "inject_image": lambda c, m: {
-                "requires": ["href", "alt", "placement", "scale", "width", "height", "align"],
-                "feature": "image"
-            },
-            "inject_video": lambda c, m: {
-                "requires": ["href", "width", "height", "controls", "autoplay", "loop", "poster"],
-                "feature": "video"
-            },
-            "inject_audio": lambda c, m: {
-                "requires": ["href", "controls", "autoplay", "loop", "preload"],
-                "feature": "audio"
-            },
-            "inject_iframe": lambda c, m: {
-                "requires": ["href", "width", "height", "sandbox", "allow"],
-                "feature": "iframe"
-            },
-            "inject_topic_section": lambda c, m: {
-                "requires": ["topic_content", "specialization"],
-                "feature": "topic_section"
-            },
-            "add_heading_attributes": lambda c, m: {
-                "requires": ["headings", "sequence"],
-                "feature": ["index_numbers", "anchor_links"]
-            },
-            "add_toc": lambda c, m: {
-                "requires": ["headings", "hierarchy"],
-                "feature": "toc"
-            },
-            "add_bibliography": lambda c, m: {
-                "requires": ["citations"],
-                "feature": "bibliography"
-            },
-            "add_glossary": lambda c, m: {
-                "requires": ["glossary_entries"],
-                "feature": "glossary"
-            },
-            "swap_topic_version": lambda c, m: {
-                "requires": ["version_info"],
-                "feature": "swap_topic_version"
-            },
-            "swap_topic_type": lambda c, m: {
-                "requires": ["type_info"],
-                "feature": "swap_topic_type"
-            }
-        }
+        Args:
+            event_manager: Event management system
+            content_cache: Content caching system
+            config: Optional configuration settings
+        """
+        self.logger = logging.getLogger(__name__)
+        self.event_manager = event_manager
+        self.content_cache = content_cache
+        self.config = config
+
+
+        # Database connection
+        self._conn: Optional[sqlite3.Connection] = None
+
+        # Transaction management
+        self._active_transactions: Dict[str, MetadataTransaction] = {}
+        self._transaction_locks: Set[str] = set()
+
+        # Cache management
+        self._dirty_keys: Set[str] = set()
+        self._invalidation_queue: List[str] = []
+
+        # Initialize cache for metadata validation results
+        self._validation_cache: Dict[str, bool] = {}
+
+
+        # Validation schemas
+        self._schemas: Dict[str, MetadataSchema] = {}
+        self._init_schemas()
+
+        # Validation cache
+        self._validation_results: Dict[str, ValidationResult] = {}
+
+    def _init_schemas(self) -> None:
+        """Initialize metadata schemas."""
+        # Base content schema
+        base_schema = MetadataSchema("base")
+        base_schema.add_field("title", str, required=True)
+        base_schema.add_field("content_type", str, required=True)
+        base_schema.add_field("created_at", datetime, required=True)
+        base_schema.add_field("updated_at", datetime, required=True)
+        self._schemas["base"] = base_schema
+
+        # Topic schema
+        topic_schema = MetadataSchema("topic")
+        topic_schema.add_field("topic_type", str, required=True)
+        topic_schema.add_field("short_desc", str)
+        topic_schema.add_field("prerequisites", list)
+        topic_schema.add_field("related_topics", list)
+        self._schemas["topic"] = topic_schema
+
+        # Map schema
+        map_schema = MetadataSchema("map")
+        map_schema.add_field("topics", list, required=True)
+        map_schema.add_field("toc_enabled", bool)
+        map_schema.add_field("index_numbers_enabled", bool)
+        self._schemas["map"] = map_schema
+
+    #############################
+    # Metadata Validation methods
+    #############################
+
+    def validate_metadata(
+        self,
+        metadata: Dict[str, Any],
+        schema_type: str = "base"
+    ) -> ValidationResult:
+        """
+        Validate metadata against schema.
+
+        Args:
+            metadata: Metadata to validate
+            schema_type: Type of schema to use
+
+        Returns:
+            ValidationResult with validation details
+        """
+        try:
+            # Check cache
+            cache_key = f"validation_{hash(json.dumps(metadata))}_{schema_type}"
+            if cached := self._validation_results.get(cache_key):
+                return cached
+
+            messages: List[ValidationMessage] = []
+            schema = self._schemas.get(schema_type)
+
+            if not schema:
+                raise ValueError(f"Unknown schema type: {schema_type}")
+
+            # Check required fields
+            for field in schema.required_fields:
+                if field not in metadata:
+                    messages.append(ValidationMessage(
+                        path=field,
+                        message=f"Required field '{field}' is missing",
+                        severity=ValidationSeverity.ERROR,
+                        code="missing_required"
+                    ))
+
+            # Validate field types
+            for field, value in metadata.items():
+                if field in schema.field_types:
+                    expected_type = schema.field_types[field]
+                    if not isinstance(value, expected_type):
+                        messages.append(ValidationMessage(
+                            path=field,
+                            message=f"Field '{field}' should be type {expected_type.__name__}",
+                            severity=ValidationSeverity.ERROR,
+                            code="invalid_type"
+                        ))
+
+            # Run custom validators
+            for field, validators in schema.validators.items():
+                if field in metadata:
+                    value = metadata[field]
+                    for validator in validators:
+                        try:
+                            validator(value)
+                        except Exception as e:
+                            messages.append(ValidationMessage(
+                                path=field,
+                                message=str(e),
+                                severity=ValidationSeverity.ERROR,
+                                code="validation_failed"
+                            ))
+
+            # Create result
+            result = ValidationResult(
+                is_valid=not any(
+                    msg.severity == ValidationSeverity.ERROR
+                    for msg in messages
+                ),
+                messages=messages
+            )
+
+            # Cache result
+            self._validation_results[cache_key] = result
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Validation failed: {str(e)}")
+            return ValidationResult(
+                is_valid=False,
+                messages=[ValidationMessage(
+                    path="",
+                    message=str(e),
+                    severity=ValidationSeverity.ERROR,
+                    code="validation_error"
+                )]
+            )
+
+    def batch_validate(
+        self,
+        items: List[Tuple[Dict[str, Any], str]]
+    ) -> Dict[str, ValidationResult]:
+        """
+        Validate multiple metadata items in batch.
+
+        Args:
+            items: List of (metadata, schema_type) tuples
+
+        Returns:
+            Dict mapping content IDs to validation results
+        """
+        results = {}
+
+        for metadata, schema_type in items:
+            content_id = metadata.get("content_id", str(hash(json.dumps(metadata))))
+            results[content_id] = self.validate_metadata(metadata, schema_type)
+
+        return results
+
+    def _validate_update(
+        self,
+        current: Dict[str, Any],
+        updates: Dict[str, Any],
+        schema_type: str
+    ) -> List[str]:
+        """
+        Validate metadata updates for conflicts.
+
+        Args:
+            current: Current metadata state
+            updates: Proposed updates
+            schema_type: Schema type to validate against
+
+        Returns:
+            List of conflict messages
+        """
+        conflicts = []
+
+        # Validate complete metadata after merge
+        merged = self._merge_metadata(current, updates)
+        result = self.validate_metadata(merged, schema_type)
+
+        if not result.is_valid:
+            conflicts.extend([msg.message for msg in result.messages])
+
+        return conflicts
+
+    def _get_current_metadata(self, content_id: str) -> Dict[str, Any]:
+        """
+        Get current metadata state for content.
+
+        Args:
+            content_id: Content identifier
+
+        Returns:
+            Current metadata state
+        """
+        try:
+            if self._conn is None:
+                raise RuntimeError("Database connection not initialized")
+
+            cursor = self._conn.execute("""
+                SELECT metadata
+                FROM metadata_store
+                WHERE content_id = ?
+            """, (content_id,))
+
+            if row := cursor.fetchone():
+                return json.loads(row[0])
+            return {}
+
+        except Exception as e:
+            self.logger.error(f"Error getting current metadata: {str(e)}")
+            raise
+
+
+    @contextmanager
+    def transaction(self, content_id: str) -> Generator[MetadataTransaction, None, None]:
+        """
+        Create a managed transaction context.
+
+        Args:
+            content_id: Content identifier for the transaction
+
+        Yields:
+            MetadataTransaction for the operation
+        """
+        if content_id in self._transaction_locks:
+            raise RuntimeError(f"Content {content_id} is locked by another transaction")
+
+        transaction = MetadataTransaction(content_id=content_id, updates={})
+        self._transaction_locks.add(content_id)
+        self._active_transactions[content_id] = transaction
+
+        try:
+            yield transaction
+
+            if transaction.updates:
+                self._commit_transaction(transaction)
+
+        except Exception as e:
+            self._rollback_transaction(transaction)
+            raise
+        finally:
+            self._transaction_locks.remove(content_id)
+            self._active_transactions.pop(content_id, None)
+
+    def _commit_transaction(self, transaction: MetadataTransaction) -> None:
+        """
+        Commit a metadata transaction.
+
+        Args:
+            transaction: Transaction to commit
+        """
+        try:
+            if self._conn is None:
+                raise RuntimeError("Database connection not initialized")
+
+            # Start database transaction
+            with self._conn:
+                # Apply updates
+                current_metadata = self._get_current_metadata(transaction.content_id)
+                merged_metadata = self._merge_metadata(
+                    current_metadata,
+                    transaction.updates
+                )
+
+                # Store updated metadata
+                self._conn.execute("""
+                    INSERT INTO metadata_store (content_id, metadata, updated_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(content_id) DO UPDATE SET
+                    metadata = excluded.metadata,
+                    updated_at = excluded.updated_at
+                """, (
+                    transaction.content_id,
+                    json.dumps(merged_metadata),
+                    transaction.timestamp.isoformat()
+                ))
+
+            # Invalidate cache
+            self.invalidate_metadata(transaction.content_id)
+
+            # Mark transaction as committed
+            transaction.is_committed = True
+
+            # Emit event
+            self.event_manager.emit(
+                EventType.STATE_CHANGE,
+                element_id=transaction.content_id,
+                old_state=ProcessingState.PROCESSING,
+                new_state=ProcessingState.COMPLETED
+            )
+
+        except Exception as e:
+            self.logger.error(f"Transaction commit failed: {str(e)}")
+            raise
+
+    def _rollback_transaction(self, transaction: MetadataTransaction) -> None:
+        """Rollback a failed transaction."""
+        try:
+            if self._conn is not None:
+                self._conn.rollback()
+
+            # Emit event
+            self.event_manager.emit(
+                EventType.ERROR,
+                error_type="transaction_rollback",
+                element_id=transaction.content_id,
+                message="Transaction rollback"
+            )
+
+        except Exception as e:
+            self.logger.error(f"Transaction rollback failed: {str(e)}")
+            raise
+
+    def invalidate_metadata(self, content_id: str) -> None:
+        """
+        Invalidate metadata cache for content.
+
+        Args:
+            content_id: Content identifier to invalidate
+        """
+        try:
+            # Add to dirty set
+            self._dirty_keys.add(content_id)
+
+            # Add to invalidation queue
+            self._invalidation_queue.append(content_id)
+
+            # Remove from cache
+            cache_key = f"metadata_{content_id}"
+            self.content_cache.invalidate(cache_key)
+
+            # Emit event
+            self.event_manager.emit(
+                EventType.CACHE_INVALIDATE,
+                element_id=content_id
+            )
+
+        except Exception as e:
+            self.logger.error(f"Cache invalidation failed: {str(e)}")
+            raise
+
+    def _merge_metadata(
+        self,
+        current: Dict[str, Any],
+        updates: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Merge metadata updates with conflict resolution.
+
+        Args:
+            current: Current metadata state
+            updates: New updates to apply
+
+        Returns:
+            Merged metadata dictionary
+        """
+        merged = current.copy()
+
+        for key, value in updates.items():
+            if key in current and isinstance(current[key], dict) and isinstance(value, dict):
+                # Recursively merge nested dictionaries
+                merged[key] = self._merge_metadata(current[key], value)
+            else:
+                # For non-dict values, newer value wins
+                merged[key] = value
+
+        return merged
+
+    def process_batch(
+        self,
+        updates: List[Tuple[str, Dict[str, Any]]]
+    ) -> List[str]:
+        """
+        Process batch metadata updates.
+
+        Args:
+            updates: List of (content_id, updates) tuples
+
+        Returns:
+            List of failed content IDs
+        """
+        failed_ids = []
+
+        for content_id, metadata in updates:
+            try:
+                with self.transaction(content_id) as txn:
+                    txn.updates = metadata
+            except Exception as e:
+                self.logger.error(f"Batch update failed for {content_id}: {str(e)}")
+                failed_ids.append(content_id)
+
+        return failed_ids
+
+    def _process_invalidation_queue(self) -> None:
+        """Process pending cache invalidations."""
+        try:
+            while self._invalidation_queue:
+                content_id = self._invalidation_queue.pop(0)
+
+                # Remove from cache
+                cache_key = f"metadata_{content_id}"
+                self.content_cache.invalidate(cache_key)
+
+                # Emit event
+                self.event_manager.emit(
+                    EventType.CACHE_INVALIDATE,
+                    element_id=content_id
+                )
+
+        except Exception as e:
+            self.logger.error(f"Error processing invalidation queue: {str(e)}")
+            raise
+
+
+    ##########################################################################
+    # Schema management methods
+    ##########################################################################
+
+
+    def register_schema(
+        self,
+        name: str,
+        schema: MetadataSchema
+    ) -> None:
+        """
+        Register a new metadata schema.
+
+        Args:
+            name: Schema name
+            schema: Schema definition
+        """
+        try:
+            if name in self._schemas:
+                raise ValueError(f"Schema {name} already exists")
+
+            self._schemas[name] = schema
+
+            # Clear validation cache
+            self._validation_results.clear()
+
+            # Emit event
+            self.event_manager.emit(
+                EventType.STATE_CHANGE,
+                old_state=ProcessingState.PROCESSING,
+                new_state=ProcessingState.COMPLETED
+            )
+
+        except Exception as e:
+            self.logger.error(f"Schema registration failed: {str(e)}")
+            raise
+
+    def extend_schema(
+        self,
+        base_name: str,
+        extension_name: str,
+        additional_fields: Dict[str, Tuple[type, bool, Optional[List[Callable]]]]
+    ) -> None:
+        """
+        Extend an existing schema.
+
+        Args:
+            base_name: Name of base schema
+            extension_name: Name for new schema
+            additional_fields: Dict of field_name -> (type, required, validators)
+        """
+        try:
+            if base_name not in self._schemas:
+                raise ValueError(f"Base schema {base_name} not found")
+
+            if extension_name in self._schemas:
+                raise ValueError(f"Schema {extension_name} already exists")
+
+            # Create new schema from base
+            base_schema = self._schemas[base_name]
+            new_schema = MetadataSchema(extension_name)
+
+            # Copy base fields
+            new_schema.required_fields = base_schema.required_fields.copy()
+            new_schema.field_types = base_schema.field_types.copy()
+            new_schema.validators = base_schema.validators.copy()
+
+            # Add new fields
+            for field_name, (field_type, required, validators) in additional_fields.items():
+                new_schema.add_field(field_name, field_type, required, validators)
+
+            # Register new schema
+            self.register_schema(extension_name, new_schema)
+
+        except Exception as e:
+            self.logger.error(f"Schema extension failed: {str(e)}")
+            raise
+
+    ##########################################################################
+    # Metadata extraction methods
+    ##########################################################################
+
 
     def _init_db_connection(self) -> sqlite3.Connection:
             """Initialize SQLite connection with proper settings."""
@@ -112,245 +613,145 @@ class MetadataHandler:
                 raise
 
     def configure(self, config: DITAConfig) -> None:
-        """Configure metadata handler."""
-        try:
-            if hasattr(self, '_conn'):
-                self._conn.close()
-
-            # Use config's metadata DB path
-            self._conn = sqlite3.connect(str(config.metadata_db_path))
-            self._conn.row_factory = sqlite3.Row
-
-            self.logger.debug("Configuring metadata handler")
-            # Add any configuration-specific settings here
-            self.logger.debug("Metadata handler configuration completed")
-        except Exception as e:
-            self.logger.error(f"Metadata handler configuration failed: {str(e)}")
-            raise
-
-    def extract_metadata(
-            self,
-            file_path: Path,
-            content_id: str,
-            heading_id: Optional[str] = None,
-            map_metadata: Optional[Dict[str, Any]] = None
-        ) -> Dict[str, Any]:
             """
-            Extract metadata for a given file, handling both DITA and Markdown content.
+            Configure metadata handler with provided settings.
 
             Args:
-                file_path: Path to the content file.
-                content_id: Unique identifier for the content.
-                heading_id: Optional heading for scoped metadata.
-                map_metadata: Parent map metadata for context.
-
-            Returns:
-                Dict containing extracted metadata.
+                config: Configuration object containing settings
             """
             try:
-                content_type = self._determine_content_type(file_path)
+                if self._conn is not None:
+                    self._conn.close()
 
-                if content_type == ContentType.MARKDOWN:
-                    metadata = self._extract_markdown_metadata(file_path, content_id, heading_id, map_metadata)
-                elif content_type in {ContentType.DITA, ContentType.MAP}:
-                    metadata = self._extract_dita_metadata(file_path, content_id, heading_id, map_metadata)
-                else:
-                    self.logger.warning(f"Unsupported content type for {file_path}")
-                    return {}
+                self._conn = sqlite3.connect(str(config.metadata_db_path))
+                self._conn.row_factory = sqlite3.Row
 
-                # Enrich metadata with feature flags and context
-                metadata = self._enrich_metadata(metadata, map_metadata)
+                # Update configuration
+                self.config = config
 
-                return metadata
+                self.logger.debug("Metadata handler configuration completed")
+
+                # Emit configuration event
+                self.event_manager.emit(
+                    EventType.STATE_CHANGE,
+                    old_state=ProcessingState.PENDING,
+                    new_state=ProcessingState.PROCESSING
+                )
 
             except Exception as e:
-                self.logger.error(f"Error extracting metadata from {file_path}: {str(e)}")
-                return {}
+                self.logger.error(f"Metadata handler configuration failed: {str(e)}")
+                raise
 
-
-    def get_strategy_metadata(self, strategy: str, content_id: str) -> Dict[str, Any]:
-       """Retrieves required metadata based on BaseTransformer strategy."""
-
-       strategy_queries = {
-           # Inject strategies
-           "latex": """
-               SELECT content_id, math_content
-               FROM topic_elements
-               WHERE element_type = 'latex' AND content_id = ?
-           """,
-
-            # Media and key definitions
-            "image": """
-                SELECT te.element_id, te.content_hash,
-                        kd.href, kd.alt, kd.placement, kd.scale,
-                        kd.width, kd.height, kd.align, kd.outputclass
-                FROM topic_elements te
-                JOIN element_context ec ON te.element_id = ec.element_id
-                LEFT JOIN key_definitions kd ON te.keyref = kd.keys
-                WHERE te.element_type = 'image' AND te.topic_id = ?
-            """,
-
-            "video": """
-                SELECT te.element_id, te.content_hash,
-                        kd.href, kd.width, kd.height,
-                        kd.controls, kd.autoplay, kd.loop,
-                        kd.poster, kd.preload, kd.outputclass
-                FROM topic_elements te
-                JOIN element_context ec ON te.element_id = ec.element_id
-                LEFT JOIN key_definitions kd ON te.keyref = kd.keys
-                WHERE te.element_type = 'video' AND te.topic_id = ?
-            """,
-
-            "audio": """
-                SELECT te.element_id, te.content_hash,
-                        kd.href, kd.controls, kd.autoplay,
-                        kd.loop, kd.preload, kd.outputclass
-                FROM topic_elements te
-                JOIN element_context ec ON te.element_id = ec.element_id
-                LEFT JOIN key_definitions kd ON te.keyref = kd.keys
-                WHERE te.element_type = 'audio' AND te.topic_id = ?
-            """,
-
-            "iframe": """
-                SELECT te.element_id, te.content_hash,
-                        kd.href, kd.width, kd.height,
-                        kd.sandbox, kd.allow, kd.outputclass
-                FROM topic_elements te
-                JOIN element_context ec ON te.element_id = ec.element_id
-                LEFT JOIN key_definitions kd ON te.keyref = kd.keys
-                WHERE te.element_type = 'iframe' AND te.topic_id = ?
-            """,
-
-           "topic_section": """
-               SELECT t.id, t.title, t.content_type, t.specialization_type,
-                      tm.features, tm.prerequisites
-               FROM topics t
-               LEFT JOIN content_metadata tm ON t.id = tm.content_id
-               WHERE t.id = ?
-           """,
-
-           # Append strategies
-           "heading_attributes": """
-               SELECT hi.id, hi.text, hi.level, hi.sequence_number,
-                      hi.path_fragment
-               FROM heading_index hi
-               WHERE hi.topic_id = ?
-               ORDER BY hi.sequence_number
-           """,
-
-           "toc": """
-               SELECT hi.id, hi.text, hi.level
-               FROM heading_index hi
-               WHERE hi.map_id = (
-                   SELECT root_map_id FROM topics WHERE id = ?
-               )
-               ORDER BY hi.sequence_number
-           """,
-
-           "bibliography": """
-               SELECT citation_data
-               FROM citations
-               WHERE topic_id = ?
-               ORDER BY citation_data->>'$.author'
-           """,
-
-           "glossary": """
-               SELECT term, definition
-               FROM topic_elements
-               WHERE topic_id = ? AND element_type = 'dlentry'
-           """,
-
-           # Swap strategies
-           "topic_version": """
-               SELECT version, revision_history
-               FROM content_items
-               WHERE id = ?
-           """,
-
-           "topic_type": """
-               SELECT t.type_id, tt.name, tt.base_type
-               FROM topics t
-               JOIN topic_types tt ON t.type_id = tt.type_id
-               WHERE t.id = ?
-           """
-       }
-
-       query = strategy_queries.get(strategy.lstrip("_"))
-       if not query:
-           return {}
-
-       with self._conn as conn:
-           cur = conn.execute(query, (content_id,))
-           result = cur.fetchall()
-           return {
-               "content_id": content_id,
-               "strategy": strategy,
-               "data": [dict(row) for row in result]
-           }
-
-    def _enrich_metadata(self, metadata: Dict[str, Any], map_metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def extract_metadata(
+        self,
+        file_path: Path,
+        content_id: str,
+        heading_id: Optional[str] = None,
+        map_metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
-        Enrich metadata with default values and feature flags.
+        Extract metadata with event tracking and caching.
 
         Args:
-            metadata: Extracted metadata.
-            map_metadata: Parent map metadata for context.
+            file_path: Path to content file
+            content_id: Unique content identifier
+            heading_id: Optional heading identifier
+            map_metadata: Optional parent map metadata
 
         Returns:
-            Enriched metadata.
-        """
-        enriched_metadata = metadata.copy()
-
-        # Add feature flags
-        enriched_metadata.setdefault("feature_flags", {
-            "enable_toc": True,
-            "enable_cross_refs": True,
-            "enable_heading_numbering": True
-        })
-
-        # Add relational metadata defaults
-        enriched_metadata.setdefault("prerequisites", [])
-        enriched_metadata.setdefault("related_topics", [])
-
-        # Merge parent map metadata if provided
-        if map_metadata:
-            enriched_metadata["context"] = map_metadata.get("context", {})
-            enriched_metadata["feature_flags"].update(map_metadata.get("feature_flags", {}))
-
-        # Validate and finalize
-        self._validate_metadata(enriched_metadata)
-        return enriched_metadata
-
-    def _validate_metadata(self, metadata: Dict[str, Any]) -> None:
-        """
-        Validate metadata fields for consistency and completeness.
-
-        Args:
-            metadata: Metadata to validate.
-
-        Raises:
-            ValueError if validation fails.
-        """
-        required_fields = ["title", "feature_flags", "context"]
-        for field in required_fields:
-            if field not in metadata:
-                raise ValueError(f"Missing required metadata field: {field}")
-
-        # Additional validation for feature flags
-        if not isinstance(metadata.get("feature_flags"), dict):
-            raise ValueError("Feature flags must be a dictionary.")
-
-    def store_metadata(
-        self, content_id: str, metadata: Dict[str, Any]
-    ) -> None:
-        """
-        Store metadata in the database.
-
-        Args:
-            content_id: Unique identifier for the content.
-            metadata: Metadata to store.
+            Dict containing extracted metadata
         """
         try:
+            # Check cache first
+            cache_key = f"metadata_{content_id}"
+            if cached := self.content_cache.get(cache_key):
+                return cached
+
+            # Start metadata extraction
+            self.event_manager.emit(
+                EventType.PHASE_START,
+                element_id=content_id,
+                phase=ProcessingPhase.DISCOVERY
+            )
+
+            # Determine content type
+            content_type = self._determine_content_type(file_path)
+
+            # Extract metadata based on content type
+            metadata = self._extract_content_metadata(
+                file_path=file_path,
+                content_id=content_id,
+                content_type=content_type,
+                heading_id=heading_id
+            )
+
+            # Apply map metadata if provided
+            if map_metadata:
+                metadata.update(map_metadata)
+
+            # Enrich metadata
+            metadata = self._enrich_metadata(metadata, map_metadata)
+
+            # Validate metadata
+            validation_result = self.validate_metadata(metadata)
+            if not validation_result.is_valid:
+                error_messages = [msg.message for msg in validation_result.messages]
+                raise ValueError(
+                    f"Invalid metadata for {content_id}: {'; '.join(error_messages)}"
+                )
+
+            # Cache results
+            self.content_cache.set(
+                cache_key,
+                metadata,
+                ElementType.UNKNOWN,  # Use appropriate type based on content
+                ProcessingPhase.DISCOVERY
+            )
+
+            # Complete extraction
+            self.event_manager.emit(
+                EventType.PHASE_END,
+                element_id=content_id,
+                phase=ProcessingPhase.DISCOVERY
+            )
+
+            return metadata
+
+        except Exception as e:
+            self.logger.error(f"Error extracting metadata from {file_path}: {str(e)}")
+            self.event_manager.emit(
+                EventType.ERROR,
+                error_type="metadata_extraction",
+                message=str(e),
+                context=str(file_path)
+            )
+            return {}
+
+    def store_metadata(
+        self,
+        content_id: str,
+        metadata: Dict[str, Any]
+    ) -> None:
+        """
+        Store metadata with event tracking.
+
+        Args:
+            content_id: Content identifier
+            metadata: Metadata to store
+        """
+        try:
+            # Start storage phase
+            self.event_manager.emit(
+                EventType.PHASE_START,
+                element_id=content_id,
+                phase=ProcessingPhase.DISCOVERY
+            )
+
+            # Ensure database connection
+            if self._conn is None:
+                raise RuntimeError("Database connection not initialized")
+
+            # Store metadata
             with self._conn as conn:
                 conn.execute("""
                     INSERT INTO metadata_store (content_id, metadata)
@@ -359,67 +760,108 @@ class MetadataHandler:
                     metadata = excluded.metadata
                 """, (content_id, json.dumps(metadata)))
 
+            # Complete storage
+            self.event_manager.emit(
+                EventType.PHASE_END,
+                element_id=content_id,
+                phase=ProcessingPhase.DISCOVERY
+            )
+
         except Exception as e:
             self.logger.error(f"Error storing metadata for {content_id}: {str(e)}")
+            self.event_manager.emit(
+                EventType.ERROR,
+                error_type="metadata_storage",
+                message=str(e),
+                context=content_id
+            )
             raise
+
+    def _enrich_metadata(
+        self,
+        metadata: Dict[str, Any],
+        map_metadata: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Enrich metadata with configuration-based defaults.
+
+        Args:
+            metadata: Base metadata
+            map_metadata: Optional parent map metadata
+
+        Returns:
+            Enriched metadata
+        """
+        enriched = metadata.copy()
+
+        # Add feature flags from config
+        if self.config:
+            enriched.setdefault("feature_flags", self.config.features)
+
+        # Add default metadata fields
+        enriched.setdefault("prerequisites", [])
+        enriched.setdefault("related_topics", [])
+
+        # Merge map metadata if provided
+        if map_metadata:
+            enriched["context"] = map_metadata.get("context", {})
+            enriched["feature_flags"].update(
+                map_metadata.get("feature_flags", {})
+            )
+
+        # Validate enriched metadata
+        validation_result = self.validate_metadata(enriched)
+        if not validation_result.is_valid:
+            self.logger.warning(
+                f"Enriched metadata validation failed: "
+                f"{'; '.join(msg.message for msg in validation_result.messages)}"
+            )
+
+        return enriched
+
+
 
     def _determine_content_type(self, file_path: Path) -> ContentType:
         """
-        Determine content type based on file extension.
+        Determine content type from file extension.
 
         Args:
-            file_path: Path to the content file.
+            file_path: Path to content file
 
         Returns:
-            ContentType enum.
+            ContentType: Determined content type
         """
-        ext = file_path.suffix.lower()
-        if ext in {".dita", ".ditamap"}:
-            return ContentType.DITA if ext == ".dita" else ContentType.MAP
-        elif ext == ".md":
+        suffix = file_path.suffix.lower()
+        if suffix == '.ditamap':
+            return ContentType.MAP
+        elif suffix == '.dita':
+            return ContentType.DITA
+        elif suffix == '.md':
             return ContentType.MARKDOWN
         else:
             return ContentType.UNKNOWN
 
-
-    def extract_yaml_metadata(self, content: str) -> Tuple[Dict[str, Any], str]:
-        """
-        Extract YAML metadata from the beginning of the content if present.
-
-        Args:
-            content: The content string to extract metadata from.
-
-        Returns:
-            A tuple containing the extracted metadata (dict) and the remaining content.
-        """
-        match = re.match(r'^---\n(.*?)\n---\n', content, re.DOTALL)
-        if match:
-            try:
-                metadata = yaml.safe_load(match.group(1))  # Parse YAML block
-                remaining_content = content[len(match.group(0)):]  # Strip YAML block
-                return metadata, remaining_content
-            except yaml.YAMLError as e:
-                raise ValueError(f"Error parsing YAML metadata: {e}")
-        return {}, content
-
     def add_index_entry(
-            self,
-            topic_id: str,
-            term: str,
-            entry_type: str,
-            target_id: Optional[str] = None
-        ) -> None:
-            """Add an index entry."""
-            try:
-                cur = self._conn.cursor()
-                cur.execute("""
+        self,
+        topic_id: str,
+        term: str,
+        entry_type: str,
+        target_id: Optional[str] = None
+    ) -> None:
+        """Add an index entry."""
+        try:
+            if self._conn is None:
+                raise RuntimeError("Database connection not initialized")
+
+            with self._conn as conn:
+                conn.execute("""
                     INSERT INTO index_entries (topic_id, term, type, target_id)
                     VALUES (?, ?, ?, ?)
                 """, (topic_id, term, entry_type, target_id))
-                self._conn.commit()
 
-            except Exception as e:
-                self.logger.error(f"Error adding index entry: {str(e)}")
+        except Exception as e:
+            self.logger.error(f"Error adding index entry: {str(e)}")
+            raise
 
     def add_conditional_attribute(
         self,
@@ -430,83 +872,100 @@ class MetadataHandler:
     ) -> None:
         """Add a conditional processing attribute."""
         try:
-            cur = self._conn.cursor()
-            cur.execute("""
-                INSERT INTO conditional_attributes
-                (name, attribute_type, scope, description)
-                VALUES (?, ?, ?, ?)
-            """, (name, attr_type, scope, description))
-            self._conn.commit()
+            if self._conn is None:
+                raise RuntimeError("Database connection not initialized")
+
+            with self._conn as conn:
+                conn.execute("""
+                    INSERT INTO conditional_attributes
+                    (name, attribute_type, scope, description)
+                    VALUES (?, ?, ?, ?)
+                """, (name, attr_type, scope, description))
 
         except Exception as e:
             self.logger.error(f"Error adding conditional attribute: {str(e)}")
+            raise
 
-
-    def _extract_dita_metadata(
+    def _extract_content_metadata(
         self,
         file_path: Path,
         content_id: str,
-        heading_id: Optional[str],
-        map_metadata: Optional[Dict[str, Any]]
+        content_type: ContentType,
+        heading_id: Optional[str] = None
     ) -> Dict[str, Any]:
+        """
+        Extract metadata based on content type.
+
+        Args:
+            file_path: Path to content file
+            content_id: Content identifier
+            content_type: Type of content
+            heading_id: Optional heading identifier
+
+        Returns:
+            Dict containing extracted metadata
+        """
         try:
-            tree = etree.parse(str(file_path), self.parser)
-            metadata = {
-                'content_type': (ContentType.MAP.value
-                               if file_path.suffix == '.ditamap'
-                               else ContentType.DITA.value),
-                'content_id': content_id,
-                'heading_id': heading_id,
-                'source_file': str(file_path),
-                'processed_at': datetime.now().isoformat()
-            }
+            if content_type == ContentType.DITA:
+                # Initialize XML parser if needed
+                parser = etree.XMLParser(
+                    recover=True,
+                    remove_blank_text=True,
+                    resolve_entities=False,
+                    dtd_validation=False,
+                    load_dtd=False,
+                    no_network=True
+                )
 
-            for othermeta in tree.xpath('.//othermeta'):
-                name = othermeta.get('name')
-                content = othermeta.get('content')
-                if name and content:
-                    if name in ['index-numbers', 'append-toc']:
-                        metadata[name] = content.lower() == 'true'
-                    else:
-                        metadata[name] = content
+                tree = etree.parse(str(file_path), parser)
 
-            metadata.update(map_metadata or {})
+                metadata = {
+                    'content_type': content_type.value,
+                    'content_id': content_id,
+                    'heading_id': heading_id,
+                    'source_file': str(file_path),
+                    'processed_at': datetime.now().isoformat()
+                }
 
-            return metadata
+                # Extract metadata from othermeta elements
+                for othermeta in tree.xpath('.//othermeta'):
+                    name = othermeta.get('name')
+                    content = othermeta.get('content')
+                    if name and content:
+                        if name in ['index-numbers', 'append-toc']:
+                            metadata[name] = content.lower() == 'true'
+                        else:
+                            metadata[name] = content
+
+                return metadata
+
+            elif content_type == ContentType.MARKDOWN:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    metadata, _ = self.extract_yaml_metadata(content)
+                    metadata.update({
+                        'content_type': content_type.value,
+                        'content_id': content_id,
+                        'heading_id': heading_id,
+                        'source_file': str(file_path),
+                        'processed_at': datetime.now().isoformat()
+                    })
+                    return metadata
+
+            else:
+                self.logger.warning(f"Unsupported content type: {content_type}")
+                return {
+                    'content_type': content_type.value,
+                    'content_id': content_id,
+                    'heading_id': heading_id,
+                    'source_file': str(file_path),
+                    'processed_at': datetime.now().isoformat()
+                }
 
         except Exception as e:
-            self.logger.error(f"Error processing DITA metadata: {str(e)}")
-            return {}
+            self.logger.error(f"Error extracting content metadata: {str(e)}")
+            raise
 
-    def _extract_markdown_metadata(
-        self,
-        file_path: Path,
-        content_id: str,
-        heading_id: Optional[str],
-        map_metadata: Optional[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                post = frontmatter.load(f)
-
-            metadata = post.metadata
-            metadata.update({
-                'content_type': ContentType.MARKDOWN.value,
-                'content_id': content_id,
-                'heading_id': heading_id,
-                'source_file': str(file_path),
-                'processed_at': datetime.now().isoformat()
-            })
-
-            metadata['has_bibliography'] = metadata.get('bibliography', False)
-
-            metadata.update(map_metadata or {})
-
-            return metadata
-
-        except Exception as e:
-            self.logger.error(f"Error processing markdown metadata: {str(e)}")
-            return {}
 
 
     def _check_metadata_flag(self, prolog: _Element, flag_name: str) -> bool:
@@ -518,50 +977,457 @@ class MetadataHandler:
                 return content.lower() == 'true'
         return False
 
-    def prepare_for_database(self, metadata: Dict[str, Any]) -> List[MetadataField]:
-        """Convert metadata dict to database-ready format"""
-        fields = []
-        content_type = ContentType(metadata.pop('content_type'))
-        content_id = metadata.pop('content_id')
-        heading_id = metadata.pop('heading_id', None)
+    def extract_yaml_metadata(
+        self,
+        content: str,
+        parent_flags: Optional[Dict[str, bool]] = None
+    ) -> YAMLFrontmatter:
+        """
+        Extract and validate YAML frontmatter.
 
-        for name, value in metadata.items():
-            # Convert complex values to JSON strings
-            if isinstance(value, (list, dict)):
-                value = json.dumps(value)
+        Args:
+            content: Content string
+            parent_flags: Optional parent feature flags
 
-            fields.append(MetadataField(
-                name=name,
-                value=value,
-                content_type=content_type,
-                source_id=content_id,
-                heading_id=heading_id
-            ))
+        Returns:
+            Structured YAML frontmatter data
+        """
+        try:
+            # Extract YAML block
+            if not content.startswith('---\n'):
+                return YAMLFrontmatter(
+                    feature_flags={},
+                    relationships={},
+                    context={},
+                    raw_data={}
+                )
 
-        return fields
+            end_idx = content.find('\n---\n', 4)
+            if end_idx == -1:
+                raise ValueError("Invalid YAML frontmatter format")
 
-    def get_toggleable_features(self, metadata: Dict[str, Any]) -> Dict[str, bool]:
-        """Extract toggleable features from metadata"""
-        return {
-            'show_journal_table': metadata.get('is_journal_entry', False),
-            'show_bibliography': metadata.get('has_bibliography', False),
-            'show_abstract': 'abstract' in metadata,
-            # Additional toggleable features go here
-        }
+            # Parse YAML
+            yaml_content = content[4:end_idx]
+            raw_data = yaml.safe_load(yaml_content)
+
+            # Extract feature flags with inheritance
+            feature_flags = parent_flags.copy() if parent_flags else {}
+            if yaml_flags := raw_data.get('features', {}):
+                feature_flags.update(yaml_flags)
+
+            # Extract relationships
+            relationships = {
+                'prerequisites': raw_data.get('prerequisites', []),
+                'related_topics': raw_data.get('related_topics', []),
+                'children': raw_data.get('children', []),
+                'parents': raw_data.get('parents', [])
+            }
+
+            # Extract context
+            context = {
+                'scope': raw_data.get('scope', 'local'),
+                'processing-role': raw_data.get('processing-role', 'normal'),
+                'format': raw_data.get('format'),
+                'type': raw_data.get('type', 'topic'),
+                'platform': raw_data.get('platform'),
+                'audience': raw_data.get('audience'),
+                'props': raw_data.get('props', {})
+            }
+
+            # Log extraction
+            self._log_operation(
+                'yaml_extraction',
+                str(hash(content)),
+                {
+                    'features_count': len(feature_flags),
+                    'relationships_count': sum(len(r) for r in relationships.values()),
+                    'has_context': bool(context)
+                }
+            )
+
+            return YAMLFrontmatter(
+                feature_flags=feature_flags,
+                relationships=relationships,
+                context=context,
+                raw_data=raw_data
+            )
+
+        except Exception as e:
+            self.logger.error(json.dumps({
+                "error": "yaml_extraction_failed",
+                "message": str(e),
+                "content_hash": str(hash(content))
+            }))
+            raise
+
+    def store_key_definition(
+        self,
+        key_def: KeyDefinition
+    ) -> None:
+        """
+        Store DITA key definition.
+
+        Args:
+            key_def: Key definition to store
+        """
+        try:
+            if self._conn is None:
+                raise RuntimeError("Database connection not initialized")
+
+            with self._conn:
+                # Store key definition
+                self._conn.execute("""
+                    INSERT INTO key_definitions (
+                        key_id, href, scope, processing_role,
+                        metadata, source_map, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(key_id) DO UPDATE SET
+                    href = excluded.href,
+                    scope = excluded.scope,
+                    processing_role = excluded.processing_role,
+                    metadata = excluded.metadata,
+                    source_map = excluded.source_map
+                """, (
+                    key_def.key,
+                    key_def.href,
+                    key_def.scope,
+                    key_def.processing_role,
+                    json.dumps(key_def.metadata),
+                    key_def.source_map,
+                    datetime.now().isoformat()
+                ))
+
+            # Log operation
+            self._log_operation(
+                'key_definition_stored',
+                key_def.key,
+                {
+                    'href': key_def.href,
+                    'scope': key_def.scope,
+                    'source_map': key_def.source_map
+                }
+            )
+
+        except Exception as e:
+            self.logger.error(json.dumps({
+                "error": "key_definition_store_failed",
+                "key": key_def.key,
+                "message": str(e)
+            }))
+            raise
+
+    def get_key_definitions(
+        self,
+        map_id: str,
+        scope: Optional[str] = None
+    ) -> Dict[str, KeyDefinition]:
+        """
+        Get key definitions with scope handling.
+
+        Args:
+            map_id: Map identifier
+            scope: Optional scope filter
+
+        Returns:
+            Dict of key definitions
+        """
+        try:
+            if self._conn is None:
+                raise RuntimeError("Database connection not initialized")
+
+            query = """
+                SELECT k.*, m.metadata as map_metadata
+                FROM key_definitions k
+                JOIN maps m ON k.source_map = m.map_id
+                WHERE k.source_map = ?
+            """
+            params = [map_id]
+
+            if scope:
+                query += " AND k.scope = ?"
+                params.append(scope)
+
+            cursor = self._conn.execute(query, params)
+            key_defs = {}
+
+            for row in cursor:
+                key_defs[row['key_id']] = KeyDefinition(
+                    key=row['key_id'],
+                    href=row['href'],
+                    scope=row['scope'],
+                    processing_role=row['processing_role'],
+                    metadata=json.loads(row['metadata']),
+                    source_map=row['source_map']
+                )
+
+            # Log retrieval
+            self._log_operation(
+                'key_definitions_retrieved',
+                map_id,
+                {
+                    'count': len(key_defs),
+                    'scope': scope
+                }
+            )
+
+            return key_defs
+
+        except Exception as e:
+            self.logger.error(json.dumps({
+                "error": "key_definitions_retrieval_failed",
+                "map_id": map_id,
+                "message": str(e)
+            }))
+            raise
+
+
+    def get_content_relationships(
+        self,
+        content_id: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all relationships for a content element.
+
+        Args:
+            content_id: Content identifier
+
+        Returns:
+            List of relationship dictionaries
+        """
+        try:
+            if self._conn is None:
+                raise RuntimeError("Database connection not initialized")
+
+            with self._conn as conn:
+                cur = conn.execute("""
+                    SELECT
+                        r.target_id,
+                        r.relationship_type as type,
+                        r.scope,
+                        r.metadata,
+                        r.created_at
+                    FROM content_relationships r
+                    WHERE r.source_id = ?
+                    ORDER BY r.created_at ASC
+                """, (content_id,))
+
+                relationships = []
+                for row in cur:
+                    relationships.append({
+                        'target_id': row['target_id'],
+                        'type': row['type'],
+                        'scope': row['scope'],
+                        'metadata': json.loads(row['metadata'] or '{}'),
+                        'created_at': row['created_at']
+                    })
+
+                return relationships
+
+        except Exception as e:
+            self.logger.error(f"Error getting relationships for {content_id}: {str(e)}")
+            raise
+
+    def store_content_relationships(
+        self,
+        content_id: str,
+        relationships: List[Dict[str, Any]]
+    ) -> None:
+        """
+        Store content relationships in the database.
+
+        Args:
+            content_id: Content identifier
+            relationships: List of relationship dictionaries
+        """
+        try:
+            if self._conn is None:
+                raise RuntimeError("Database connection not initialized")
+
+            with self._conn as conn:
+                # First, clear existing relationships
+                conn.execute("""
+                    DELETE FROM content_relationships
+                    WHERE source_id = ?
+                """, (content_id,))
+
+                # Insert new relationships
+                for rel in relationships:
+                    conn.execute("""
+                        INSERT INTO content_relationships (
+                            source_id,
+                            target_id,
+                            relationship_type,
+                            scope,
+                            metadata,
+                            created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        content_id,
+                        rel['target_id'],
+                        rel['type'],
+                        rel['scope'],
+                        json.dumps(rel.get('metadata', {})),
+                        datetime.now().isoformat()
+                    ))
+
+                # Invalidate cache
+                self.event_manager.emit(
+                    EventType.CACHE_INVALIDATE,
+                    element_id=content_id
+                )
+
+        except Exception as e:
+            self.logger.error(f"Error storing relationships for {content_id}: {str(e)}")
+            raise
+
 
     def cleanup(self) -> None:
-            """Clean up metadata handler resources and state."""
-            try:
-                if hasattr(self, '_conn'):
-                    self._conn.close()
+        """Clean up resources with event tracking."""
+        try:
+            # Close database connection
+            if self._conn is not None:
+                self._conn.close()
+                self._conn = None
 
-                self.logger.debug("Starting metadata handler cleanup")
+            # Clear caches
+            self._validation_cache.clear()
 
-                # Clear cached metadata
-                self._metadata_cache.clear()
+            # Emit cleanup event
+            self.event_manager.emit(
+                EventType.STATE_CHANGE,
+                old_state=ProcessingState.PROCESSING,
+                new_state=ProcessingState.COMPLETED
+            )
 
-                self.logger.debug("Metadata handler cleanup completed")
+            self.logger.debug("Metadata handler cleanup completed")
 
-            except Exception as e:
-                self.logger.error(f"Metadata handler cleanup failed: {str(e)}")
-                raise
+            # Clear validation caches
+            self._validation_results.clear()
+
+        except Exception as e:
+            self.logger.error(f"Cleanup failed: {str(e)}")
+            raise
+
+
+
+
+ # DEPRECATE - MOVE TO TRANSFORMER
+ # def get_strategy_metadata(self, strategy: str, content_id: str) -> Dict[str, Any]:
+ #    """Retrieves required metadata based on BaseTransformer strategy."""
+
+ #    strategy_queries = {
+ #        # Inject strategies
+ #        "latex": """
+ #            SELECT content_id, math_content
+ #            FROM topic_elements
+ #            WHERE element_type = 'latex' AND content_id = ?
+ #        """,
+
+ #         # Media and key definitions
+ #         "image": """
+ #             SELECT te.element_id, te.content_hash,
+ #                     kd.href, kd.alt, kd.placement, kd.scale,
+ #                     kd.width, kd.height, kd.align, kd.outputclass
+ #             FROM topic_elements te
+ #             JOIN element_context ec ON te.element_id = ec.element_id
+ #             LEFT JOIN key_definitions kd ON te.keyref = kd.keys
+ #             WHERE te.element_type = 'image' AND te.topic_id = ?
+ #         """,
+
+ #         "video": """
+ #             SELECT te.element_id, te.content_hash,
+ #                     kd.href, kd.width, kd.height,
+ #                     kd.controls, kd.autoplay, kd.loop,
+ #                     kd.poster, kd.preload, kd.outputclass
+ #             FROM topic_elements te
+ #             JOIN element_context ec ON te.element_id = ec.element_id
+ #             LEFT JOIN key_definitions kd ON te.keyref = kd.keys
+ #             WHERE te.element_type = 'video' AND te.topic_id = ?
+ #         """,
+
+ #         "audio": """
+ #             SELECT te.element_id, te.content_hash,
+ #                     kd.href, kd.controls, kd.autoplay,
+ #                     kd.loop, kd.preload, kd.outputclass
+ #             FROM topic_elements te
+ #             JOIN element_context ec ON te.element_id = ec.element_id
+ #             LEFT JOIN key_definitions kd ON te.keyref = kd.keys
+ #             WHERE te.element_type = 'audio' AND te.topic_id = ?
+ #         """,
+
+ #         "iframe": """
+ #             SELECT te.element_id, te.content_hash,
+ #                     kd.href, kd.width, kd.height,
+ #                     kd.sandbox, kd.allow, kd.outputclass
+ #             FROM topic_elements te
+ #             JOIN element_context ec ON te.element_id = ec.element_id
+ #             LEFT JOIN key_definitions kd ON te.keyref = kd.keys
+ #             WHERE te.element_type = 'iframe' AND te.topic_id = ?
+ #         """,
+
+ #        "topic_section": """
+ #            SELECT t.id, t.title, t.content_type, t.specialization_type,
+ #                   tm.features, tm.prerequisites
+ #            FROM topics t
+ #            LEFT JOIN content_metadata tm ON t.id = tm.content_id
+ #            WHERE t.id = ?
+ #        """,
+
+ #        # Append strategies
+ #        "heading_attributes": """
+ #            SELECT hi.id, hi.text, hi.level, hi.sequence_number,
+ #                   hi.path_fragment
+ #            FROM heading_index hi
+ #            WHERE hi.topic_id = ?
+ #            ORDER BY hi.sequence_number
+ #        """,
+
+ #        "toc": """
+ #            SELECT hi.id, hi.text, hi.level
+ #            FROM heading_index hi
+ #            WHERE hi.map_id = (
+ #                SELECT root_map_id FROM topics WHERE id = ?
+ #            )
+ #            ORDER BY hi.sequence_number
+ #        """,
+
+ #        "bibliography": """
+ #            SELECT citation_data
+ #            FROM citations
+ #            WHERE topic_id = ?
+ #            ORDER BY citation_data->>'$.author'
+ #        """,
+
+ #        "glossary": """
+ #            SELECT term, definition
+ #            FROM topic_elements
+ #            WHERE topic_id = ? AND element_type = 'dlentry'
+ #        """,
+
+ #        # Swap strategies
+ #        "topic_version": """
+ #            SELECT version, revision_history
+ #            FROM content_items
+ #            WHERE id = ?
+ #        """,
+
+ #        "topic_type": """
+ #            SELECT t.type_id, tt.name, tt.base_type
+ #            FROM topics t
+ #            JOIN topic_types tt ON t.type_id = tt.type_id
+ #            WHERE t.id = ?
+ #        """
+ #    }
+
+ #    query = strategy_queries.get(strategy.lstrip("_"))
+ #    if not query:
+ #        return {}
+
+ #    with self._conn as conn:
+ #        cur = conn.execute(query, (content_id,))
+ #        result = cur.fetchall()
+ #        return {
+ #            "content_id": content_id,
+ #            "strategy": strategy,
+ #            "data": [dict(row) for row in result]
+ #        }

@@ -3,6 +3,7 @@
 from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
 import logging
+import re
 from pathlib import Path
 import json
 
@@ -151,6 +152,34 @@ class ContentCache:
             self.logger.error(
                 f"Error invalidating cache for type {element_type}: {str(e)}"
             )
+
+    def invalidate_pattern(self, pattern: str) -> None:
+        """
+        Invalidate all cache entries matching a pattern.
+
+        Args:
+            pattern: Pattern to match against cache keys
+        """
+        try:
+            # Use regex pattern matching
+            pattern_regex = re.compile(pattern.replace('*', '.*'))
+
+            # Find matching keys
+            keys_to_remove = [
+                key for key in self._cache.keys()
+                if pattern_regex.match(key)
+            ]
+
+            # Remove matching entries
+            for key in keys_to_remove:
+                self._cache.pop(key, None)
+
+                # Log invalidation
+                self.logger.debug(f"Invalidated cache key: {key}")
+
+        except Exception as e:
+            self.logger.error(f"Error invalidating cache pattern {pattern}: {str(e)}")
+            raise
 
     def clear(self) -> None:
         """Clear all cache entries."""

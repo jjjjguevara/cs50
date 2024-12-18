@@ -1,554 +1,1104 @@
 # app/dita/context_manager.py
-from typing import Optional, TYPE_CHECKING
-from typing import Dict, List, Optional, Any, Tuple
-from pathlib import Path
-import sqlite3
-import logging
+from typing import Dict, List, Optional, Any, Set
+from dataclasses import dataclass, field
 from datetime import datetime
-import json
-from .config_manager import DITAConfig
+from enum import Enum
+from pathlib import Path
+from uuid import uuid4
+
+# Event and Cache
+from .event_manager import EventManager, EventType
+from .utils.cache import ContentCache
+
+# Handlers & Managers
+from .utils.metadata import MetadataHandler
+from .config_manager import ConfigManager
+
+# Custom Types
 from .models.types import (
+    ContentScope,
+    ContentRelationType,
+    ContentRelationship,
+    NavigationContext,
+    ProcessingContext,
+    ElementType,
     TrackedElement,
     ProcessingPhase,
     ProcessingState,
-    ProcessingContext,
-    ProcessingError,
-    ProcessingMetadata,
-    ElementType,
-    Topic,
-    Map
+    ProcessingStateInfo
 )
 
-if TYPE_CHECKING:
-    from .config_manager import ConfigManager
-
+# Logger
+from .utils.logger import DITALogger
 
 class ContextManager:
     """
-    Manages processing contexts, conditional attributes, and element tracking.
-    Provides centralized context management for the DITA processing pipeline.
+    Mediates context relationships and content hierarchy.
+    Provides framework for contextual processing without enforcing processing rules.
     """
-    def __init__(self, db_path: str):
-        """Initialize the ContextManager."""
-        self.logger = logging.getLogger(__name__)
-        self.db_path = db_path
-        self._conn: Optional[sqlite3.Connection] = None  # Explicitly define type
-        self._active_contexts: List[ProcessingContext] = []
-        self.context_stack: List[ProcessingContext] = []  # Initialize context stack
-
-    def _init_db_connection(self) -> sqlite3.Connection:
-        """Initialize SQLite connection with proper settings."""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row  # Enable dict-like row access
-            self.logger.debug("Database connection initialized")
-            return conn
-        except Exception as e:
-            self.logger.error(f"Error initializing database connection: {str(e)}")
-            raise
-
-    def _ensure_db_connection(self) -> sqlite3.Connection:
-        """Ensure database connection is initialized and return it."""
-        if self._conn is None:
-            self._conn = self._init_db_connection()
-        return self._conn
-
-
-
-    def create_context(self, element: TrackedElement, map_id: str) -> ProcessingContext:
-        """
-        Create a new processing context for a given element.
-
-        Args:
-            element: A `TrackedElement` instance representing the content.
-            map_id: The ID of the map this context belongs to.
-
-        Returns:
-            ProcessingContext: The processing context for the pipeline.
-        """
-        try:
-            # Initialize the context with map-level information
-            context = ProcessingContext(
-                map_id=map_id,
-                map_metadata=element.metadata.get("map_metadata", {}),
-                topic_metadata=element.metadata.get("topic_metadata", {}),
-            )
-
-            # Register the element in the context
-            if element.type == ElementType.DITAMAP:
-                context.map_id = element.id
-            elif element.type in [ElementType.DITA, ElementType.MARKDOWN]:
-                context.set_topic(
-                    topic_id=element.id,
-                    metadata=element.metadata
-                )
-
-            return context
-
-        except Exception as e:
-            self.logger.error(f"Error creating processing context: {str(e)}")
-            raise
-
-
-    def get_current_context(self) -> Optional[ProcessingContext]:
-            """
-            Get the current processing context.
-
-            Returns:
-                Optional[ProcessingContext]: The current context, or None if the stack is empty.
-            """
-            try:
-                return self.context_stack[-1] if self.context_stack else None
-            except Exception as e:
-                self.logger.error(f"Error accessing current context: {str(e)}")
-                return None
-
-    def pop_context(self) -> Optional[ProcessingContext]:
-        """
-        Remove and return the current processing context.
-
-        Returns:
-            Optional[ProcessingContext]: The popped context, or None if the stack is empty.
-        """
-        try:
-            if self.context_stack:
-                context = self.context_stack.pop()
-                self.logger.debug(f"Popped context with map ID {context.map_id}")
-                return context
-            self.logger.warning("No context to pop")
-            return None
-        except Exception as e:
-            self.logger.error(f"Error popping context: {str(e)}")
-            return None
-
-    def push_context(self, context: ProcessingContext) -> None:
-        """
-        Push a new context onto the stack.
-
-        Args:
-            context: The `ProcessingContext` to push onto the stack.
-        """
-        try:
-            self.context_stack.append(context)
-            self.logger.debug(f"Pushed context with map ID {context.map_id}")
-        except Exception as e:
-            self.logger.error(f"Error pushing context: {str(e)}")
-
-    def update_current_context(self, key: str, value: Any) -> None:
-        """Update metadata in the current processing context."""
-        current_context = self.get_current_context()
-        if not current_context:
-            self.logger.error("No current context to update")
-            return
-        current_context.map_metadata[key] = value
-        self.logger.debug(f"Updated current context metadata: {key} -> {value}")
-
-
-    def create_topic_context(
-        self, element: TrackedElement, map_id: str, phase: ProcessingPhase
-    ) -> ProcessingContext:
-        """
-        Create a processing context for a topic.
-
-        Args:
-            element: The `TrackedElement` representing the topic.
-            map_id: ID of the parent map.
-            phase: The current processing phase.
-
-        Returns:
-            A `ProcessingContext` configured for the topic.
-        """
-        try:
-            # Update metadata directly in the element
-            element.metadata.update({
-                "parent_map_id": map_id,
-                "processing_phase": phase.value,
-                "sequence_num": self._get_next_sequence(map_id),
-            })
-
-            return ProcessingContext(
-                map_id=map_id,
-                current_topic_id=element.id,
-                map_metadata={
-                    "context_path": f"{map_id}/{element.id}",
-                    "topic_type": element.type.value,
-                },
-                topic_metadata={
-                    element.id: element.metadata,
-                },
-            )
-        except Exception as e:
-            self.logger.error(f"Error creating topic context for {element.id}: {str(e)}")
-            raise
-
-
-    def create_map_context(
-        self, element: TrackedElement, phase: ProcessingPhase
-    ) -> ProcessingContext:
-        """
-        Create a processing context for a map.
-
-        Args:
-            element: The `TrackedElement` representing the map.
-            phase: The current processing phase.
-
-        Returns:
-            A `ProcessingContext` configured for the map.
-        """
-        try:
-            # Update metadata directly in the element
-            element.metadata.update({
-                "processing_phase": phase.value,
-                "index_numbers_enabled": element.metadata.get("index_numbers_enabled", True),
-                "toc_enabled": element.metadata.get("toc_enabled", True),
-            })
-
-            return ProcessingContext(
-                map_id=element.id,
-                features={
-                    "process_latex": element.metadata.get("latex_enabled", False),
-                    "number_headings": element.metadata.get("index_numbers_enabled", True),
-                    "show_toc": element.metadata.get("toc_enabled", True),
-                },
-                map_metadata={
-                    "title": element.title,
-                    "context_root": element.metadata.get("context_root", ""),
-                },
-                topic_order=element.metadata.get("topic_order", []),
-            )
-        except Exception as e:
-            self.logger.error(f"Error creating map context for {element.id}: {str(e)}")
-            raise
-
-
-
-
-    def get_element_context(self, element: TrackedElement) -> Optional[ProcessingContext]:
-        """
-        Get context for a specific element.
-
-        Args:
-            element: The `TrackedElement` to retrieve context for.
-
-        Returns:
-            A `ProcessingContext` for the element, or None if not found.
-        """
-        try:
-            conn = self._ensure_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT e.*, ec.*
-                FROM topic_elements e
-                JOIN element_context ec ON e.element_id = ec.element_id
-                WHERE e.element_id = ?
-            """, (element.id,))
-
-            row = cur.fetchone()
-            if not row:
-                self.logger.debug(f"No context found for element ID: {element.id}")
-                return None
-
-            # Construct and return the ProcessingContext
-            return ProcessingContext(
-                map_id=row["map_id"],
-                current_topic_id=row["topic_id"],
-                topic_metadata={
-                    row["topic_id"]: json.loads(row["metadata"] or "{}"),
-                },
-                features=json.loads(row["features"] or "{}"),
-            )
-        except Exception as e:
-            self.logger.error(f"Error getting element context for {element.id}: {str(e)}")
-            return None
-
-
-
-    def get_topic_conditions(
+    def __init__(
         self,
-        topic_id: str,
-        map_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        event_manager: EventManager,
+        content_cache: ContentCache,
+        metadata_handler: MetadataHandler,
+        config_manager: ConfigManager,
+        logger: DITALogger
+    ):
         """
-        Get all conditional attributes for a topic, including inherited conditions from map.
-        Handles content toggles, version toggles, and feature flags.
+        Initialize context manager with required dependencies.
 
         Args:
-            topic_id: ID of the topic
-            map_id: Optional map ID for context-aware conditions
-
-        Returns:
-            Dict containing organized conditions and their values.
+            event_manager: For event-based communication
+            content_cache: For transient context storage
+            metadata_handler: For persistent context storage
+            config_manager: For accessing feature flags
+            logger: For structured logging
         """
-        try:
-            # Ensure database connection is initialized
-            if self._conn is None:
-                self._conn = self._init_db_connection()
+        # Core dependencies
+        self.event_manager = event_manager
+        self.content_cache = content_cache
+        self.metadata_handler = metadata_handler
+        self.config_manager = config_manager
+        self.logger = logger
 
-            cur = self._conn.cursor()
+        # Context tracking
+        self._active_contexts: Dict[str, ProcessingContext] = {}
+        self._content_relationships: Dict[str, List[ContentRelationship]] = {}
+        self._navigation_contexts: Dict[str, NavigationContext] = {}
 
-            # Initialize conditions dictionary
-            conditions = {
-                'content_toggles': {},
-                'version_toggles': {},
-                'features': {},
-                'metadata': {},
-                'processing': {
-                    'enabled': True,
-                    'phase': None,
-                    'context': {}
-                }
-            }
+        # Scope & hierarchy tracking
+        self._scope_registry: Dict[str, ContentScope] = {}
+        self._hierarchy_paths: Dict[str, List[str]] = {}
 
-            # Get topic-specific conditions
-            cur.execute("""
-                SELECT
-                    ca.attribute_id,
-                    ca.name,
-                    ca.attribute_type,
-                    ca.scope,
-                    ca.is_toggle,
-                    cv.value,
-                    cc.content_type,
-                    ca.context_dependent
-                FROM content_conditions cc
-                JOIN conditional_attributes ca ON cc.attribute_id = ca.attribute_id
-                JOIN conditional_values cv ON cc.value_id = cv.value_id
-                WHERE (cc.content_id = ? AND cc.content_type = 'topic')
-                   OR (cc.content_id = ? AND cc.content_type = 'map' AND ca.scope = 'global')
-                   OR (ca.scope = 'global' AND ca.context_dependent = FALSE)
-                ORDER BY ca.scope DESC
-            """, (topic_id, map_id if map_id else ''))
+        # Initialize context rules
+        self._init_context_rules()
 
-            # Process conditions
-            for row in cur.fetchall():
-                attr_name = row['name']
-                attr_type = row['attribute_type']
-                attr_value = row['value']
-                attr_scope = row['scope']
-                is_toggle = row['is_toggle']
+        # Context rules registry
+        self.CONTEXT_RULES = {
+            # Scientific Publication Context
+            "journal": {
+                "metadata_hierarchy": [
+                    "journal_metadata",  # Journal-level metadata
+                    "issue_metadata",    # Issue-specific
+                    "article_metadata",  # Article-level
+                    "section_metadata",  # Section-specific
+                    "content_metadata"   # Content-specific
+                ],
 
-                if attr_type == 'content_toggle':
-                    if is_toggle:
-                        conditions['content_toggles'][attr_name] = attr_value.lower() == 'true'
-                    else:
-                        conditions['content_toggles'][attr_name] = attr_value
-
-                elif attr_type == 'version_toggle':
-                    conditions['version_toggles'][attr_name] = {
-                        'value': attr_value,
-                        'scope': attr_scope
+                "content_relationships": {
+                    "article": {
+                        "required": ["abstract", "authors", "doi"],
+                        "optional": ["supplementary", "acknowledgments"],
+                        "allowed_children": ["section", "appendix", "references"],
+                        "allowed_parents": ["issue", "volume"]
+                    },
+                    "section": {
+                        "required": ["title"],
+                        "allowed_children": ["subsection", "paragraph", "figure"],
+                        "allowed_parents": ["article", "section"]
                     }
-
-                if attr_name in ['process-latex', 'show-toc', 'index-numbers', 'process-artifacts']:
-                    conditions['features'][attr_name] = attr_value.lower() == 'true'
-
-            # Get processing context if exists
-            cur.execute("""
-                SELECT phase, state, features, conditions
-                FROM processing_contexts
-                WHERE content_id = ? AND content_type = 'topic'
-                ORDER BY created_at DESC
-                LIMIT 1
-            """, (topic_id,))
-
-            if context_row := cur.fetchone():
-                conditions['processing'].update({
-                    'phase': context_row['phase'],
-                    'state': context_row['state'],
-                    'features': json.loads(context_row['features'] or '{}'),
-                    'context': json.loads(context_row['conditions'] or '{}')
-                })
-
-            # Get metadata attributes
-            cur.execute("""
-                SELECT t.topic_type, t.specialization_type, t.status, t.language
-                FROM topics t
-                WHERE t.topic_id = ?
-            """, (topic_id,))
-
-            if metadata_row := cur.fetchone():
-                conditions['metadata'] = dict(metadata_row)
-
-            self.logger.debug(f"Retrieved conditions for topic {topic_id}: {conditions}")
-            return conditions
-
-        except Exception as e:
-            self.logger.error(f"Error getting topic conditions: {str(e)}")
-            # Return safe defaults
-            return {
-                'content_toggles': {},
-                'version_toggles': {},
-                'features': {
-                    'process-latex': False,
-                    'show-toc': True,
-                    'index-numbers': True,
-                    'process-artifacts': False
                 },
-                'metadata': {},
-                'processing': {
-                    'enabled': True,
-                    'phase': None,
-                    'context': {}
+
+                "reuse_contexts": {
+                    "citation": {
+                        "scope": "global",
+                        "validation": ["doi", "authors", "year"],
+                        "required_metadata": ["citation_style", "reference_type"]
+                    },
+                    "equation": {
+                        "scope": "local",
+                        "validation": ["equation_id", "latex_content"],
+                        "required_metadata": ["equation_number", "reference_type"]
+                    }
+                },
+
+                "attribute_inheritance": {
+                    "audience": {
+                        "inherit": True,
+                        "override": "child",
+                        "valid_values": ["researcher", "student", "practitioner"]
+                    },
+                    "access_level": {
+                        "inherit": True,
+                        "override": "parent",
+                        "valid_values": ["public", "subscriber", "institution"]
+                    }
                 }
             }
+        }
 
-
-    def evaluate_conditions(
-        self,
-        conditions: Dict[str, Any],
-        context: Optional[ProcessingContext] = None
-    ) -> bool:
-        """
-        Evaluate if content should be processed based on conditions.
-
-        Args:
-            conditions: Conditions dict from `get_topic_conditions`.
-            context: Optional `ProcessingContext` for context-aware evaluation.
-
-        Returns:
-            bool: True if content should be processed.
-        """
-        try:
-            # Check if processing is enabled
-            if not conditions.get('processing', {}).get('enabled', True):
-                return False
-
-            # Evaluate content toggles
-            for name, value in conditions.get('content_toggles', {}).items():
-                if isinstance(value, bool) and not value:
-                    self.logger.debug(f"Content toggle '{name}' is disabled.")
-                    return False
-
-            # Evaluate version toggles if context provided
-            if context and 'version_toggles' in conditions:
-                current_version = context.map_metadata.get('version') or context.topic_metadata.get('version')
-                if current_version:
-                    for name, info in conditions['version_toggles'].items():
-                        if info['value'] > current_version:
-                            self.logger.debug(f"Version toggle '{name}' excludes current version '{current_version}'.")
-                            return False
-
-            # Check required features
-            required_features = {
-                feature for feature, enabled in conditions.get('features', {}).items() if enabled
+        self.CONTENT_SCOPES = {
+            "local": {
+                "description": "Content valid within current topic",
+                "allows_external_refs": False
+            },
+            "map": {
+                "description": "Content valid within current map",
+                "allows_external_refs": True,
+                "requires_validation": True
+            },
+            "global": {
+                "description": "Content valid across all maps",
+                "allows_external_refs": True,
+                "requires_validation": True
             }
-
-            if context and required_features:
-                # Get available features from the context
-                available_features = set(context.features.keys())
-                missing_features = required_features - available_features
-                if missing_features:
-                    self.logger.debug(f"Missing required features: {missing_features}")
-                    return False
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error evaluating conditions: {str(e)}")
-            # Default to allowing content in case of errors
-            return True
-
-
-    def update_processing_state(
-        self,
-        content_id: str,
-        phase: ProcessingPhase,
-        state: ProcessingState,
-        error: Optional[str] = None
-    ) -> None:
-        """Update processing state in the database."""
-        try:
-            conn = self._ensure_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                UPDATE processing_contexts
-                SET state = ?, error = ?, updated_at = ?
-                WHERE content_id = ? AND phase = ?
-            """, (state.value, error, datetime.now().isoformat(), content_id, phase.value))
-            conn.commit()
-        except Exception as e:
-            self.logger.error(f"Error updating processing state: {str(e)}")
-            raise
-
-    def _get_topic_type(self, type_id: int) -> Dict[str, Any]:
-        """Get topic type information from the database."""
-        conn = self._ensure_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT * FROM topic_types WHERE type_id = ?
-        """, (type_id,))
-        row = cur.fetchone()
-        if not row:
-            raise ValueError(f"Topic type {type_id} not found")
-
-        return {
-            "id": row["type_id"],
-            "name": row["name"],
-            "base_type": row["base_type"],
-            "description": row["description"],
-            "schema_file": row["schema_file"],
-            "is_custom": row["is_custom"],
         }
 
 
-    def _get_context_path(self, topic_id: str, map_id: str) -> str:
-        """Get context path for a topic in a map."""
-        conn = self._ensure_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT context_path
-            FROM context_hierarchy
-            WHERE topic_id = ? AND map_id = ?
-        """, (topic_id, map_id))
-        row = cur.fetchone()
-        return row["context_path"] if row else f"/{topic_id}"
+    #########################
+    # Core mediator methods #
+    #########################
 
+    def _init_context_rules(self) -> None:
+            """Initialize context management rules."""
+            try:
+                # Register scopes
+                for scope_name, scope_info in self.CONTENT_SCOPES.items():
+                    self._scope_registry[scope_name] = ContentScope(scope_name)
 
+                # Log initialization
+                self.logger.debug("Context rules initialized successfully")
 
-    def _get_topic_order(self, map_id: str) -> List[str]:
-        """Get ordered list of topic IDs for a map."""
-        conn = self._ensure_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT topic_id
-            FROM map_topics
-            WHERE map_id = ?
-            ORDER BY sequence_num
-        """, (map_id,))
-        return [row["topic_id"] for row in cur.fetchall()]
+            except Exception as e:
+                self.logger.error(f"Failed to initialize context rules: {str(e)}")
+                raise
 
-
-    def _get_map_conditions(self, map_id: str) -> Dict[str, Any]:
-        """Get conditional attributes for a map."""
+    def register_context(
+        self,
+        content_id: str,
+        context_type: str,
+        metadata: Dict[str, Any]
+    ) -> None:
+        """Register a new context with proper caching."""
         try:
-            return self.get_topic_conditions(
-                topic_id=map_id,
-                map_id=None  # Use the method's existing signature
+            cache_key = f"context_{content_id}"
+
+            # Create structured context data
+            context_data = {
+                "type": context_type,
+                "metadata": metadata,
+                "registered_at": datetime.now().isoformat()
+            }
+
+            # Store in cache with required parameters
+            self.content_cache.set(
+                key=cache_key,
+                data=context_data,
+                element_type=ElementType.UNKNOWN,  # We'll use UNKNOWN since this is context data
+                phase=ProcessingPhase.DISCOVERY,   # Default to discovery phase
+                ttl=3600  # Cache for 1 hour
             )
+
+            # Store in metadata handler
+            self.metadata_handler.store_metadata(content_id, metadata)
+
         except Exception as e:
-            self.logger.error(f"Error getting map conditions: {str(e)}")
-            return {}
+            self.logger.error(f"Error registering context: {str(e)}")
+            raise
 
-
-    def _get_next_sequence(self, map_id: str) -> int:
-        """Get the next sequence number for map topics."""
-        conn = self._ensure_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT COALESCE(MAX(sequence_num), 0) + 1
-            FROM map_topics
-            WHERE map_id = ?
-        """, (map_id,))
-        return cur.fetchone()[0]
-
-
-
-    def cleanup(self) -> None:
-        """Clean up resources."""
+    def update_context(
+        self,
+        content_id: str,
+        updates: Dict[str, Any]
+    ) -> None:
+        """Update existing context with proper caching."""
         try:
-            self._active_contexts.clear()
-            if self._conn:
-                self._conn.close()
-                self._conn = None
+            cache_key = f"context_{content_id}"
+
+            # Get current context
+            current = self.get_context(content_id) or {}
+
+            # Merge updates
+            current.update(updates)
+
+            # Update cache with required parameters
+            self.content_cache.set(
+                key=cache_key,
+                data=current,
+                element_type=ElementType.UNKNOWN,
+                phase=ProcessingPhase.DISCOVERY,
+                ttl=3600
+            )
+
+            # Update persistent storage
+            self.metadata_handler.store_metadata(content_id, current)
+
         except Exception as e:
-            self.logger.error(f"Error during cleanup: {str(e)}")
+            self.logger.error(f"Error updating context: {str(e)}")
+            raise
+
+
+    def get_context(self, content_id: str) -> Dict[str, Any]:
+       """Get context with proper caching and metadata handling."""
+       try:
+           cache_key = f"context_{content_id}"
+
+           # Check cache first
+           if cached := self.content_cache.get(cache_key):
+               return cached
+
+           # Get from metadata storage using store_metadata method
+           # Note: We'll use store_metadata since get_metadata isn't defined
+           context = {}
+           try:
+               with self.metadata_handler.transaction(content_id) as txn:
+                   context = txn.updates  # Get current metadata state
+           except Exception as e:
+               self.logger.warning(f"Could not retrieve metadata for {content_id}: {str(e)}")
+
+           # Get parent context if exists
+           if parent_id := self._hierarchy_paths.get(content_id, [None])[0]:
+               parent_context = self.get_context(parent_id)
+               context = self._merge_contexts(parent_context, context)
+
+           # Cache result with required parameters
+           self.content_cache.set(
+               key=cache_key,
+               data=context,
+               element_type=ElementType.UNKNOWN,
+               phase=ProcessingPhase.DISCOVERY,
+               ttl=3600
+           )
+
+           return context
+
+       except Exception as e:
+           self.logger.error(f"Error getting context: {str(e)}")
+           return {}
+
+    def invalidate_context(self, content_id: str) -> None:
+        """
+        Invalidate cached context.
+
+        Args:
+            content_id: Content identifier
+        """
+        try:
+            cache_key = f"context_{content_id}"
+            self.content_cache.invalidate(cache_key)
+
+            # Emit event
+            self.event_manager.emit(
+                EventType.CACHE_INVALIDATE,
+                element_id=content_id
+            )
+
+            self.logger.debug(f"Invalidated context for {content_id}")
+
+        except Exception as e:
+            self.logger.error(f"Failed to invalidate context: {str(e)}")
+            raise
+
+    def notify_context_change(
+        self,
+        content_id: str,
+        change_type: str
+    ) -> None:
+        """
+        Notify observers about context changes.
+
+        Args:
+            content_id: Content identifier
+            change_type: Type of change
+        """
+        try:
+            context = self.get_context(content_id)
+
+            # Emit change event
+            self.event_manager.emit(
+                EventType.STATE_CHANGE,
+                element_id=content_id,
+                change_type=change_type,
+                context=context
+            )
+
+            # Invalidate affected contexts
+            self._invalidate_dependent_contexts(content_id)
+
+            self.logger.debug(f"Notified context change for {content_id}")
+
+        except Exception as e:
+            self.logger.error(f"Failed to notify context change: {str(e)}")
+            raise
+
+    def _merge_contexts(
+        self,
+        parent: Dict[str, Any],
+        child: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Helper method to merge contexts following inheritance rules."""
+        merged = parent.copy()
+
+        for attr, value in child.items():
+            inheritance_rule = self.CONTEXT_RULES["attribute_inheritance"].get(attr, {})
+            if inheritance_rule.get("inherit", True):
+                if inheritance_rule.get("override") == "child":
+                    merged[attr] = value
+            else:
+                merged[attr] = value
+
+        return merged
+
+    def _invalidate_dependent_contexts(self, content_id: str) -> None:
+        """Helper method to invalidate dependent contexts."""
+        # Get dependent IDs (children in hierarchy)
+        dependent_ids = [
+            id for id, path in self._hierarchy_paths.items()
+            if content_id in path
+        ]
+
+        # Invalidate each dependent context
+        for dep_id in dependent_ids:
+            self.invalidate_context(dep_id)
+
+    ###########################
+    # Relationship management #
+    ##########################
+
+    def register_relationship(
+        self,
+        source_id: str,
+        target_id: str,
+        relationship_type: ContentRelationType,
+        scope: Optional[ContentScope] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Register a relationship between content elements.
+
+        Args:
+            source_id: Source content identifier
+            target_id: Target content identifier
+            relationship_type: Type of relationship
+            scope: Optional relationship scope (defaults to LOCAL)
+            metadata: Optional relationship metadata
+        """
+        try:
+            # Validate the relationship first
+            if not self.validate_relationship(source_id, target_id):
+                raise ValueError(f"Invalid relationship between {source_id} and {target_id}")
+
+            # Create relationship object
+            relationship = ContentRelationship(
+                source_id=source_id,
+                target_id=target_id,
+                relation_type=relationship_type,
+                scope=scope or ContentScope.LOCAL,
+                metadata=metadata or {}
+            )
+
+            # Add to relationships registry
+            if source_id not in self._content_relationships:
+                self._content_relationships[source_id] = []
+            self._content_relationships[source_id].append(relationship)
+
+            # Store relationship in metadata handler
+            self.metadata_handler.store_content_relationships(
+                source_id,
+                [{
+                    'target_id': target_id,
+                    'type': relationship_type.value,
+                    'scope': relationship.scope.value,
+                    'metadata': relationship.metadata
+                }]
+            )
+
+            # Invalidate related caches
+            self.content_cache.invalidate_pattern(f"context_{source_id}")
+            self.content_cache.invalidate_pattern(f"context_{target_id}")
+
+            self.logger.debug(
+                f"Registered relationship: {source_id} -> {target_id} "
+                f"({relationship_type.value})"
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error registering relationship: {str(e)}")
+            raise
+
+    def validate_relationship(self, source_id: str, target_id: str) -> bool:
+        """
+        Validate a potential relationship between content elements.
+
+        Args:
+            source_id: Source content identifier
+            target_id: Target content identifier
+
+        Returns:
+            bool: True if relationship is valid
+        """
+        try:
+            # Check for self-referential relationships
+            if source_id == target_id:
+                self.logger.warning(f"Self-referential relationship detected: {source_id}")
+                return False
+
+            # Get source and target contexts
+            source_context = self._active_contexts.get(source_id)
+            target_context = self._active_contexts.get(target_id)
+
+            # Both contexts must exist
+            if not source_context or not target_context:
+                return False
+
+            # Check for circular references
+            if self._has_circular_reference(source_id, target_id):
+                self.logger.warning(f"Circular reference detected: {source_id} -> {target_id}")
+                return False
+
+            # Check scope compatibility
+            source_scope = source_context.scope
+            target_scope = target_context.scope
+
+            if source_scope == ContentScope.LOCAL and target_scope == ContentScope.EXTERNAL:
+                return False
+
+            if source_scope == ContentScope.PEER and target_scope == ContentScope.EXTERNAL:
+                return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error validating relationship: {str(e)}")
+            return False
+
+    def _has_circular_reference(self, source_id: str, target_id: str, visited: Optional[Set[str]] = None) -> bool:
+        """
+        Check for circular references in relationships.
+
+        Args:
+            source_id: Starting point for checking
+            target_id: Target to check against
+            visited: Set of already visited IDs
+
+        Returns:
+            bool: True if circular reference detected
+        """
+        if visited is None:
+            visited = set()
+
+        if source_id in visited:
+            return True
+
+        visited.add(source_id)
+
+        # Check current relationships
+        relationships = self._content_relationships.get(source_id, [])
+        for rel in relationships:
+            if rel.target_id == target_id:
+                return True
+            if self._has_circular_reference(rel.target_id, target_id, visited):
+                return True
+
+        return False
+
+    def get_related_content(
+        self,
+        content_id: str,
+        relationship_type: Optional[ContentRelationType] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get related content with optional relationship type filter.
+
+        Args:
+            content_id: Content identifier to get relationships for
+            relationship_type: Optional relationship type to filter by
+
+        Returns:
+            List of related content items with metadata
+        """
+        try:
+            # Check cache first
+            cache_key = (
+                f"related_{content_id}"
+                f"{'_' + relationship_type.value if relationship_type else ''}"
+            )
+
+            if cached := self.content_cache.get(cache_key):
+                return cached
+
+            # Get relationships from metadata handler
+            relationships = self.metadata_handler.get_content_relationships(content_id)
+
+            # Filter by relationship type if specified
+            if relationship_type:
+                relationships = [
+                    rel for rel in relationships
+                    if ContentRelationType(rel['type']) == relationship_type
+                ]
+
+            # Process relationships and build result
+            result = []
+            for rel in relationships:
+                # Add base relationship info
+                related_item = {
+                    'target_id': rel['target_id'],
+                    'type': rel['type'],
+                    'scope': rel['scope'],
+                    'metadata': rel['metadata'],
+                    'created_at': rel['created_at']
+                }
+
+                # Get target context if available
+                if target_context := self._active_contexts.get(rel['target_id']):
+                    related_item['context'] = {
+                        'element_type': target_context.element_type.value,
+                        'scope': target_context.scope.value,
+                        'features': target_context.features,
+                        'navigation': {
+                            'level': target_context.navigation.level,
+                            'sequence': target_context.navigation.sequence
+                        }
+                    }
+
+                result.append(related_item)
+
+            # Cache results
+            self.content_cache.set(
+                cache_key,
+                result,
+                ElementType.UNKNOWN,
+                ProcessingPhase.DISCOVERY,
+                ttl=3600  # Cache for 1 hour
+            )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error getting related content: {str(e)}")
+            return []
+
+
+    #########################
+    # Hierarchy management #
+    ########################
+
+    def register_hierarchy_node(
+        self,
+        content_id: str,
+        parent_id: Optional[str] = None
+    ) -> None:
+        """
+        Register a node in the content hierarchy.
+
+        Args:
+            content_id: Content identifier to register
+            parent_id: Optional parent content identifier
+        """
+        try:
+            # Get current context
+            context = self._active_contexts.get(content_id)
+            if not context:
+                raise ValueError(f"No active context found for {content_id}")
+
+            # Get parent context if exists
+            parent_context = self._active_contexts.get(parent_id) if parent_id else None
+
+            # Calculate hierarchy level
+            level = (parent_context.navigation.level + 1) if parent_context else 0
+
+            # Create navigation context
+            navigation = NavigationContext(
+                path=[parent_id] if parent_id else [],
+                level=level,
+                sequence=len(self._content_relationships.get(parent_id, [])) if parent_id else 0,
+                parent_id=parent_id,
+                root_map=parent_context.navigation.root_map if parent_context else content_id
+            )
+
+            # Update context with new navigation
+            context.navigation = navigation
+
+            # Store hierarchy in metadata
+            hierarchy_metadata = {
+                'parent_id': parent_id,
+                'level': level,
+                'path': navigation.path,
+                'root_map': navigation.root_map
+            }
+
+            with self.metadata_handler.transaction(content_id) as txn:
+                txn.updates = {
+                    'hierarchy': hierarchy_metadata
+                }
+
+            # Update hierarchy paths
+            if content_id not in self._hierarchy_paths:
+                self._hierarchy_paths[content_id] = []
+            if parent_id:
+                # Copy parent's path and append current
+                parent_path = self._hierarchy_paths.get(parent_id, [])
+                self._hierarchy_paths[content_id] = parent_path + [parent_id]
+
+            # Invalidate related caches
+            self.content_cache.invalidate_pattern(f"context_{content_id}")
+            if parent_id:
+                self.content_cache.invalidate_pattern(f"context_{parent_id}")
+
+            self.logger.debug(
+                f"Registered hierarchy node: {content_id} "
+                f"(parent: {parent_id}, level: {level})"
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error registering hierarchy node: {str(e)}")
+            raise
+
+    def get_content_path(self, content_id: str) -> List[str]:
+        """
+        Get the full path to a content element.
+
+        Args:
+            content_id: Content identifier
+
+        Returns:
+            List of content IDs representing the path from root to content
+        """
+        try:
+            # Check cache first
+            cache_key = f"path_{content_id}"
+            if cached := self.content_cache.get(cache_key):
+                return cached
+
+            # Get current context
+            context = self._active_contexts.get(content_id)
+            if not context:
+                return []
+
+            # Build path from navigation context
+            path = context.navigation.path.copy()
+            path.append(content_id)  # Add current element
+
+            # Cache result
+            self.content_cache.set(
+                cache_key,
+                path,
+                ElementType.UNKNOWN,
+                ProcessingPhase.DISCOVERY,
+                ttl=3600  # Cache for 1 hour
+            )
+
+            return path
+
+        except Exception as e:
+            self.logger.error(f"Error getting content path: {str(e)}")
+            return []
+
+    def get_content_level(self, content_id: str) -> int:
+        """
+        Get the hierarchy level of a content element.
+
+        Args:
+            content_id: Content identifier
+
+        Returns:
+            int: Hierarchy level (0 for root elements)
+        """
+        try:
+            # Get current context
+            context = self._active_contexts.get(content_id)
+            if not context:
+                return 0
+
+            # Check cache first
+            cache_key = f"level_{content_id}"
+            if cached := self.content_cache.get(cache_key):
+                return cached
+
+            # Get level from navigation context
+            level = context.navigation.level
+
+            # Cache result
+            self.content_cache.set(
+                cache_key,
+                level,
+                ElementType.UNKNOWN,
+                ProcessingPhase.DISCOVERY,
+                ttl=3600  # Cache for 1 hour
+            )
+
+            return level
+
+        except Exception as e:
+            self.logger.error(f"Error getting content level: {str(e)}")
+            return 0
+
+
+    ##########################
+    # Validation management #
+    #########################
+
+    def validate_content_relationship(
+        self,
+        source: str,
+        target: str,
+        relationship_type: ContentRelationType
+    ) -> bool:
+        """
+        Validate relationships between content elements considering context and type.
+
+        Args:
+            source: Source content identifier
+            target: Target content identifier
+            relationship_type: Type of relationship to validate
+
+        Returns:
+            bool: True if relationship is valid for the content context
+        """
+        try:
+            # Get contexts
+            source_context = self._active_contexts.get(source)
+            target_context = self._active_contexts.get(target)
+
+            if not source_context or not target_context:
+                self.logger.warning(f"Missing context for relationship validation: {source} -> {target}")
+                return False
+
+            # Define valid relationship rules for scientific content
+            valid_relationships = {
+                ContentRelationType.PREREQ: {
+                    # Source -> Target allowed combinations
+                    (ElementType.TOPIC, ElementType.TOPIC): True,  # Topic can require another topic
+                    (ElementType.MAP, ElementType.MAP): True,      # Map can require another map
+                    (ElementType.TOPIC, ElementType.MAP): False,   # Topic cannot require an entire map
+                    (ElementType.MAP, ElementType.TOPIC): True     # Map can require specific topics
+                },
+                ContentRelationType.RELATED: {
+                    # Allow related content between similar types
+                    (ElementType.TOPIC, ElementType.TOPIC): True,
+                    (ElementType.MAP, ElementType.MAP): True,
+                    (ElementType.TOPIC, ElementType.MAP): True,
+                    (ElementType.MAP, ElementType.TOPIC): True
+                },
+                ContentRelationType.REFERENCE: {
+                    # References have more lenient rules
+                    (ElementType.TOPIC, ElementType.TOPIC): True,
+                    (ElementType.MAP, ElementType.MAP): True,
+                    (ElementType.TOPIC, ElementType.MAP): True,
+                    (ElementType.MAP, ElementType.TOPIC): True
+                }
+            }
+
+            # Check if relationship type is valid for the element types
+            type_pair = (source_context.element_type, target_context.element_type)
+            if not valid_relationships.get(relationship_type, {}).get(type_pair, False):
+                self.logger.warning(
+                    f"Invalid relationship type {relationship_type} "
+                    f"for {type_pair[0]} -> {type_pair[1]}"
+                )
+                return False
+
+            # Validate scope compatibility
+            scope_rules = {
+                ContentScope.LOCAL: {ContentScope.LOCAL, ContentScope.PEER},
+                ContentScope.PEER: {ContentScope.LOCAL, ContentScope.PEER},
+                ContentScope.EXTERNAL: {ContentScope.LOCAL, ContentScope.PEER, ContentScope.EXTERNAL},
+                ContentScope.GLOBAL: {ContentScope.LOCAL, ContentScope.PEER, ContentScope.EXTERNAL, ContentScope.GLOBAL}
+            }
+
+            if target_context.scope not in scope_rules.get(source_context.scope, set()):
+                self.logger.warning(
+                    f"Invalid scope relationship: {source_context.scope} -> {target_context.scope}"
+                )
+                return False
+
+            # Check for circular references
+            if self._has_circular_reference(source, target):
+                self.logger.warning(f"Circular reference detected: {source} -> {target}")
+                return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error validating content relationship: {str(e)}")
+            return False
+
+    def validate_attribute_inheritance(
+        self,
+        content_id: str,
+        attribute: str
+    ) -> bool:
+        """
+        Validate attribute inheritance based on context hierarchy.
+
+        Args:
+            content_id: Content identifier
+            attribute: Attribute to validate
+
+        Returns:
+            bool: True if attribute inheritance is valid
+        """
+        try:
+            # Get current context
+            context = self._active_contexts.get(content_id)
+            if not context:
+                return False
+
+            # Define attribute inheritance rules for scientific content
+            inheritance_rules = {
+                "audience": {
+                    "inheritable": True,
+                    "override_allowed": True,
+                    "valid_values": {"researchers", "students", "practitioners"},
+                    "scope": ContentScope.LOCAL
+                },
+                "distribution": {
+                    "inheritable": True,
+                    "override_allowed": False,
+                    "valid_values": {"public", "private", "institutional"},
+                    "scope": ContentScope.GLOBAL
+                },
+                "review_status": {
+                    "inheritable": False,
+                    "override_allowed": True,
+                    "valid_values": {"draft", "peer_review", "published"},
+                    "scope": ContentScope.LOCAL
+                },
+                "publication_state": {
+                    "inheritable": True,
+                    "override_allowed": False,
+                    "valid_values": {"preprint", "published", "retracted"},
+                    "scope": ContentScope.GLOBAL
+                }
+            }
+
+            # Check if attribute is defined in rules
+            if attribute not in inheritance_rules:
+                self.logger.warning(f"Unknown attribute for inheritance: {attribute}")
+                return False
+
+            # Get attribute rules
+            rules = inheritance_rules[attribute]
+
+            # Check if attribute is inheritable
+            if not rules["inheritable"]:
+                return False
+
+            # Check scope compatibility
+            if context.scope != rules["scope"]:
+                return False
+
+            # If attribute allows override, we don't need to check parent
+            if rules["override_allowed"]:
+                return True
+
+            # If no override allowed, check if parent has the attribute
+            parent_id = context.navigation.parent_id
+            if parent_id:
+                parent_context = self._active_contexts.get(parent_id)
+                if parent_context:
+                    parent_value = parent_context.metadata_refs.get(attribute)
+                    if parent_value and parent_value not in rules["valid_values"]:
+                        return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error validating attribute inheritance: {str(e)}")
+            return False
+
+    def validate_reuse_context(
+        self,
+        content_id: str,
+        reuse_type: str
+    ) -> bool:
+        """
+        Validate content reuse based on type and context.
+
+        Args:
+            content_id: Content identifier
+            reuse_type: Type of content reuse (e.g., 'conref', 'keyref')
+
+        Returns:
+            bool: True if reuse is valid in current context
+        """
+        try:
+            context = self._active_contexts.get(content_id)
+            if not context:
+                return False
+
+            # Define reuse rules for scientific content
+            reuse_rules = {
+                "conref": {
+                    "allowed_scopes": {ContentScope.LOCAL, ContentScope.PEER},
+                    "allowed_elements": {
+                        ElementType.TOPIC: {
+                            "sections": ["abstract", "methodology", "results", "discussion"],
+                            "max_depth": 2
+                        },
+                        ElementType.MAP: {
+                            "sections": ["front_matter", "back_matter"],
+                            "max_depth": 1
+                        }
+                    },
+                    "requires_citation": True
+                },
+                "keyref": {
+                    "allowed_scopes": {ContentScope.LOCAL, ContentScope.PEER, ContentScope.GLOBAL},
+                    "allowed_elements": {
+                        ElementType.TOPIC: {
+                            "sections": ["all"],
+                            "max_depth": None
+                        },
+                        ElementType.MAP: {
+                            "sections": ["all"],
+                            "max_depth": None
+                        }
+                    },
+                    "requires_citation": False
+                }
+            }
+
+            # Check if reuse type is supported
+            if reuse_type not in reuse_rules:
+                self.logger.warning(f"Unsupported reuse type: {reuse_type}")
+                return False
+
+            rules = reuse_rules[reuse_type]
+
+            # Validate scope
+            if context.scope not in rules["allowed_scopes"]:
+                self.logger.warning(
+                    f"Invalid scope for {reuse_type}: {context.scope}"
+                )
+                return False
+
+            # Get element rules
+            element_rules = rules["allowed_elements"].get(context.element_type)
+            if not element_rules:
+                return False
+
+            # Check section constraints
+            current_section = context.metadata_refs.get("section")
+            if current_section and "all" not in element_rules["sections"]:
+                if current_section not in element_rules["sections"]:
+                    return False
+
+            # Check depth constraints
+            if element_rules["max_depth"] is not None:
+                current_depth = len(self.get_content_path(content_id))
+                if current_depth > element_rules["max_depth"]:
+                    return False
+
+            # Check citation requirement
+            if rules["requires_citation"]:
+                has_citation = bool(context.metadata_refs.get("citation"))
+                if not has_citation:
+                    return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error validating reuse context: {str(e)}")
+            return False
+
+
+
+
+
+    ##################
+    # Helper methods #
+    ##################
+
+    def _get_children(self, content_id: str) -> List[str]:
+        """
+        Get immediate children of a content element.
+
+        Args:
+            content_id: Content identifier
+
+        Returns:
+            List of child content IDs
+        """
+        try:
+            # Check relationships for children
+            return [
+                rel.target_id for rel in self._content_relationships.get(content_id, [])
+                if rel.relation_type == ContentRelationType.CHILD
+            ]
+        except Exception as e:
+            self.logger.error(f"Error getting children: {str(e)}")
+            return []
+
+    def _validate_hierarchy_operation(
+        self,
+        content_id: str,
+        parent_id: Optional[str]
+    ) -> bool:
+        """
+        Validate a hierarchy operation.
+
+        Args:
+            content_id: Content being added/moved
+            parent_id: Potential parent ID
+
+        Returns:
+            bool: True if operation is valid
+        """
+        try:
+            # Self-reference check
+            if content_id == parent_id:
+                return False
+
+            # If no parent, valid root operation
+            if not parent_id:
+                return True
+
+            # Check for circular reference
+            if self._has_circular_reference(parent_id, content_id):
+                return False
+
+            # Get contexts
+            content_context = self._active_contexts.get(content_id)
+            parent_context = self._active_contexts.get(parent_id)
+
+            if not content_context or not parent_context:
+                return False
+
+            # Validate element types can be nested
+            valid_nesting = {
+                ElementType.MAP: {ElementType.TOPIC, ElementType.MAP},
+                ElementType.TOPIC: {ElementType.TOPIC},
+                # Add other nesting rules as needed
+            }
+
+            parent_type = parent_context.element_type
+            content_type = content_context.element_type
+
+            if parent_type in valid_nesting:
+                return content_type in valid_nesting[parent_type]
+
+            return False
+
+        except Exception as e:
+            self.logger.error(f"Error validating hierarchy: {str(e)}")
+            return False
+
+    def _update_child_levels(
+        self,
+        parent_id: str,
+        parent_level: int
+    ) -> None:
+        """
+        Recursively update levels of child elements.
+
+        Args:
+            parent_id: Parent content identifier
+            parent_level: Level of parent element
+        """
+        try:
+            children = self._get_children(parent_id)
+            for child_id in children:
+                child_context = self._active_contexts.get(child_id)
+                if child_context:
+                    # Update navigation level
+                    child_context.navigation.level = parent_level + 1
+
+                    # Recursively update children
+                    self._update_child_levels(child_id, parent_level + 1)
+
+                    # Invalidate cache
+                    self.content_cache.invalidate_pattern(f"context_{child_id}")
+
+        except Exception as e:
+            self.logger.error(f"Error updating child levels: {str(e)}")

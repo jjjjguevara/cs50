@@ -60,7 +60,7 @@ class DITAParser:
         self.event_manager = event_manager
         self.content_cache = content_cache
         self.id_handler = id_handler or DITAIDHandler()
-        self.metadata_handler = MetadataHandler()
+        self.metadata_handler = MetadataHandler(event_manager=event_manager, content_cache=content_cache, config=config)
         self.heading_handler = HeadingHandler(event_manager=event_manager)
 
 

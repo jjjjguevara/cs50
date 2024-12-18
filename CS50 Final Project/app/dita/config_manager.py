@@ -26,9 +26,158 @@ class ConfigManager:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.feature_flags = {
-            "enable_toc": True,
-            "enable_heading_numbering": True,
-            "enable_cross_refs": True,
+            # Presentation Features
+            "show_toc": True,                        # Include a Table of Contents (True | False)
+            "show_flyout": True,                     # Toggle floating flyout menu (True | False)
+            "index_numbers": {
+                    "toggle": True,                  # Add numbering to headings (True | False)
+                    "format": ["numeric",            # Numbering format (numeric | alpha | roman | arabic | none)
+                                "alpha",
+                                "roman",
+                                "arabic",
+                                "none"],
+                    "default": "numeric"             # Default format
+            },
+            "index_number_format": "numeric",
+            "citation_format": "APA",                # Citation style (APA | MLA | Chicago | IEEE)
+            "enable_pdf_download": "none",           # Allow PDF download (None | 'filename.pdf')
+            "image_version": "light",                # Use a light or dark version of images (light | dark)
+            "use_footnotes": "endnotes",             # Footnotes or endnotes for references (footnotes | endnotes)
+            "show_navigation": True,                 # Enable navigation buttons (True | False)
+            "show_tooltips": True,                   # Show tooltips for links (True | False)
+
+            # Enrichment Features
+            "enable_latex": True,                    # Render LaTeX equations (True | False)
+            "enable_latex_highlight": False,         # Highlight LaTeX equations (True | False)
+            "enable_artifacts": True,                # Inject interactive artifacts (True | False)
+            "enable_media": True,                    # Include multimedia elements (True | False)
+            "highlight_code": True,                  # Highlight code blocks with syntax highlighting (True | False)
+
+            # Content Relationships
+            "enable_reuse": True,                    # Enable reuse of components like conrefs/keyrefs (True | False)
+            "enable_xrefs": True,                    # Enable cross-references between topics/maps (True | False)
+            "anchor_links": {
+                    "toggle": True,                  # Add links to heading anchors (True | False)
+                    "format": ["pilcrow",            # Anchor format (pilcrow | section | hash | {custom} | none)
+                                "section",
+                                "hash",
+                                "{custom}",
+                                "none"],
+                    "default": "pilcrow"             # Default format
+            },
+            "related_topics": True,                  # Show related topics section (True | False)
+
+            # Conditional Rendering
+            "audience": "Professional",              # Target audience (Professional | Research | Students)
+            "platform": "desktop",                   # Target platform (desktop | mobile | pdf)
+            "conditional_rendering": {               # Conditional rendering based on attributes
+                "region": "US",                      # Region-specific rendering (e.g., US, EU)
+                "language": "en"                     # Language-specific rendering (e.g., en, fr)
+            },
+
+            # Collaboration Features
+            "last_edited": "T2024-05-21T15:50",      # Timestamp of the last edit (ISO 8601 format)
+            "show_contributors": True,               # Display contributor roles (True | False)
+
+            # Journal-Specific Features
+            "journal_name": "Engineering Weekly",    # Name of the journal
+            "show_doi": True,                        # Display DOI for the content (True | False)
+            "include_keywords": False,               # Include keywords for indexing or SEO (True | False)
+            "highlight_categories": "Acoustic Space",# Highlight specific categories (e.g., Room Acoustics)
+
+            # Analytics Features
+            "track_views": True,                     # Track the number of views for the content (True | False)
+            "show_popularity_ranking": False,        # Show popularity ranking of content (True | False)
+            "display_metrics": False,                # Display content metrics (e.g., word count, reading time)
+
+            # Accessibility Features
+            "enable_accessibility": False,            # Enable accessibility features (True | False)
+
+            # Customization Features
+            "custom_styles": None,                   # Path to custom CSS for styling (None | 'path/to/styles.css')
+
+            # Subscription Features
+            "subscription_level": "free",            # Subscription level required to access (free | premium | enterprise)
+
+            # Future-Proofing Features
+            "experimental_feature_x": False,         # Placeholder for future experimental toggles
+        }
+
+        self._processing_rules = {
+            # Titles and Headings
+            "titles": {
+                "default": {
+                    "html_tag": "h1",
+                    "default_classes": ["map-title", "main-title", "text-3xl", "font-bold", "mb-6"],
+                    "attributes": {"role": "heading", "aria-level": "1"}
+                },
+                "headings": {
+                    "html_tag": "h{level}",  # Level is dynamically substituted
+                    "default_classes": ["heading", "topic-heading"],
+                    "level_classes": {
+                        1: ["text-2xl", "font-bold", "mb-4"],
+                        2: ["text-xl", "font-bold", "mb-3"],
+                        3: ["text-lg", "font-semibold", "mb-2"]
+                    },
+                    "attributes": {"role": "heading"}
+                }
+            },
+
+            # Blocks
+            "blocks": {
+                "paragraph": {
+                    "html_tag": "p",
+                    "default_classes": ["prose"]
+                },
+                "note": {
+                    "html_tag": "div",
+                    "default_classes": ["note", "alert"],
+                    "type_classes": {
+                        "warning": "alert-warning",
+                        "danger": "alert-danger",
+                        "tip": "alert-info"
+                    },
+                    "attributes": {"role": "note"}
+                },
+                "code_block": {
+                    "html_tag": "pre",
+                    "default_classes": ["code-block", "highlight"],
+                    "inner_tag": "code",
+                    "inner_classes": ["language-{language}"]
+                }
+            },
+
+            # Tables
+            "tables": {
+                "default": {
+                    "html_tag": "table",
+                    "default_classes": ["table", "table-bordered"],
+                    "attributes": {"role": "grid"}
+                },
+                "specializations": {
+                    "bibliography": {
+                        "extra_classes": ["bibliography-table"],
+                        "extra_attrs": {"data-citation-format": "{citation_format}"}
+                    }
+                }
+            },
+
+            # Emphasis
+            "emphasis": {
+                "bold": {"html_tag": "strong", "default_classes": ["font-bold"]},
+                "italic": {"html_tag": "em", "default_classes": ["italic"]},
+                "underline": {"html_tag": "u", "default_classes": ["underline"]},
+                "highlight": {"html_tag": "mark", "default_classes": ["bg-yellow-200"]}
+            },
+
+            # Links
+            "links": {
+                "default": {
+                    "html_tag": "a",
+                    "default_classes": ["link"],
+                    "external_attrs": {"target": "_blank", "rel": "noopener noreferrer"}
+                }
+            }
         }
         self.validation_patterns = {
             "map": r"^map-[a-zA-Z0-9_\-]+$",

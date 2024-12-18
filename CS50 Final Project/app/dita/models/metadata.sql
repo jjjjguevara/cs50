@@ -253,6 +253,70 @@ CREATE TABLE heading_index (
     FOREIGN KEY (map_id) REFERENCES maps(id)
 );
 
+
+
+-- Enhanced key definitions table
+CREATE TABLE IF NOT EXISTS key_definitions (
+    key_id TEXT PRIMARY KEY,
+    href TEXT,
+    scope TEXT CHECK (scope IN ('local', 'peer', 'external')) NOT NULL,
+    processing_role TEXT CHECK (processing_role IN ('resource-only', 'normal')) NOT NULL,
+    metadata JSON,
+    source_map TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (source_map) REFERENCES maps(map_id)
+);
+
+-- Key resolution table for handling key references
+CREATE TABLE IF NOT EXISTS key_resolution (
+    resolution_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key_id TEXT NOT NULL,
+    resolved_href TEXT NOT NULL,
+    resolved_scope TEXT NOT NULL,
+    context_map TEXT NOT NULL,
+    resolution_chain JSON,  -- Stores the resolution path for indirect keys
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (key_id) REFERENCES key_definitions(key_id),
+    FOREIGN KEY (context_map) REFERENCES maps(map_id)
+);
+
+-- Key relationships for handling key hierarchies
+CREATE TABLE IF NOT EXISTS key_relationships (
+    relationship_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_key TEXT NOT NULL,
+    child_key TEXT NOT NULL,
+    relationship_type TEXT CHECK (relationship_type IN ('extends', 'uses', 'overrides')) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_key) REFERENCES key_definitions(key_id),
+    FOREIGN KEY (child_key) REFERENCES key_definitions(key_id)
+);
+
+CREATE TABLE IF NOT EXISTS content_relationships (
+    relationship_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    relationship_type TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    metadata JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (source_id) REFERENCES content_items(id),
+    FOREIGN KEY (target_id) REFERENCES content_items(id)
+);
+
+-- Create indexes for efficient querying
+CREATE INDEX idx_rel_source ON content_relationships(source_id);
+CREATE INDEX idx_rel_target ON content_relationships(target_id);
+CREATE INDEX idx_rel_type ON content_relationships(relationship_type);
+
+
+-- Indexes for key-related queries
+CREATE INDEX idx_key_scope ON key_definitions(scope, source_map);
+CREATE INDEX idx_key_resolution ON key_resolution(key_id, context_map);
+CREATE INDEX idx_key_relationships ON key_relationships(parent_key, child_key);
+
+
 -- Table for content references, extended with metadata and relation_type
 CREATE TABLE content_references (
     ref_id TEXT PRIMARY KEY,

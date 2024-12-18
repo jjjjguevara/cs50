@@ -66,7 +66,7 @@ class HeadingHandler:
             heading_id = self.generate_heading_id(text, level)
 
             # Update the heading hierarchy
-            self.update_hierarchy(level, is_topic_title)
+            self.update_hierarchy(level)
 
             # Retrieve the current numbering for this heading
             heading_number = self.get_current_number(level)
@@ -116,13 +116,25 @@ class HeadingHandler:
     # Metadata Extraction
     def extract_heading_metadata(self) -> Dict[str, Any]:
         """
-        Extract metadata for headings from ProcessingMetadata.
+        Extract metadata for headings from tracked elements.
 
         Returns:
             Dict containing heading metadata.
         """
         try:
-            return self.processing_metadata.references.get("headings", {})
+            heading_metadata = {}
+
+            for heading_id, element in self._heading_elements.items():
+                heading_metadata[heading_id] = {
+                    "text": element.content,
+                    "level": element.metadata.get("heading_level"),
+                    "number": element.metadata.get("heading_number"),
+                    "is_title": element.metadata.get("is_topic_title", False),
+                    "parent_id": self._heading_hierarchy.get(heading_id)
+                }
+
+            return heading_metadata
+
         except Exception as e:
             self.logger.error(f"Error extracting heading metadata: {str(e)}")
             return {}
