@@ -44,6 +44,53 @@ class HeadingHandler:
             self.current_topic_number = 0
             self.first_heading_in_topic = True
 
+            # Register for configuration events
+            self.event_manager.subscribe(
+                EventType.CONFIG_UPDATE,  # New event type needed
+                self._handle_config_update
+            )
+
+    def _handle_config_update(self, config: Dict[str, Any]) -> None:
+            """Handle configuration updates from event system."""
+            try:
+                # Reset state with new configuration
+                self._state = HeadingState(
+                    current_h1=self._state.current_h1,  # Preserve current count
+                    counters=self._state.counters.copy()  # Preserve current counters
+                )
+
+                # Apply configuration based on hierarchy
+                if heading_config := config.get('heading', {}):
+                    self._apply_heading_config(heading_config)
+
+            except Exception as e:
+                self.logger.error(f"Error handling config update: {str(e)}")
+
+    def _apply_heading_config(self, config: Dict[str, Any]) -> None:
+        """Apply heading configuration respecting inheritance rules."""
+        # Numbers and format configuration
+        if 'numbering' in config:
+            numbering = config['numbering']
+            self._state.numbering_enabled = numbering.get('enabled', True)
+            self._state.number_format = numbering.get('format', 'numeric')
+
+        # Heading level configuration
+        if 'levels' in config:
+            for level, level_config in config['levels'].items():
+                self._state.level_config[int(level)] = level_config
+
+        # Audience-specific configuration
+        if audience_config := config.get('audience_overrides', {}):
+            if current_audience := config.get('current_audience'):
+                if audience_rules := audience_config.get(current_audience):
+                    self._apply_audience_rules(audience_rules)
+
+        # Distribution channel configuration
+        if channel_config := config.get('channel_overrides', {}):
+            if current_channel := config.get('current_channel'):
+                if channel_rules := channel_config.get(current_channel):
+                    self._apply_channel_rules(channel_rules)
+
     def process_heading(
         self, text: str, level: int, is_topic_title: bool = False
     ) -> Tuple[str, str, Optional[str]]:

@@ -85,14 +85,92 @@ class ProcessingState(Enum):
 @dataclass
 class ProcessingStateInfo:
     """
-    NEW: Detailed information about current processing state.
-    Complements existing ProcessingState enum.
+    Comprehensive state information for element processing.
+    Tracks phase, state, history, and relationships.
     """
-    phase: ProcessingPhase
-    state: ProcessingState  # Uses existing enum
+    # Core identification
     element_id: str
+    phase: ProcessingPhase
+    state: ProcessingState
     parent_id: Optional[str] = None
+
+    # History tracking
+    previous_state: Optional[ProcessingState] = None
+    previous_phase: Optional[ProcessingPhase] = None
     timestamp: datetime = field(default_factory=datetime.now)
+
+    # Error tracking
+    error_message: Optional[str] = None
+    error_count: int = 0
+
+    # Processing metadata
+    attempts: int = 0
+    duration: Optional[float] = None
+    cache_hits: int = 0
+
+    # State flags
+    is_locked: bool = False
+    needs_reprocessing: bool = False
+    is_cached: bool = False
+
+    # Relations
+    dependent_ids: List[str] = field(default_factory=list)
+    blocking_ids: List[str] = field(default_factory=list)
+
+    def update(
+        self,
+        new_state: Optional[ProcessingState] = None,
+        new_phase: Optional[ProcessingPhase] = None,
+        error: Optional[str] = None
+    ) -> None:
+        """Update state with history tracking."""
+        if new_state:
+            self.previous_state = self.state
+            self.state = new_state
+
+        if new_phase:
+            self.previous_phase = self.phase
+            self.phase = new_phase
+
+        if error:
+            self.error_message = error
+            self.error_count += 1
+
+        self.timestamp = datetime.now()
+
+    def increment_attempt(self) -> None:
+        """Increment processing attempt counter."""
+        self.attempts += 1
+        self.timestamp = datetime.now()
+
+    def can_process(self) -> bool:
+        """Check if element can be processed."""
+        return (
+            not self.is_locked and
+            self.attempts < 3 and
+            self.state != ProcessingState.ERROR and
+            self.state != ProcessingState.COMPLETED
+        )
+
+    @property
+    def has_error(self) -> bool:
+        """Check if element has errors."""
+        return bool(self.error_message) or self.error_count > 0
+
+    @property
+    def is_complete(self) -> bool:
+        """Check if processing is complete."""
+        return self.state == ProcessingState.COMPLETED
+
+    @property
+    def is_processing(self) -> bool:
+        """Check if element is currently processing."""
+        return self.state == ProcessingState.PROCESSING
+
+    @property
+    def is_blocked(self) -> bool:
+        """Check if element is blocked by dependencies."""
+        return bool(self.blocking_ids)
 
 class ContentType(Enum):
     DITA = "dita"
@@ -360,6 +438,26 @@ class NavigationContext:
     root_map: str
     siblings: List[str] = field(default_factory=list)
 
+    def update(self, updates: Dict[str, Any]) -> None:
+        """
+        Update navigation context fields.
+
+        Args:
+            updates: Dictionary of fields to update
+        """
+        if new_path := updates.get('path'):
+            self.path = new_path
+        if 'level' in updates:
+            self.level = updates['level']
+        if 'sequence' in updates:
+            self.sequence = updates['sequence']
+        if 'parent_id' in updates:
+            self.parent_id = updates['parent_id']
+        if 'root_map' in updates:
+            self.root_map = updates['root_map']
+        if new_siblings := updates.get('siblings'):
+            self.siblings = new_siblings
+
 
 @dataclass
 class ProcessingContext:
@@ -435,11 +533,21 @@ class ProcessingMetadata:
         phase=ProcessingPhase.DISCOVERY,
         state=ProcessingState.PENDING,
         element_id="",
-        parent_id=None
+        parent_id=None,
+    ))
+
+    # Processing state tracking
+    processing_state: ProcessingStateInfo = field(default_factory=lambda: ProcessingStateInfo(
+        element_id="",
+        phase=ProcessingPhase.DISCOVERY,
+        state=ProcessingState.PENDING
     ))
 
     # Cache for processing
+    references: Dict[str, ElementReference] = field(default_factory=dict)
+    transient_attributes: Dict[str, Any] = field(default_factory=dict)
     _reference_cache: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+
 
     def add_reference(
         self,
@@ -507,15 +615,16 @@ class ProcessingMetadata:
 
     def update_state(
         self,
-        phase: Optional[ProcessingPhase] = None,
-        state: Optional[ProcessingState] = None
+        new_state: Optional[ProcessingState] = None,
+        new_phase: Optional[ProcessingPhase] = None,
+        error: Optional[str] = None
     ) -> None:
         """Update processing state."""
-        if phase:
-            self.processing_state.phase = phase
-        if state:
-            self.processing_state.state = state
-        self.processing_state.timestamp = datetime.now()
+        self.processing_state.update(
+            new_state=new_state,
+            new_phase=new_phase,
+            error=error
+        )
 
     def cleanup(self) -> None:
         """Cleanup transient data."""

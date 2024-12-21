@@ -1,0 +1,109 @@
+{
+  "version": "1.0",
+  "description": "Processing rules for content transformation",
+  "rules": {
+    "titles": {
+      "default": {
+        "html_tag": "h1",
+        "default_classes": [
+          "map-title",
+          "main-title",
+          "text-3xl",
+          "font-bold",
+          "mb-6"
+        ],
+        "attributes": {
+          "role": "heading",
+          "aria-level": "1"
+        }
+      },
+      "headings": {
+        "html_tag": "h{level}",
+        "default_classes": ["heading", "topic-heading"],
+        "level_classes": {
+          "1": ["text-2xl", "font-bold", "mb-4"],
+          "2": ["text-xl", "font-bold", "mb-3"],
+          "3": ["text-lg", "font-semibold", "mb-2"]
+        },
+        "attributes": {
+          "role": "heading"
+        }
+      }
+    },
+    "blocks": {
+      "paragraph": {
+        "html_tag": "p",
+        "default_classes": ["prose"]
+      },
+      "note": {
+        "html_tag": "div",
+        "default_classes": ["note", "alert"],
+        "type_classes": {
+          "warning": "alert-warning",
+          "danger": "alert-danger",
+          "tip": "alert-info"
+        },
+        "attributes": {
+          "role": "note"
+        }
+      },
+      "code_block": {
+        "html_tag": "pre",
+        "default_classes": ["code-block", "highlight"],
+        "inner": {
+          "tag": "code",
+          "classes": ["language-{language}"]
+        }
+      }
+    },
+    "tables": {
+      "default": {
+        "html_tag": "table",
+        "default_classes": ["table", "table-bordered"],
+        "attributes": {
+          "role": "grid"
+        }
+      },
+      "specializations": {
+        "bibliography": {
+          "extra_classes": ["bibliography-table"],
+          "extra_attributes": {
+            "data-citation-format": "{citation_format}"
+          }
+        }
+      }
+    },
+    "emphasis": {
+      "bold": {
+        "html_tag": "strong",
+        "default_classes": ["font-bold"]
+      },
+      "italic": {
+        "html_tag": "em",
+        "default_classes": ["italic"]
+      },
+      "underline": {
+        "html_tag": "u",
+        "default_classes": ["underline"]
+      },
+      "highlight": {
+        "html_tag": "mark",
+        "default_classes": ["bg-yellow-200"]
+      },
+      "strikethrough": {
+        "html_tag": "del",
+        "default_classes": ["line-through"]
+      }
+    },
+    "links": {
+      "default": {
+        "html_tag": "a",
+        "default_classes": ["link"],
+        "external_attributes": {
+          "target": "_blank",
+          "rel": "noopener noreferrer"
+        }
+      }
+    }
+  }
+}

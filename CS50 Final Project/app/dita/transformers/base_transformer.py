@@ -350,36 +350,57 @@ class BaseTransformer(ABC):
         }
 
     def transform(self, element: TrackedElement, context: ProcessingContext) -> ProcessedContent:
-       """Transform content with processing strategies."""
-       try:
-           html_content = self._convert_to_html(element, context)
+        """Transform content using centralized methods and strategy patterns."""
+        try:
+            # Convert to base HTML (handled by specific transformers)
+            html_content = self._convert_to_html(element, context)
 
-           # Transform with element transformer
-           if element.type in self._element_transformers:
-               html_content = self._element_transformers[element.type](html_content)
+            # Transform using centralized methods
+            if element.type in self._processing_rules:
+                if element.type in [ElementType.HEADING, ElementType.MAP_TITLE]:
+                    html_content = self._transform_titles(element)
+                elif element.type in [ElementType.PARAGRAPH, ElementType.NOTE,
+                                    ElementType.CODE_BLOCK, ElementType.BLOCKQUOTE,
+                                    ElementType.CODE_PHRASE]:
+                    html_content = self._transform_block(element)
+                elif element.type in [ElementType.XREF, ElementType.LINK]:
+                    html_content = self._transform_link(element)
+                elif element.type in [ElementType.BOLD, ElementType.ITALIC,
+                                    ElementType.UNDERLINE, ElementType.HIGHLIGHT,
+                                    ElementType.STRIKETHROUGH]:
+                    html_content = self._transform_emphasis(element)
+                elif element.type in [ElementType.TABLE, ElementType.TABLE_HEADER,
+                                    ElementType.TABLE_ROW, ElementType.TABLE_CELL]:
+                    html_content = self._transform_table(element)
+                elif element.type in [ElementType.UNORDERED_LIST, ElementType.ORDERED_LIST,
+                                    ElementType.TODO_LIST, ElementType.LIST_ITEM]:
+                    html_content = self._transform_list(element)
 
-           # Apply feature strategies
-           html_content = self._apply_strategies(
-               html=html_content,
-               element=element,
-               context=context,
-               metadata=element.metadata
-           )
+            # Apply transformation strategies
+            html_content = self._apply_strategies(
+                html=html_content,
+                element=element,
+                context=context,
+                metadata=element.metadata
+            )
 
-           return ProcessedContent(
-               html=html_content,
-               element_id=element.id,
-               metadata=element.metadata
-           )
+            return ProcessedContent(
+                html=html_content,
+                element_id=element.id,
+                metadata=element.metadata
+            )
 
-       except Exception as e:
-           self.logger.error(f"Transform failed: {str(e)}")
-           raise
+        except Exception as e:
+            self.logger.error(f"Transform failed: {str(e)}")
+            raise
 
     @abstractmethod
     def _convert_to_html(self, element: TrackedElement, context: ProcessingContext) -> str:
-       """Convert element content to HTML. To be implemented by subclasses."""
-       pass
+        """
+        Initial HTML conversion to be implemented by specific transformers.
+        DITA and Markdown transformers will handle their specific parsing here.
+        """
+        pass
 
     def _apply_strategies(
        self,

@@ -1,0 +1,168 @@
+{
+  "version": "1.0",
+  "description": "Default keyref configurations and fallbacks",
+  "processing_hierarchy": {
+    "order": [
+      "default_config",
+      "map_metadata",
+      "audience_metadata",
+      "distribution_metadata",
+      "analytics_metadata",
+      "topic_metadata",
+      "processing_rules",
+      "keyrefs",
+      "html_overrides"
+    ]
+  },
+  "global_defaults": {
+    "props": {},
+    "audience": "general",
+    "platform": "all",
+    "product": "default",
+    "otherprops": {},
+    "rev": "1.0",
+    "outputclass": "default",
+    "placement": "inline",
+    "align": "left",
+    "scale": "100%",
+    "scalefit": "yes",
+    "width": "auto",
+    "height": "auto"
+  },
+  "element_defaults": {
+    "image": {
+      "placement": "break",
+      "align": "center",
+      "scalefit": "yes",
+      "width": "auto",
+      "height": "auto",
+      "alt": "Image",
+      "props": {
+        "responsive": true,
+        "lazy_load": true
+      }
+    },
+    "table": {
+      "placement": "break",
+      "align": "left",
+      "scale": "100%",
+      "props": {
+        "responsive": true,
+        "sortable": false
+      }
+    },
+    "link": {
+      "outputclass": "external-link",
+      "props": {
+        "target": "_blank",
+        "rel": "noopener noreferrer"
+      }
+    },
+    "xref": {
+      "outputclass": "cross-reference",
+      "props": {
+        "target": "_self",
+        "show_icon": true
+      }
+    },
+    "media": {
+      "placement": "break",
+      "align": "center",
+      "width": "auto",
+      "height": "auto",
+      "props": {
+        "controls": true,
+        "autoplay": false,
+        "loop": false,
+        "muted": true
+      }
+    }
+  },
+  "audience_metadata": {
+    "researcher": {
+      "outputclass": "research-content",
+      "props": {
+        "show_citations": true,
+        "show_methodology": true,
+        "enable_annotations": true
+      }
+    },
+    "student": {
+      "outputclass": "learning-content",
+      "props": {
+        "show_definitions": true,
+        "show_examples": true,
+        "enable_highlights": true
+      }
+    },
+    "professional": {
+      "outputclass": "professional-content",
+      "props": {
+        "show_summaries": true,
+        "show_applications": true,
+        "enable_bookmarks": true
+      }
+    }
+  },
+  "distribution_channels": {
+    "web": {
+      "props": {
+        "responsive": true,
+        "interactive": true
+      },
+      "outputclass": "web-content"
+    },
+    "pdf": {
+      "props": {
+        "print_optimized": true,
+        "vector_graphics": true
+      },
+      "outputclass": "print-content"
+    },
+    "mobile": {
+      "props": {
+        "responsive": true,
+        "touch_friendly": true
+      },
+      "outputclass": "mobile-content",
+      "scale": "fit-viewport"
+    }
+  },
+  "analytics_metadata": {
+    "props": {
+      "track_views": true,
+      "track_downloads": true,
+      "track_citations": true
+    },
+    "outputclass": "analytics-enabled"
+  },
+  "keyref_resolution": {
+    "scopes": ["local", "peer", "external"],
+    "fallback_order": [
+      "element_defaults",
+      "audience_metadata",
+      "distribution_metadata",
+      "global_defaults"
+    ],
+    "inheritance_rules": {
+      "props": "merge",
+      "outputclass": "append",
+      "other": "override"
+    }
+  },
+  "validation": {
+    "required_attributes": {
+      "image": ["alt", "src"],
+      "link": ["href"],
+      "xref": ["href"],
+      "media": ["src"]
+    },
+    "allowed_values": {
+      "placement": ["inline", "break"],
+      "align": ["left", "center", "right", "justify"],
+      "scalefit": ["yes", "no"],
+      "platform": ["all", "web", "mobile", "desktop", "print"],
+      "audience": ["general", "researcher", "student", "professional"]
+    }
+  }
+}

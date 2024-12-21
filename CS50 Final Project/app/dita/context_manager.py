@@ -34,7 +34,7 @@ from .utils.logger import DITALogger
 class ContextManager:
     """
     Mediates context relationships and content hierarchy.
-    Provides framework for contextual processing without enforcing processing rules.
+    Uses schema-based rules for validation and relationships.
     """
     def __init__(
         self,
@@ -50,8 +50,8 @@ class ContextManager:
         Args:
             event_manager: For event-based communication
             content_cache: For transient context storage
-            metadata_handler: For persistent context storage
-            config_manager: For accessing feature flags
+            metadata_handler: For persistent metadata storage
+            config_manager: For schema and rule access
             logger: For structured logging
         """
         # Core dependencies
@@ -67,204 +67,257 @@ class ContextManager:
         self._navigation_contexts: Dict[str, NavigationContext] = {}
 
         # Scope & hierarchy tracking
-        self._scope_registry: Dict[str, ContentScope] = {}
         self._hierarchy_paths: Dict[str, List[str]] = {}
 
-        # Initialize context rules
-        self._init_context_rules()
+        # Register for events
+        self._register_event_handlers()
 
-        # Context rules registry
-        self.CONTEXT_RULES = {
-            # Scientific Publication Context
-            "journal": {
-                "metadata_hierarchy": [
-                    "journal_metadata",  # Journal-level metadata
-                    "issue_metadata",    # Issue-specific
-                    "article_metadata",  # Article-level
-                    "section_metadata",  # Section-specific
-                    "content_metadata"   # Content-specific
-                ],
 
-                "content_relationships": {
-                    "article": {
-                        "required": ["abstract", "authors", "doi"],
-                        "optional": ["supplementary", "acknowledgments"],
-                        "allowed_children": ["section", "appendix", "references"],
-                        "allowed_parents": ["issue", "volume"]
-                    },
-                    "section": {
-                        "required": ["title"],
-                        "allowed_children": ["subsection", "paragraph", "figure"],
-                        "allowed_parents": ["article", "section"]
-                    }
-                },
-
-                "reuse_contexts": {
-                    "citation": {
-                        "scope": "global",
-                        "validation": ["doi", "authors", "year"],
-                        "required_metadata": ["citation_style", "reference_type"]
-                    },
-                    "equation": {
-                        "scope": "local",
-                        "validation": ["equation_id", "latex_content"],
-                        "required_metadata": ["equation_number", "reference_type"]
-                    }
-                },
-
-                "attribute_inheritance": {
-                    "audience": {
-                        "inherit": True,
-                        "override": "child",
-                        "valid_values": ["researcher", "student", "practitioner"]
-                    },
-                    "access_level": {
-                        "inherit": True,
-                        "override": "parent",
-                        "valid_values": ["public", "subscriber", "institution"]
-                    }
-                }
-            }
-        }
-
-        self.CONTENT_SCOPES = {
-            "local": {
-                "description": "Content valid within current topic",
-                "allows_external_refs": False
-            },
-            "map": {
-                "description": "Content valid within current map",
-                "allows_external_refs": True,
-                "requires_validation": True
-            },
-            "global": {
-                "description": "Content valid across all maps",
-                "allows_external_refs": True,
-                "requires_validation": True
-            }
-        }
 
 
     #########################
     # Core mediator methods #
     #########################
 
-    def _init_context_rules(self) -> None:
-            """Initialize context management rules."""
-            try:
-                # Register scopes
-                for scope_name, scope_info in self.CONTENT_SCOPES.items():
-                    self._scope_registry[scope_name] = ContentScope(scope_name)
-
-                # Log initialization
-                self.logger.debug("Context rules initialized successfully")
-
-            except Exception as e:
-                self.logger.error(f"Failed to initialize context rules: {str(e)}")
-                raise
-
-    def register_context(
-        self,
-        content_id: str,
-        context_type: str,
-        metadata: Dict[str, Any]
-    ) -> None:
-        """Register a new context with proper caching."""
+    def _register_event_handlers(self) -> None:
+        """Register for state change events to track context states."""
         try:
-            cache_key = f"context_{content_id}"
-
-            # Create structured context data
-            context_data = {
-                "type": context_type,
-                "metadata": metadata,
-                "registered_at": datetime.now().isoformat()
-            }
-
-            # Store in cache with required parameters
-            self.content_cache.set(
-                key=cache_key,
-                data=context_data,
-                element_type=ElementType.UNKNOWN,  # We'll use UNKNOWN since this is context data
-                phase=ProcessingPhase.DISCOVERY,   # Default to discovery phase
-                ttl=3600  # Cache for 1 hour
+            # Single event subscription for state changes
+            self.event_manager.subscribe(
+                EventType.STATE_CHANGE,
+                self._update_context_state
             )
 
-            # Store in metadata handler
-            self.metadata_handler.store_metadata(content_id, metadata)
+        except Exception as e:
+            self.logger.error(f"Error registering event handlers: {str(e)}")
+            raise
+
+    def _update_context_state(self, **event_data: Any) -> None:
+        """
+        Update context state based on event.
+
+        Args:
+            event_data: Event information including element_id and state
+        """
+        try:
+            element_id = event_data.get("element_id")
+            state_info = event_data.get("state_info")
+
+            if element_id and state_info:
+                context = self._active_contexts.get(element_id)
+                if context:
+                    context.state_info = state_info
 
         except Exception as e:
-            self.logger.error(f"Error registering context: {str(e)}")
-            raise
+            self.logger.error(f"Error updating context state: {str(e)}")
+
 
     def update_context(
         self,
         content_id: str,
         updates: Dict[str, Any]
     ) -> None:
-        """Update existing context with proper caching."""
+        """
+        Update existing context with metadata changes.
+
+        Args:
+            content_id: Content identifier
+            updates: Context updates to apply
+        """
         try:
-            cache_key = f"context_{content_id}"
+            # Get active context
+            context = self._active_contexts.get(content_id)
+            if not context:
+                self.logger.warning(f"No active context found for {content_id}")
+                return
 
-            # Get current context
-            current = self.get_context(content_id) or {}
+            # Update metadata
+            if metadata_updates := updates.get('metadata'):
+                # Store persistent metadata
+                self.metadata_handler.store_metadata(content_id, metadata_updates)
 
-            # Merge updates
-            current.update(updates)
+            # Update navigation context if provided
+            if nav_updates := updates.get('navigation'):
+                context.navigation.update(nav_updates)
 
-            # Update cache with required parameters
-            self.content_cache.set(
-                key=cache_key,
-                data=current,
-                element_type=ElementType.UNKNOWN,
-                phase=ProcessingPhase.DISCOVERY,
-                ttl=3600
+            # Update state if provided
+            if state_updates := updates.get('state'):
+                context.state_info.update(state_updates)
+
+            # Update scope if provided
+            if new_scope := updates.get('scope'):
+                context.scope = new_scope
+
+            # Emit state change event
+            self.event_manager.emit(
+                EventType.STATE_CHANGE,
+                element_id=content_id,
+                state_info=context.state_info
             )
-
-            # Update persistent storage
-            self.metadata_handler.store_metadata(content_id, current)
 
         except Exception as e:
             self.logger.error(f"Error updating context: {str(e)}")
             raise
 
+    def register_context(
+        self,
+        content_id: str,
+        element_type: ElementType,
+        metadata: Dict[str, Any]
+    ) -> None:
+        """
+        Register new context for content tracking.
 
-    def get_context(self, content_id: str) -> Dict[str, Any]:
-       """Get context with proper caching and metadata handling."""
-       try:
-           cache_key = f"context_{content_id}"
+        Args:
+            content_id: Content identifier
+            element_type: Type of element
+            metadata: Initial metadata
+        """
+        try:
+            # Create processing context
+            context = ProcessingContext(
+                context_id=content_id,
+                element_id=content_id,
+                element_type=element_type,
+                state_info=ProcessingStateInfo(
+                    phase=ProcessingPhase.DISCOVERY,
+                    state=ProcessingState.PENDING,
+                    element_id=content_id
+                ),
+                navigation=NavigationContext(
+                    path=[],
+                    level=0,
+                    sequence=0,
+                    parent_id=None,
+                    root_map=content_id
+                ),
+                scope=ContentScope.LOCAL
+            )
 
-           # Check cache first
-           if cached := self.content_cache.get(cache_key):
-               return cached
+            # Store context
+            self._active_contexts[content_id] = context
 
-           # Get from metadata storage using store_metadata method
-           # Note: We'll use store_metadata since get_metadata isn't defined
-           context = {}
-           try:
-               with self.metadata_handler.transaction(content_id) as txn:
-                   context = txn.updates  # Get current metadata state
-           except Exception as e:
-               self.logger.warning(f"Could not retrieve metadata for {content_id}: {str(e)}")
+            # Store metadata
+            self.metadata_handler.store_metadata(content_id, metadata)
 
-           # Get parent context if exists
-           if parent_id := self._hierarchy_paths.get(content_id, [None])[0]:
-               parent_context = self.get_context(parent_id)
-               context = self._merge_contexts(parent_context, context)
+            # Emit event
+            self.event_manager.emit(
+                EventType.STATE_CHANGE,
+                element_id=content_id,
+                state_info=context.state_info
+            )
 
-           # Cache result with required parameters
-           self.content_cache.set(
-               key=cache_key,
-               data=context,
-               element_type=ElementType.UNKNOWN,
-               phase=ProcessingPhase.DISCOVERY,
-               ttl=3600
-           )
+        except Exception as e:
+            self.logger.error(f"Error registering context: {str(e)}")
+            raise
 
-           return context
+    def register_relationship(
+        self,
+        source_id: str,
+        target_id: str,
+        relation_type: ContentRelationType
+    ) -> None:
+        """
+        Register relationship between content elements.
 
-       except Exception as e:
-           self.logger.error(f"Error getting context: {str(e)}")
-           return {}
+        Args:
+            source_id: Source content identifier
+            target_id: Target content identifier
+            relation_type: Type of relationship
+        """
+        try:
+            # Create relationship
+            relationship = ContentRelationship(
+                source_id=source_id,
+                target_id=target_id,
+                relation_type=relation_type,
+                scope=self._determine_scope(source_id, target_id)
+            )
+
+            # Store relationship
+            if source_id not in self._content_relationships:
+                self._content_relationships[source_id] = []
+            self._content_relationships[source_id].append(relationship)
+
+        except Exception as e:
+            self.logger.error(f"Error registering relationship: {str(e)}")
+            raise
+
+    def _determine_scope(self, source_id: str, target_id: str) -> ContentScope:
+        """
+        Determine scope based on content relationship.
+
+        Args:
+            source_id: Source content identifier
+            target_id: Target content identifier
+
+        Returns:
+            ContentScope: Determined scope
+        """
+        try:
+            source_context = self._active_contexts.get(source_id)
+            target_context = self._active_contexts.get(target_id)
+
+            if not source_context or not target_context:
+                return ContentScope.LOCAL
+
+            # Same map = local scope
+            if source_context.navigation.root_map == target_context.navigation.root_map:
+                return ContentScope.LOCAL
+
+            # External link = external scope
+            if target_context.navigation.root_map.startswith(('http://', 'https://')):
+                return ContentScope.EXTERNAL
+
+            # Default to peer scope
+            return ContentScope.PEER
+
+        except Exception as e:
+            self.logger.error(f"Error determining scope: {str(e)}")
+            return ContentScope.LOCAL
+
+    def get_relationships(
+        self,
+        content_id: str,
+        relation_type: Optional[ContentRelationType] = None
+    ) -> List[ContentRelationship]:
+        """
+        Get relationships for content.
+
+        Args:
+            content_id: Content to get relationships for
+            relation_type: Optional type to filter by
+
+        Returns:
+            List of relationships
+        """
+        try:
+            relationships = self._content_relationships.get(content_id, [])
+
+            if relation_type:
+                relationships = [
+                    rel for rel in relationships
+                    if rel.relation_type == relation_type
+                ]
+
+            return relationships
+
+        except Exception as e:
+            self.logger.error(f"Error getting relationships: {str(e)}")
+            return []
+
+    def get_context(self, content_id: str) -> Optional[ProcessingContext]:
+        """
+        Get active context for content.
+
+        Args:
+            content_id: Content identifier
+
+        Returns:
+            Optional[ProcessingContext]: Active context if found
+        """
+        return self._active_contexts.get(content_id)
+
 
     def invalidate_context(self, content_id: str) -> None:
         """
@@ -355,66 +408,7 @@ class ContextManager:
     # Relationship management #
     ##########################
 
-    def register_relationship(
-        self,
-        source_id: str,
-        target_id: str,
-        relationship_type: ContentRelationType,
-        scope: Optional[ContentScope] = None,
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> None:
-        """
-        Register a relationship between content elements.
 
-        Args:
-            source_id: Source content identifier
-            target_id: Target content identifier
-            relationship_type: Type of relationship
-            scope: Optional relationship scope (defaults to LOCAL)
-            metadata: Optional relationship metadata
-        """
-        try:
-            # Validate the relationship first
-            if not self.validate_relationship(source_id, target_id):
-                raise ValueError(f"Invalid relationship between {source_id} and {target_id}")
-
-            # Create relationship object
-            relationship = ContentRelationship(
-                source_id=source_id,
-                target_id=target_id,
-                relation_type=relationship_type,
-                scope=scope or ContentScope.LOCAL,
-                metadata=metadata or {}
-            )
-
-            # Add to relationships registry
-            if source_id not in self._content_relationships:
-                self._content_relationships[source_id] = []
-            self._content_relationships[source_id].append(relationship)
-
-            # Store relationship in metadata handler
-            self.metadata_handler.store_content_relationships(
-                source_id,
-                [{
-                    'target_id': target_id,
-                    'type': relationship_type.value,
-                    'scope': relationship.scope.value,
-                    'metadata': relationship.metadata
-                }]
-            )
-
-            # Invalidate related caches
-            self.content_cache.invalidate_pattern(f"context_{source_id}")
-            self.content_cache.invalidate_pattern(f"context_{target_id}")
-
-            self.logger.debug(
-                f"Registered relationship: {source_id} -> {target_id} "
-                f"({relationship_type.value})"
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error registering relationship: {str(e)}")
-            raise
 
     def validate_relationship(self, source_id: str, target_id: str) -> bool:
         """
@@ -728,270 +722,6 @@ class ContextManager:
     # Validation management #
     #########################
 
-    def validate_content_relationship(
-        self,
-        source: str,
-        target: str,
-        relationship_type: ContentRelationType
-    ) -> bool:
-        """
-        Validate relationships between content elements considering context and type.
-
-        Args:
-            source: Source content identifier
-            target: Target content identifier
-            relationship_type: Type of relationship to validate
-
-        Returns:
-            bool: True if relationship is valid for the content context
-        """
-        try:
-            # Get contexts
-            source_context = self._active_contexts.get(source)
-            target_context = self._active_contexts.get(target)
-
-            if not source_context or not target_context:
-                self.logger.warning(f"Missing context for relationship validation: {source} -> {target}")
-                return False
-
-            # Define valid relationship rules for scientific content
-            valid_relationships = {
-                ContentRelationType.PREREQ: {
-                    # Source -> Target allowed combinations
-                    (ElementType.TOPIC, ElementType.TOPIC): True,  # Topic can require another topic
-                    (ElementType.MAP, ElementType.MAP): True,      # Map can require another map
-                    (ElementType.TOPIC, ElementType.MAP): False,   # Topic cannot require an entire map
-                    (ElementType.MAP, ElementType.TOPIC): True     # Map can require specific topics
-                },
-                ContentRelationType.RELATED: {
-                    # Allow related content between similar types
-                    (ElementType.TOPIC, ElementType.TOPIC): True,
-                    (ElementType.MAP, ElementType.MAP): True,
-                    (ElementType.TOPIC, ElementType.MAP): True,
-                    (ElementType.MAP, ElementType.TOPIC): True
-                },
-                ContentRelationType.REFERENCE: {
-                    # References have more lenient rules
-                    (ElementType.TOPIC, ElementType.TOPIC): True,
-                    (ElementType.MAP, ElementType.MAP): True,
-                    (ElementType.TOPIC, ElementType.MAP): True,
-                    (ElementType.MAP, ElementType.TOPIC): True
-                }
-            }
-
-            # Check if relationship type is valid for the element types
-            type_pair = (source_context.element_type, target_context.element_type)
-            if not valid_relationships.get(relationship_type, {}).get(type_pair, False):
-                self.logger.warning(
-                    f"Invalid relationship type {relationship_type} "
-                    f"for {type_pair[0]} -> {type_pair[1]}"
-                )
-                return False
-
-            # Validate scope compatibility
-            scope_rules = {
-                ContentScope.LOCAL: {ContentScope.LOCAL, ContentScope.PEER},
-                ContentScope.PEER: {ContentScope.LOCAL, ContentScope.PEER},
-                ContentScope.EXTERNAL: {ContentScope.LOCAL, ContentScope.PEER, ContentScope.EXTERNAL},
-                ContentScope.GLOBAL: {ContentScope.LOCAL, ContentScope.PEER, ContentScope.EXTERNAL, ContentScope.GLOBAL}
-            }
-
-            if target_context.scope not in scope_rules.get(source_context.scope, set()):
-                self.logger.warning(
-                    f"Invalid scope relationship: {source_context.scope} -> {target_context.scope}"
-                )
-                return False
-
-            # Check for circular references
-            if self._has_circular_reference(source, target):
-                self.logger.warning(f"Circular reference detected: {source} -> {target}")
-                return False
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error validating content relationship: {str(e)}")
-            return False
-
-    def validate_attribute_inheritance(
-        self,
-        content_id: str,
-        attribute: str
-    ) -> bool:
-        """
-        Validate attribute inheritance based on context hierarchy.
-
-        Args:
-            content_id: Content identifier
-            attribute: Attribute to validate
-
-        Returns:
-            bool: True if attribute inheritance is valid
-        """
-        try:
-            # Get current context
-            context = self._active_contexts.get(content_id)
-            if not context:
-                return False
-
-            # Define attribute inheritance rules for scientific content
-            inheritance_rules = {
-                "audience": {
-                    "inheritable": True,
-                    "override_allowed": True,
-                    "valid_values": {"researchers", "students", "practitioners"},
-                    "scope": ContentScope.LOCAL
-                },
-                "distribution": {
-                    "inheritable": True,
-                    "override_allowed": False,
-                    "valid_values": {"public", "private", "institutional"},
-                    "scope": ContentScope.GLOBAL
-                },
-                "review_status": {
-                    "inheritable": False,
-                    "override_allowed": True,
-                    "valid_values": {"draft", "peer_review", "published"},
-                    "scope": ContentScope.LOCAL
-                },
-                "publication_state": {
-                    "inheritable": True,
-                    "override_allowed": False,
-                    "valid_values": {"preprint", "published", "retracted"},
-                    "scope": ContentScope.GLOBAL
-                }
-            }
-
-            # Check if attribute is defined in rules
-            if attribute not in inheritance_rules:
-                self.logger.warning(f"Unknown attribute for inheritance: {attribute}")
-                return False
-
-            # Get attribute rules
-            rules = inheritance_rules[attribute]
-
-            # Check if attribute is inheritable
-            if not rules["inheritable"]:
-                return False
-
-            # Check scope compatibility
-            if context.scope != rules["scope"]:
-                return False
-
-            # If attribute allows override, we don't need to check parent
-            if rules["override_allowed"]:
-                return True
-
-            # If no override allowed, check if parent has the attribute
-            parent_id = context.navigation.parent_id
-            if parent_id:
-                parent_context = self._active_contexts.get(parent_id)
-                if parent_context:
-                    parent_value = parent_context.metadata_refs.get(attribute)
-                    if parent_value and parent_value not in rules["valid_values"]:
-                        return False
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error validating attribute inheritance: {str(e)}")
-            return False
-
-    def validate_reuse_context(
-        self,
-        content_id: str,
-        reuse_type: str
-    ) -> bool:
-        """
-        Validate content reuse based on type and context.
-
-        Args:
-            content_id: Content identifier
-            reuse_type: Type of content reuse (e.g., 'conref', 'keyref')
-
-        Returns:
-            bool: True if reuse is valid in current context
-        """
-        try:
-            context = self._active_contexts.get(content_id)
-            if not context:
-                return False
-
-            # Define reuse rules for scientific content
-            reuse_rules = {
-                "conref": {
-                    "allowed_scopes": {ContentScope.LOCAL, ContentScope.PEER},
-                    "allowed_elements": {
-                        ElementType.TOPIC: {
-                            "sections": ["abstract", "methodology", "results", "discussion"],
-                            "max_depth": 2
-                        },
-                        ElementType.MAP: {
-                            "sections": ["front_matter", "back_matter"],
-                            "max_depth": 1
-                        }
-                    },
-                    "requires_citation": True
-                },
-                "keyref": {
-                    "allowed_scopes": {ContentScope.LOCAL, ContentScope.PEER, ContentScope.GLOBAL},
-                    "allowed_elements": {
-                        ElementType.TOPIC: {
-                            "sections": ["all"],
-                            "max_depth": None
-                        },
-                        ElementType.MAP: {
-                            "sections": ["all"],
-                            "max_depth": None
-                        }
-                    },
-                    "requires_citation": False
-                }
-            }
-
-            # Check if reuse type is supported
-            if reuse_type not in reuse_rules:
-                self.logger.warning(f"Unsupported reuse type: {reuse_type}")
-                return False
-
-            rules = reuse_rules[reuse_type]
-
-            # Validate scope
-            if context.scope not in rules["allowed_scopes"]:
-                self.logger.warning(
-                    f"Invalid scope for {reuse_type}: {context.scope}"
-                )
-                return False
-
-            # Get element rules
-            element_rules = rules["allowed_elements"].get(context.element_type)
-            if not element_rules:
-                return False
-
-            # Check section constraints
-            current_section = context.metadata_refs.get("section")
-            if current_section and "all" not in element_rules["sections"]:
-                if current_section not in element_rules["sections"]:
-                    return False
-
-            # Check depth constraints
-            if element_rules["max_depth"] is not None:
-                current_depth = len(self.get_content_path(content_id))
-                if current_depth > element_rules["max_depth"]:
-                    return False
-
-            # Check citation requirement
-            if rules["requires_citation"]:
-                has_citation = bool(context.metadata_refs.get("citation"))
-                if not has_citation:
-                    return False
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error validating reuse context: {str(e)}")
-            return False
-
 
 
 
@@ -1102,3 +832,18 @@ class ContextManager:
 
         except Exception as e:
             self.logger.error(f"Error updating child levels: {str(e)}")
+
+
+
+    def cleanup(self) -> None:
+        """Clean up manager resources."""
+        try:
+            self._active_contexts.clear()
+            self._content_relationships.clear()
+            self._navigation_contexts.clear()
+            self._hierarchy_paths.clear()
+            self.logger.debug("Context manager cleanup completed")
+
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {str(e)}")
+            raise

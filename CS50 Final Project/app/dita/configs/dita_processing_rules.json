@@ -1,0 +1,302 @@
+{
+  "version": "1.0",
+  "description": "DITA-specific processing rules for element transformation",
+  "element_rules": {
+    "structure": {
+      "concept": {
+        "html_tag": "article",
+        "default_classes": ["dita-concept", "article-content"],
+        "attributes": {
+          "role": "article"
+        },
+        "content_wrapper": {
+          "tag": "div",
+          "classes": ["concept-content"]
+        }
+      },
+      "task": {
+        "html_tag": "article",
+        "default_classes": ["dita-task", "article-content"],
+        "attributes": {
+          "role": "article"
+        },
+        "content_wrapper": {
+          "tag": "div",
+          "classes": ["task-content"]
+        }
+      },
+      "reference": {
+        "html_tag": "article",
+        "default_classes": ["dita-reference", "article-content"],
+        "attributes": {
+          "role": "article"
+        },
+        "content_wrapper": {
+          "tag": "div",
+          "classes": ["reference-content"]
+        }
+      }
+    },
+    "block": {
+      "section": {
+        "html_tag": "section",
+        "default_classes": ["dita-section"],
+        "attributes": {
+          "role": "region"
+        }
+      },
+      "paragraph": {
+        "html_tag": "p",
+        "default_classes": ["dita-p"]
+      },
+      "note": {
+        "html_tag": "div",
+        "default_classes": ["dita-note", "alert"],
+        "type_class_mapping": {
+          "warning": "alert-warning",
+          "danger": "alert-danger",
+          "tip": "alert-info",
+          "note": "alert-secondary"
+        },
+        "attributes": {
+          "role": "alert"
+        }
+      },
+      "code_block": {
+        "html_tag": "pre",
+        "default_classes": ["code-block", "highlight"],
+        "attributes": {
+          "spellcheck": "false",
+          "translate": "no"
+        },
+        "inner": {
+          "tag": "code",
+          "classes": ["language-{outputclass}"]
+        }
+      }
+    },
+    "lists": {
+      "unordered": {
+        "html_tag": "ul",
+        "default_classes": ["dita-ul"]
+      },
+      "ordered": {
+        "html_tag": "ol",
+        "default_classes": ["dita-ol"]
+      },
+      "item": {
+        "html_tag": "li",
+        "default_classes": ["dita-li"]
+      }
+    },
+    "tables": {
+      "base": {
+        "html_tag": "table",
+        "default_classes": ["table", "table-bordered"],
+        "attributes": {
+          "role": "grid",
+          "aria-label": "Content Table"
+        }
+      }
+    },
+    "media": {
+      "figure": {
+        "html_tag": "figure",
+        "default_classes": ["figure", "dita-figure"],
+        "inner": {
+          "tag": "figcaption",
+          "classes": ["figure-caption"]
+        }
+      },
+      "image": {
+        "html_tag": "img",
+        "default_classes": ["img-fluid", "dita-image"],
+        "required_attributes": ["src"],
+        "attribute_mapping": {
+          "href": "src",
+          "alt": "alt"
+        },
+        "attributes": {
+          "loading": "lazy",
+          "decoding": "async"
+        }
+      }
+    },
+    "links": {
+      "xref": {
+        "html_tag": "a",
+        "default_classes": ["dita-xref"],
+        "required_attributes": ["href"],
+        "attribute_mapping": {
+          "href": "href",
+          "scope": "data-scope",
+          "format": "data-format"
+        },
+        "attributes": {
+          "target": "_self",
+          "rel": "noopener"
+        }
+      },
+      "link": {
+        "html_tag": "a",
+        "default_classes": ["dita-link"],
+        "required_attributes": ["href"],
+        "attribute_mapping": {
+          "href": "href",
+          "scope": "data-scope",
+          "format": "data-format"
+        },
+        "attributes": {
+          "target": "_blank",
+          "rel": "noopener noreferrer"
+        }
+      }
+    },
+    "headings": {
+      "title": {
+        "html_tag": "h1",
+        "default_classes": ["dita-title"]
+      },
+      "shortdesc": {
+        "html_tag": "p",
+        "default_classes": ["lead", "dita-shortdesc"]
+      }
+    },
+    "task_elements": {
+      "prereq": {
+        "html_tag": "div",
+        "default_classes": ["prerequisites", "alert", "alert-warning"],
+        "attributes": {
+          "role": "alert"
+        }
+      },
+      "steps": {
+        "html_tag": "div",
+        "default_classes": ["steps-container"]
+      },
+      "step": {
+        "html_tag": "div",
+        "default_classes": ["step"],
+        "content_wrapper": {
+          "tag": "div",
+          "classes": ["step-content"]
+        }
+      },
+      "cmd": {
+        "html_tag": "div",
+        "default_classes": ["command"]
+      },
+      "info": {
+        "html_tag": "div",
+        "default_classes": ["step-info"]
+      },
+      "substep": {
+        "html_tag": "div",
+        "default_classes": ["substep"]
+      },
+      "substeps": {
+        "html_tag": "div",
+        "default_classes": ["substeps-container"]
+      }
+    },
+    "inline": {
+      "bold": {
+        "html_tag": "strong",
+        "default_classes": ["dita-b"]
+      },
+      "italic": {
+        "html_tag": "em",
+        "default_classes": ["dita-i"]
+      },
+      "underline": {
+        "html_tag": "u",
+        "default_classes": ["dita-u"]
+      },
+      "phrase": {
+        "html_tag": "span",
+        "default_classes": ["dita-ph"]
+      },
+      "quote": {
+        "html_tag": "blockquote",
+        "default_classes": ["dita-quote"]
+      },
+      "cite": {
+        "html_tag": "cite",
+        "default_classes": ["dita-cite"]
+      }
+    },
+    "definition": {
+      "dlentry": {
+        "html_tag": "dl",
+        "default_classes": ["dita-dlentry"]
+      },
+      "term": {
+        "html_tag": "dt",
+        "default_classes": ["dita-dt"]
+      }
+    },
+    "metadata": {
+      "section": {
+        "html_tag": "div",
+        "default_classes": ["metadata-section"],
+        "attributes": {
+          "aria-hidden": "true"
+        }
+      }
+    },
+    "navigation": {
+      "topicref": {
+        "html_tag": "div",
+        "default_classes": ["topic-ref"]
+      },
+      "topicgroup": {
+        "html_tag": "div",
+        "default_classes": ["topic-group"]
+      }
+    },
+    "default": {
+      "unknown": {
+        "html_tag": "div",
+        "default_classes": ["dita-unknown"]
+      }
+    }
+  },
+  "element_type_mapping": {
+    "concept": "structure.concept",
+    "task": "structure.task",
+    "reference": "structure.reference",
+    "section": "block.section",
+    "p": "block.paragraph",
+    "note": "block.note",
+    "codeblock": "block.code_block",
+    "ul": "lists.unordered",
+    "ol": "lists.ordered",
+    "li": "lists.item",
+    "table": "tables.base",
+    "fig": "media.figure",
+    "image": "media.image",
+    "xref": "links.xref",
+    "link": "links.link",
+    "title": "headings.title",
+    "shortdesc": "headings.shortdesc",
+    "prereq": "task_elements.prereq",
+    "steps": "task_elements.steps",
+    "step": "task_elements.step",
+    "cmd": "task_elements.cmd",
+    "info": "task_elements.info",
+    "substep": "task_elements.substep",
+    "substeps": "task_elements.substeps",
+    "b": "inline.bold",
+    "i": "inline.italic",
+    "u": "inline.underline",
+    "ph": "inline.phrase",
+    "q": "inline.quote",
+    "cite": "inline.cite",
+    "dlentry": "definition.dlentry",
+    "dt": "definition.term",
+    "metadata": "metadata.section",
+    "topicref": "navigation.topicref",
+    "topicgroup": "navigation.topicgroup",
+    "unknown": "default.unknown"
+  }
+}

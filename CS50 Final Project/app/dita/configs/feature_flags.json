@@ -1,0 +1,168 @@
+{
+  "version": "1.0",
+  "description": "Feature flags configuration for scientific publishing",
+  "features": {
+    "presentation": {
+      "show_toc": {
+        "enabled": true,
+        "description": "Include a Table of Contents",
+        "type": "boolean"
+      },
+      "show_flyout": {
+        "enabled": true,
+        "description": "Toggle floating flyout menu",
+        "type": "boolean"
+      },
+      "index_numbers": {
+        "enabled": true,
+        "config": {
+          "format": {
+            "options": ["numeric", "alpha", "roman", "arabic", "none"],
+            "default": "numeric"
+          }
+        },
+        "type": "complex"
+      },
+      "citation_format": {
+        "value": "Chicago",
+        "options": ["APA", "MLA", "Chicago", "IEEE"],
+        "type": "enum"
+      },
+      "pdf_download": {
+        "enabled": false,
+        "value": null,
+        "type": "string"
+      },
+      "image_version": {
+        "value": "light",
+        "options": ["light", "dark"],
+        "type": "enum"
+      },
+      "footnotes": {
+        "value": "endnotes",
+        "options": ["footnotes", "endnotes"],
+        "type": "enum"
+      },
+      "navigation": {
+        "enabled": true,
+        "type": "boolean"
+      },
+      "tooltips": {
+        "enabled": true,
+        "type": "boolean"
+      }
+    },
+    "enrichment": {
+      "latex": {
+        "enabled": true,
+        "highlight": false,
+        "type": "boolean"
+      },
+      "artifacts": {
+        "enabled": true,
+        "type": "boolean"
+      },
+      "media": {
+        "enabled": true,
+        "type": "boolean"
+      },
+      "code_highlight": {
+        "enabled": true,
+        "type": "boolean"
+      }
+    },
+    "relationships": {
+      "content_reuse": {
+        "enabled": true,
+        "type": "boolean"
+      },
+      "cross_references": {
+        "enabled": true,
+        "type": "boolean"
+      },
+      "anchor_links": {
+        "enabled": true,
+        "config": {
+          "format": {
+            "options": ["pilcrow", "section", "hash", "custom", "none"],
+            "default": "pilcrow"
+          }
+        },
+        "type": "complex"
+      },
+      "related_topics": {
+        "enabled": true,
+        "type": "boolean"
+      }
+    },
+    "conditional_rendering": {
+      "audience": {
+        "value": "Professional",
+        "options": ["Professional", "Research", "Students"],
+        "type": "enum"
+      },
+      "platform": {
+        "value": "desktop",
+        "options": ["desktop", "mobile", "pdf"],
+        "type": "enum"
+      },
+      "region": {
+        "value": "US",
+        "type": "string"
+      },
+      "language": {
+        "value": "en",
+        "type": "string"
+      }
+    },
+    "publication": {
+      "journal_name": {
+        "value": "Engineering Weekly",
+        "type": "string"
+      },
+      "show_doi": {
+        "enabled": true,
+        "type": "boolean"
+      },
+      "keywords": {
+        "enabled": false,
+        "type": "boolean"
+      },
+      "categories": {
+        "value": "Acoustic Space",
+        "type": "string"
+      }
+    },
+    "analytics": {
+      "track_views": {
+        "enabled": true,
+        "type": "boolean"
+      },
+      "popularity_ranking": {
+        "enabled": false,
+        "type": "boolean"
+      },
+      "metrics": {
+        "enabled": false,
+        "type": "boolean"
+      }
+    },
+    "accessibility": {
+      "enabled": false,
+      "type": "boolean"
+    },
+    "customization": {
+      "custom_styles": {
+        "value": null,
+        "type": "string"
+      }
+    },
+    "subscription": {
+      "level": {
+        "value": "free",
+        "options": ["free", "premium", "enterprise"],
+        "type": "enum"
+      }
+    }
+  }
+}
