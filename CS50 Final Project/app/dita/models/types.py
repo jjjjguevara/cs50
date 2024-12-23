@@ -488,6 +488,19 @@ class ProcessingContext:
     # Metadata access (references, not storage)
     metadata_refs: Dict[str, str] = field(default_factory=dict)
 
+    def get(self, key: str, default: Any = None) -> Any:
+            """Get context attribute with fallback."""
+            return getattr(self, key, default)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert context to dictionary for validation."""
+        return {
+            'pipeline_features': self.features.get('pipeline', {}),
+            'content_type': self.element_type.value,
+            'component': self.metadata_refs.get('component'),
+            'features': self.features
+        }
+
     def update_state(
         self,
         new_phase: Optional[ProcessingPhase] = None,

@@ -29,7 +29,8 @@ from .models.types import (
     ProcessorConfig,
     ValidationResult,
     ValidationMessage,
-    ValidationSeverity
+    ValidationSeverity,
+    ProcessingContext,
 )
 
 # Import handlers we'll integrate with
@@ -191,11 +192,13 @@ class ConfigManager:
 
     def __init__(
         self,
-        event_manager: EventManager,
-        context_manager: ContextManager,
         metadata_handler: MetadataHandler,
-        id_handler: DITAIDHandler,
+        context_manager: ContextManager,
         content_cache: ContentCache,
+        event_manager: EventManager,
+        id_handler: DITAIDHandler,
+        env: Optional[str] = None,
+        config_path: Optional[Union[str, Path]] = None,
         logger: Optional[DITALogger] = None,
     ):
         """
@@ -218,7 +221,7 @@ class ConfigManager:
         self.metadata_handler = metadata_handler
         self.content_cache = content_cache
         self.id_handler = id_handler or DITAIDHandler()
-        self.config_path = config_path or Path("config")
+        self.config_path = Path(config_path) if config_path else Path(__file__).parent / "configs"
         self.cache = ContentCache()
 
 
@@ -228,10 +231,6 @@ class ConfigManager:
 
         # Cache for resolved configurations
         self._config_cache: Dict[str, Any] = {}
-
-        # Register for configuration events
-        self._register_event_handlers()
-
 
         # Initialize configuration stores
         self._env_config: Dict[str, Any] = {}
@@ -262,6 +261,13 @@ class ConfigManager:
         self._state = ConfigState(
             environment=self.environment,
             last_updated=datetime.now()
+        )
+
+
+        # Register for events
+        self.event_manager.subscribe(
+            EventType.STATE_CHANGE,
+            self._handle_config_change
         )
 
         # Track initialization
@@ -633,38 +639,29 @@ class ConfigManager:
     def _load_config_files(self) -> None:
         """Load configuration files from config directory."""
         try:
-            config_dir = self.config_path / "configs"
-
             # Load feature flags
-            with open(config_dir / "feature_flags.json") as f:
+            with open(self.config_path / "feature_flags.json") as f:
                 self._feature_registry = json.load(f)["features"]
 
             # Load processing rules
-            with open(config_dir / "processing_rules.json") as f:
+            with open(self.config_path / "processing_rules.json") as f:
                 self._rule_registry = json.load(f)["rules"]
 
             # Load DITA processing rules
-            with open(config_dir / "dita_processing_rules.json") as f:
+            with open(self.config_path / "dita_processing_rules.json") as f:
                 dita_config = json.load(f)
                 self._dita_rules = dita_config["element_rules"]
                 self._dita_type_mapping = dita_config["element_type_mapping"]
 
             # Load validation patterns
-            with open(config_dir / "validation_patterns.json") as f:
+            with open(self.config_path / "validation_patterns.json") as f:
                 patterns_config = json.load(f)
-                self.validation_patterns = {
-                    k: v["pattern"]
-                    for k, v in patterns_config["patterns"].items()
-                }
+                self.validation_patterns = patterns_config["patterns"]
                 self.default_metadata = patterns_config["default_metadata"]
 
             # Load keyref configuration
-            with open(config_dir / "keyref_config.json") as f:
-                keyref_config = json.load(f)
-                self._keyref_config = keyref_config
-                self._processing_hierarchy = keyref_config["processing_hierarchy"]["order"]
-                self._global_defaults = keyref_config["global_defaults"]
-                self._element_defaults = keyref_config["element_defaults"]
+            with open(self.config_path / "keyref_config.json") as f:
+                self._keyref_config = json.load(f)
 
             self.logger.info("Successfully loaded configuration files")
 
@@ -713,38 +710,26 @@ class ConfigManager:
             if cache_key in self._config_cache:
                 return self._config_cache[cache_key]
 
-            # Get component config file
-            config_file = self.config_path / "components" / f"{component}.yml"
-            if not config_file.exists():
-                raise FileNotFoundError(f"Component config not found: {config_file}")
+            component_config = {}
+            for section in ["rules", "features", "metadata"]:
+                section_path = self.config_path / f"{component}_{section}.json"
+                if section_path.exists():
+                    with open(section_path) as f:
+                        component_config[section] = json.load(f)
 
-            # Load component config
-            with open(config_file, 'r') as f:
-                component_config = yaml.safe_load(f)
-
-            # Apply environment-specific overrides
-            env_overrides = self._env_config.get('components', {}).get(component, {})
-            if env_overrides:
-                component_config = self._deep_merge(component_config, env_overrides)
-
-            # Validate component config
-            if not self.validate_config(component_config):
+            # Validate against schema
+            if not self.validate_config(component_config, ElementType.UNKNOWN):
                 raise ValueError(f"Invalid configuration for component: {component}")
-
-            # Store in component registry
-            self._component_config[component] = component_config
 
             # Cache the result
             self._config_cache[cache_key] = component_config
 
             self.logger.debug(f"Loaded configuration for component: {component}")
-
             return component_config
 
         except Exception as e:
             self.logger.error(f"Failed to load component config {component}: {str(e)}")
-            raise
-
+            return {}
 
     def update_config(self, updates: Dict[str, Any]) -> bool:
         """
@@ -845,12 +830,17 @@ class ConfigManager:
 
     def _load_base_config(self) -> Dict[str, Any]:
         """Load base configuration."""
-        base_config_file = self.config_path / "base.yml"
-        if not base_config_file.exists():
-            return {}
+        try:
+            base_config_path = self.config_path / "base.yml"
+            if not base_config_path.exists():
+                return {}
 
-        with open(base_config_file, 'r') as f:
-            return yaml.safe_load(f)
+            with base_config_path.open('r') as f:
+                return yaml.safe_load(f) or {}
+
+        except Exception as e:
+            self.logger.error(f"Error loading base config: {str(e)}")
+            return {}
 
 
     def _apply_env_overrides(self) -> None:
@@ -1392,44 +1382,34 @@ class ConfigManager:
             self.logger.error(f"Failed to update feature {name}: {str(e)}")
             raise
 
-    def get_effective_features(self, context_id: str) -> Dict[str, bool]:
-        """Get effective feature states for a given context."""
+    def get_effective_features(
+        self,
+        context: ProcessingContext
+    ) -> Dict[str, bool]:
+        """
+        Get effective feature states for context.
+
+        Args:
+            context: Processing context
+
+        Returns:
+            Dict[str, bool]: Effective feature states
+        """
         try:
-            if not self.context_manager:
-                return {name: feature.default for name, feature in self._feature_registry.items()}
+            context_dict = context.to_dict()
+            effective_features = {}
 
-            # Get context
-            context = self.context_manager.get_context(context_id)
-            if not context:
-                return {}
-
-            # Start with global features
-            effective_features: Dict[str, bool] = {}
-
-            for name, feature in self._feature_registry.items():
+            for feature_name, feature_def in self._attribute_schema["feature_definitions"].items():
                 # Get base state
-                state = self.get_feature_state(name)
+                base_state = feature_def.get("default", False)
 
-                # Apply scope-based rules
-                if feature.scope == FeatureScope.GLOBAL:
-                    effective_features[name] = state
-                elif feature.scope == FeatureScope.PIPELINE:
-                    pipeline_features = context.get('pipeline_features', {})
-                    effective_features[name] = pipeline_features.get(name, state)
-                elif feature.scope == FeatureScope.CONTENT:
-                    content_type = context.get('content_type')
-                    if content_type:
-                        content_features = self._get_content_type_features(content_type)
-                        effective_features[name] = content_features.get(name, state)
-                elif feature.scope == FeatureScope.COMPONENT:
-                    component = context.get('component')
-                    if component:
-                        component_features = (
-                            self._component_config
-                            .get(component, {})
-                            .get('features', {})
-                        )
-                        effective_features[name] = component_features.get(name, state)
+                # Apply context overrides
+                if feature_overrides := context_dict.get("features", {}):
+                    if feature_name in feature_overrides:
+                        base_state = feature_overrides[feature_name]
+
+                # Store effective state
+                effective_features[feature_name] = base_state
 
             return effective_features
 
@@ -1536,57 +1516,29 @@ class ConfigManager:
     def get_processing_rules(
         self,
         element_type: ElementType,
-        rule_types: Optional[List[ProcessingRuleType]] = None,
-        context_id: Optional[str] = None
+        context: Optional[ProcessingContext] = None
     ) -> Dict[str, Any]:
-        """Get applicable processing rules for an element type."""
+        """
+        Get processing rules for element type and context.
+
+        Args:
+            element_type: Element type to get rules for
+            context: Optional processing context
+
+        Returns:
+            Dict[str, Any]: Processing rules
+        """
         try:
-            # Generate cache key
-            rule_types_str = '_'.join(rt.value for rt in (rule_types or []))
-            cache_key = f"rules_{element_type.value}_{rule_types_str}"
+            # Get base rules
+            base_rules = self._attribute_schema["processing"].get(element_type.value, {})
 
-            # Check cache if no context needed
-            if not context_id:
-                if cached := self._config_cache.get(cache_key):
-                    return cached
+            # Apply context rules if provided
+            if context:
+                context_dict = context.to_dict()
+                if context_rules := context_dict.get("processing_rules", {}):
+                    base_rules = self._deep_merge(base_rules, context_rules)
 
-            # Get context if provided
-            context = None
-            if context_id and self.context_manager:
-                context = self.context_manager.get_context(context_id)
-
-            # Get all applicable rule types if none specified
-            if not rule_types:
-                rule_types = list(ProcessingRuleType)
-
-            applicable_rules: Dict[str, Any] = {}
-
-            # Collect rules from element type index
-            for rule_type in rule_types:
-                rule_type_str = rule_type.value
-                if (element_type in self._element_rule_index and
-                    rule_type in self._element_rule_index[element_type]):
-
-                    for rule_id in self._element_rule_index[element_type][rule_type]:
-                        rule = self._rule_registry[rule_type_str][rule_id]
-
-                        # Skip inactive rules
-                        if not rule.is_active:
-                            continue
-
-                        # Check conditions if context provided
-                        if context and rule.conditions:
-                            if not self._evaluate_rule_conditions(rule.conditions, context):
-                                continue
-
-                        # Add rule configuration
-                        applicable_rules[rule_id] = rule.config
-
-            # Cache results if no context-specific rules
-            if not context_id:
-                self._config_cache[cache_key] = applicable_rules
-
-            return applicable_rules
+            return base_rules
 
         except Exception as e:
             self.logger.error(f"Error getting processing rules: {str(e)}")
@@ -1711,25 +1663,38 @@ class ConfigManager:
     def _evaluate_rule_conditions(
         self,
         conditions: Dict[str, Any],
-        context: Dict[str, Any]
+        context: ProcessingContext
     ) -> bool:
-        """Evaluate rule conditions against context."""
+        """
+        Evaluate rule conditions against context.
+
+        Args:
+            conditions: Conditions to evaluate
+            context: Processing context to evaluate against
+
+        Returns:
+            bool: True if conditions are satisfied
+        """
         try:
+            context_dict = context.to_dict()
+
             for key, value in conditions.items():
                 # Handle nested conditions
                 if isinstance(value, dict):
-                    if not self._evaluate_rule_conditions(value, context.get(key, {})):
+                    nested_context = context_dict.get(key, {})
+                    if not self._evaluate_rule_conditions(value, nested_context):
                         return False
                     continue
 
                 # Handle list conditions (any match)
                 if isinstance(value, list):
-                    if key not in context or context[key] not in value:
+                    context_value = context_dict.get(key)
+                    if context_value is None or context_value not in value:
                         return False
                     continue
 
                 # Handle simple equality
-                if context.get(key) != value:
+                if context_dict.get(key) != value:
                     return False
 
             return True
@@ -1744,14 +1709,39 @@ class ConfigManager:
     # Validation and schema management #
     ####################################
 
+    def _handle_config_change(self, **event_data: Any) -> None:
+        """
+        Handle configuration change events.
+
+        Args:
+            event_data: Event information
+        """
+        try:
+            if element_id := event_data.get("element_id"):
+                # Clear cached configs for element
+                cache_key = f"config_{element_id}"
+                self._config_cache.pop(cache_key, None)
+
+                # Clear configs that include this element
+                invalidation_patterns = [
+                    f"*{element_id}*",  # Any config containing this element
+                    f"component_*",      # Component configs might need update
+                    f"pipeline_*"        # Pipeline configs might need update
+                ]
+
+                for pattern in invalidation_patterns:
+                    self.content_cache.invalidate_pattern(pattern)
+
+        except Exception as e:
+            self.logger.error(f"Error handling config change: {str(e)}")
 
     def _load_attribute_schema(self) -> Dict[str, Any]:
         """Load and validate attribute schema."""
         try:
-            schema_path = Path(__file__).parent / "configs" / "attribute_schema.json"
+            schema_path = self.config_path / "attribute_schema.json"
             if not schema_path.exists():
                 self.logger.error(f"Schema not found: {schema_path}")
-                return {}  # Return empty dict instead of implicitly returning None
+                return {}
 
             with open(schema_path, 'r') as f:
                 schema = json.load(f)
@@ -1765,13 +1755,13 @@ class ConfigManager:
             missing = required_sections - set(schema.keys())
             if missing:
                 self.logger.error(f"Missing required schema sections: {missing}")
-                return {}  # Return empty dict on validation failure
+                return {}
 
             return schema
 
         except Exception as e:
             self.logger.error(f"Error loading attribute schema: {str(e)}")
-            return {}  # Return empty dict on any error
+            return {}
 
     def get_config(
         self,
@@ -1822,47 +1812,41 @@ class ConfigManager:
     def validate_config(
         self,
         config: Dict[str, Any],
-        element_type: ElementType
+        element_type: Optional[ElementType] = None
     ) -> bool:
         """
-        Validate complete configuration against schema.
+        Validate configuration against schema rules.
 
         Args:
             config: Configuration to validate
-            element_type: Element type for validation rules
+            element_type: Optional element type for specific validation
 
         Returns:
             bool: True if configuration is valid
         """
         try:
-            schema = self._attribute_schema
-            validation_rules = schema["validation_rules"]
+            validation_rules = self._attribute_schema["validation"]
 
-            # Check required attributes
-            if required := validation_rules["required_attributes"].get(element_type.value):
+            # Check required attributes if element type provided
+            if element_type and (required := validation_rules["required_attributes"].get(element_type.value)):
                 missing = [attr for attr in required if attr not in config]
                 if missing:
-                    self.logger.warning(
-                        f"Missing required attributes for {element_type}: {missing}"
-                    )
+                    self.logger.warning(f"Missing required attributes: {missing}")
                     return False
 
-            # Validate attribute types
+            # Validate patterns
             for attr, value in config.items():
-                if attr_type := schema["attribute_types"].get(attr):
-                    if not self._validate_attribute_type(value, attr_type):
-                        self.logger.warning(
-                            f"Invalid type for {attr}: {type(value)}"
-                        )
+                if pattern := validation_rules["attribute_patterns"].get(attr):
+                    if not re.match(pattern, str(value)):
+                        self.logger.warning(f"Invalid pattern for {attr}: {value}")
                         return False
 
-            # Validate feature combinations
-            if "features" in config:
-                if not self._validate_feature_combinations(
-                    config["features"],
-                    schema["feature_definitions"]
-                ):
-                    return False
+            # Validate allowed values
+            for attr, value in config.items():
+                if allowed := validation_rules["allowed_values"].get(attr):
+                    if value not in allowed:
+                        self.logger.warning(f"Invalid value for {attr}: {value}")
+                        return False
 
             return True
 
@@ -2007,14 +1991,6 @@ class ConfigManager:
     ) -> ValidationResult:
         """
         Validate data against a registered schema.
-
-        Args:
-            data: Data to validate
-            schema_name: Schema identifier
-            context_id: Optional context identifier
-
-        Returns:
-            ValidationResult with validation details
         """
         try:
             # Get schema
@@ -2029,23 +2005,8 @@ class ConfigManager:
 
             try:
                 # Validate using Pydantic model
-                validated_data = schema.model.parse_obj(data)  # Use parse_obj instead
+                validated_data = schema.model.parse_obj(data)
                 result.is_valid = True
-
-                # Get context for validation
-                if context_id and self.context_manager:
-                    context = self.context_manager.get_context(context_id)
-                    if context:
-                        # Perform scope-specific validation
-                        scope_result = self._validate_scope(
-                            validated_data,
-                            schema.scope,
-                            context
-                        )
-                        if not scope_result.is_valid:
-                            result.messages.extend(scope_result.messages)
-                            result.is_valid = False
-
 
             except ValidationError as e:
                 # Process Pydantic validation errors
@@ -2059,8 +2020,6 @@ class ConfigManager:
                         )
                     )
 
-            # Store validation result
-            self._validation_results[schema_name][id(data)] = result
             return result
 
         except Exception as e:
@@ -2197,67 +2156,51 @@ class ConfigManager:
 
     def get_pipeline_config(
         self,
-        pipeline_type: Union[str, PipelineType],
-        context_id: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Get configuration for a specific pipeline type."""
+        pipeline_type: PipelineType,
+        context: Optional[ProcessingContext] = None
+    ) -> PipelineConfig:
+        """
+        Get pipeline configuration with context overrides.
+
+        Args:
+            pipeline_type: Type of pipeline
+            context: Optional processing context
+
+        Returns:
+            PipelineConfig: Pipeline configuration
+        """
         try:
-            # Convert string pipeline type to enum if needed
-            if isinstance(pipeline_type, str):
-                pipeline_type = PipelineType(pipeline_type.lower())
+            # Get base config
+            base_config = self._attribute_schema["pipelines"][pipeline_type.value]
 
-            # Check cache first
-            cache_key = f"pipeline_{pipeline_type.value}"
-            if not context_id and cache_key in self._config_cache:
-                return self._config_cache[cache_key]
-
-            # Get base pipeline configuration
-            base_config = self._env_config.get('pipelines', {}).get(pipeline_type.value, {})
-
-            # Get pipeline features
-            features = self._get_pipeline_features(pipeline_type)
-
-            # Create pipeline config instance
+            # Create pipeline config with all required fields
             pipeline_config = PipelineConfig(
                 pipeline_type=pipeline_type,
-                config=base_config,
-                features=features,
-                processors=self._get_pipeline_processors(pipeline_type),
-                validators=self._get_pipeline_validators(pipeline_type),
-                transformers=self._get_pipeline_transformers(pipeline_type)
+                config=base_config.get("config", {}),
+                features=base_config.get("features", {}),
+                processors=base_config.get("processors", []),
+                validators=base_config.get("validators", []),
+                transformers=base_config.get("transformers", []),
+                metadata=base_config.get("metadata", {})
             )
 
-            # Check for context manager and apply overrides if available
-            if context_id is not None and self.context_manager is not None:
-                try:
-                    if context := self.context_manager.get_context(context_id):
-                        pipeline_config = self._apply_context_overrides(
-                            pipeline_config,
-                            context
-                        )
-                except AttributeError:
-                    self.logger.warning("Context manager get_context method not available")
+            # Apply context overrides if provided
+            if context:
+                pipeline_config = self._apply_context_overrides(pipeline_config, context)
 
-            # Convert to dictionary for return
-            config_dict = {
-                'type': pipeline_type.value,
-                'config': pipeline_config.config,
-                'features': pipeline_config.features,
-                'processors': pipeline_config.processors,
-                'validators': pipeline_config.validators,
-                'transformers': pipeline_config.transformers,
-                'metadata': pipeline_config.metadata
-            }
-
-            # Cache if no context-specific configuration
-            if not context_id:
-                self._config_cache[cache_key] = config_dict
-
-            return config_dict
+            return pipeline_config
 
         except Exception as e:
             self.logger.error(f"Error getting pipeline config: {str(e)}")
-            return {}
+            # Return a default config with empty collections
+            return PipelineConfig(
+                pipeline_type=pipeline_type,
+                config={},
+                features={},
+                processors=[],
+                validators=[],
+                transformers=[]
+            )
 
     def get_component_features(
         self,
@@ -2358,75 +2301,47 @@ class ConfigManager:
             self.logger.error(f"Failed to update runtime config: {str(e)}")
             return False
 
-    def _get_pipeline_features(self, pipeline_type: PipelineType) -> Dict[str, bool]:
-        """Get features for a pipeline type."""
-        features = {}
 
-        # Get base features
-        base_features = self._env_config.get('pipelines', {}).get(
-            pipeline_type.value, {}
-        ).get('features', {})
-        features.update(base_features)
-
-        # Get runtime overrides
-        runtime_features = self._runtime_config.get('pipelines', {}).get(
-            pipeline_type.value, {}
-        ).get('features', {})
-        features.update(runtime_features)
-
-        return features
-
-    def _get_pipeline_processors(self, pipeline_type: PipelineType) -> List[str]:
-        """Get processors for a pipeline type."""
-        return (
-            self._env_config.get('pipelines', {})
-            .get(pipeline_type.value, {})
-            .get('processors', [])
-        )
-
-    def _get_pipeline_validators(self, pipeline_type: PipelineType) -> List[str]:
-        """Get validators for a pipeline type."""
-        return (
-            self._env_config.get('pipelines', {})
-            .get(pipeline_type.value, {})
-            .get('validators', [])
-        )
-
-    def _get_pipeline_transformers(self, pipeline_type: PipelineType) -> List[str]:
-        """Get transformers for a pipeline type."""
-        return (
-            self._env_config.get('pipelines', {})
-            .get(pipeline_type.value, {})
-            .get('transformers', [])
-        )
 
     def _apply_context_overrides(
         self,
         pipeline_config: PipelineConfig,
-        context: Dict[str, Any]
+        context: ProcessingContext
     ) -> PipelineConfig:
-        """Apply context-specific overrides to pipeline configuration."""
-        # Get context-specific pipeline overrides
-        context_config = context.get('pipeline_config', {}).get(
-            pipeline_config.pipeline_type.value,
-            {}
-        )
+        """
+        Apply context-specific overrides to pipeline configuration.
 
-        # Update configuration
-        if context_config:
-            pipeline_config.config = self._deep_merge(
-                pipeline_config.config,
-                context_config
-            )
+        Args:
+            pipeline_config: Base pipeline configuration
+            context: Processing context with overrides
 
-        # Update features
-        context_features = context.get('pipeline_features', {}).get(
-            pipeline_config.pipeline_type.value,
-            {}
-        )
-        pipeline_config.features.update(context_features)
+        Returns:
+            PipelineConfig: Updated pipeline configuration
+        """
+        try:
+            # Get context as dictionary
+            context_dict = context.to_dict()
 
-        return pipeline_config
+            # Get pipeline-specific overrides
+            if pipeline_overrides := context_dict.get('pipeline_config', {}).get(
+                pipeline_config.pipeline_type.value
+            ):
+                pipeline_config.config = self._deep_merge(
+                    pipeline_config.config,
+                    pipeline_overrides
+                )
+
+            # Get feature overrides
+            if feature_overrides := context_dict.get('pipeline_features', {}).get(
+                pipeline_config.pipeline_type.value
+            ):
+                pipeline_config.features.update(feature_overrides)
+
+            return pipeline_config
+
+        except Exception as e:
+            self.logger.error(f"Error applying context overrides: {str(e)}")
+            return pipeline_config
 
     def _invalidate_affected_caches(self, updated_keys: List[str]) -> None:
         """Invalidate caches affected by configuration updates."""

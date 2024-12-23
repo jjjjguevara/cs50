@@ -376,33 +376,85 @@ class ContextManager:
 
     def _merge_contexts(
         self,
-        parent: Dict[str, Any],
-        child: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Helper method to merge contexts following inheritance rules."""
-        merged = parent.copy()
+        parent_context: ProcessingContext,
+        child_context: ProcessingContext
+    ) -> ProcessingContext:
+        """
+        Merge parent and child contexts maintaining proper inheritance.
 
-        for attr, value in child.items():
-            inheritance_rule = self.CONTEXT_RULES["attribute_inheritance"].get(attr, {})
-            if inheritance_rule.get("inherit", True):
-                if inheritance_rule.get("override") == "child":
-                    merged[attr] = value
-            else:
-                merged[attr] = value
+        Args:
+            parent_context: Parent ProcessingContext
+            child_context: Child ProcessingContext
 
-        return merged
+        Returns:
+            ProcessingContext: Merged context
+        """
+        try:
+            # Create new context with base parent values
+            merged_context = ProcessingContext(
+                context_id=child_context.context_id,
+                element_id=child_context.element_id,
+                element_type=child_context.element_type,
+                state_info=child_context.state_info,
+                navigation=NavigationContext(
+                    path=[*parent_context.navigation.path, child_context.element_id],
+                    level=parent_context.navigation.level + 1,
+                    sequence=len(parent_context.navigation.siblings),
+                    parent_id=parent_context.element_id,
+                    root_map=parent_context.navigation.root_map
+                ),
+                scope=child_context.scope
+            )
+
+            # Update metadata references based on inheritance
+            merged_context.metadata_refs.update(parent_context.metadata_refs)
+            merged_context.metadata_refs.update(child_context.metadata_refs)
+
+            # Maintain child relationships
+            merged_context.relationships = child_context.relationships
+
+            # Keep child's feature state
+            merged_context.features = child_context.features
+
+            return merged_context
+
+        except Exception as e:
+            self.logger.error(f"Error merging contexts: {str(e)}")
+            return child_context
 
     def _invalidate_dependent_contexts(self, content_id: str) -> None:
-        """Helper method to invalidate dependent contexts."""
-        # Get dependent IDs (children in hierarchy)
-        dependent_ids = [
-            id for id, path in self._hierarchy_paths.items()
-            if content_id in path
-        ]
+        """
+        Invalidate contexts that depend on the given content.
 
-        # Invalidate each dependent context
-        for dep_id in dependent_ids:
-            self.invalidate_context(dep_id)
+        Args:
+            content_id: Content identifier whose dependents need invalidation
+        """
+        try:
+            # Find all dependent contexts
+            dependent_ids = set()
+
+            # Check direct relationships
+            if relationships := self._content_relationships.get(content_id):
+                dependent_ids.update(rel.target_id for rel in relationships)
+
+            # Check navigation hierarchy
+            for ctx in self._active_contexts.values():
+                if content_id in ctx.navigation.path:
+                    dependent_ids.add(ctx.context_id)
+
+            # Remove from active contexts
+            for dep_id in dependent_ids:
+                if dep_id in self._active_contexts:
+                    del self._active_contexts[dep_id]
+
+                    # Emit invalidation event
+                    self.event_manager.emit(
+                        EventType.CACHE_INVALIDATE,
+                        element_id=dep_id
+                    )
+
+        except Exception as e:
+            self.logger.error(f"Error invalidating dependent contexts: {str(e)}")
 
     ###########################
     # Relationship management #
