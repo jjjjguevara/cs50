@@ -1,0 +1,19 @@
+{
+  "resolution_rules": {
+    "scopes": ["local", "map", "peer", "external"],
+    "inheritance": {
+      "props": "merge",
+      "platform": "override",
+      "features": "merge"
+    },
+    "fallback_order": ["map-specific", "topic-specific", "global"],
+    "validation": {
+      "required_fields": ["href", "scope"],
+      "scope_rules": {
+        "local": ["local", "peer"],
+        "peer": ["local", "peer", "external"],
+        "external": ["external"]
+      }
+    }
+  }
+}

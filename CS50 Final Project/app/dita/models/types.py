@@ -559,26 +559,12 @@ class ProcessingMetadata:
     content_scope: ContentScope
     language: str = "en"
 
-    # Processing references
-    references: Dict[str, ElementReference] = field(default_factory=dict)
-
-    # Transient attributes
-    transient_attributes: Dict[str, Any] = field(default_factory=dict)
-
     # Processing state
     processing_state: ProcessingStateInfo = field(default_factory=lambda: ProcessingStateInfo(
-        phase=ProcessingPhase.DISCOVERY,
-        state=ProcessingState.PENDING,
-        element_id="",
-        parent_id=None,
-    ))
-
-    # Processing state tracking
-    processing_state: ProcessingStateInfo = field(default_factory=lambda: ProcessingStateInfo(
-        element_id="",
-        phase=ProcessingPhase.DISCOVERY,
-        state=ProcessingState.PENDING
-    ))
+            element_id="",
+            phase=ProcessingPhase.DISCOVERY,
+            state=ProcessingState.PENDING
+        ))
 
     # Cache for processing
     references: Dict[str, ElementReference] = field(default_factory=dict)

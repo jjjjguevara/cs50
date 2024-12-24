@@ -31,12 +31,13 @@ from .models.types import (
     ValidationMessage,
     ValidationSeverity,
     ProcessingContext,
+    ContentScope,
 )
 
 # Import handlers we'll integrate with
 from .context_manager import ContextManager
 from app.dita.utils.id_handler import DITAIDHandler
-from app.dita.utils.metadata import MetadataHandler
+from app.dita.metadata.metadata_manager import MetadataManager
 from .event_manager import EventManager, EventType
 from .utils.logger import DITALogger
 from .utils.cache import ContentCache
@@ -192,7 +193,7 @@ class ConfigManager:
 
     def __init__(
         self,
-        metadata_handler: MetadataHandler,
+        metadata_manager: MetadataManager,
         context_manager: ContextManager,
         content_cache: ContentCache,
         event_manager: EventManager,
@@ -218,13 +219,11 @@ class ConfigManager:
         self.logger = logger or logging.getLogger(__name__)
         self.event_manager = event_manager
         self.context_manager = context_manager
-        self.metadata_handler = metadata_handler
+        self.metadata_manager = metadata_manager
         self.content_cache = content_cache
         self.id_handler = id_handler or DITAIDHandler()
         self.config_path = Path(config_path) if config_path else Path(__file__).parent / "configs"
         self.cache = ContentCache()
-
-
 
         # Load schema
         self._attribute_schema = self._load_attribute_schema()
@@ -257,12 +256,16 @@ class ConfigManager:
         # Determine environment
         self.environment = ConfigEnvironment(env.lower()) if env else self._detect_environment()
 
+        # Load metadata-specific configurations
+        self._metadata_config = self._load_metadata_config()
+        self._key_resolution_config = self._load_key_resolution_config()
+        self._context_validation_config = self._load_context_validation_config()
+
         # Initialize state tracking
         self._state = ConfigState(
             environment=self.environment,
             last_updated=datetime.now()
         )
-
 
         # Register for events
         self.event_manager.subscribe(
@@ -581,10 +584,341 @@ class ConfigManager:
             self.logger.error(f"Keyref config validation error: {str(e)}")
             return False
 
+    def _load_key_resolution_config(self) -> Dict[str, Any]:
+        """Load key resolution configuration."""
+        try:
+            config_path = self.config_path / "key_resolution.json"
+            if not config_path.exists():
+                raise FileNotFoundError(f"Key resolution config not found: {config_path}")
+
+            with open(config_path) as f:
+                config = json.load(f)
+
+            # Validate required sections
+            required_sections = {"resolution_rules", "scopes", "inheritance", "fallback_order"}
+            if missing := required_sections - set(config.get("resolution_rules", {})):
+                raise ValueError(f"Missing required sections in key resolution config: {missing}")
+
+            return config
+
+        except Exception as e:
+            self.logger.error(f"Error loading key resolution config: {str(e)}")
+            return {}
+
+    def _load_context_validation_config(self) -> Dict[str, Any]:
+        """Load context validation configuration."""
+        try:
+            config_path = self.config_path / "context_validation.json"
+            if not config_path.exists():
+                raise FileNotFoundError(f"Context validation config not found: {config_path}")
+
+            with open(config_path) as f:
+                config = json.load(f)
+
+            # Validate required sections
+            required_sections = {"validation_rules", "context", "metadata"}
+            if missing := required_sections - set(config.get("validation_rules", {})):
+                raise ValueError(f"Missing required sections in context validation config: {missing}")
+
+            return config
+
+        except Exception as e:
+            self.logger.error(f"Error loading context validation config: {str(e)}")
+            return {}
+
+    def _validate_metadata_config(self, config: Dict[str, Any]) -> None:
+        """Validate metadata configuration structure."""
+        try:
+            # Check top-level structure
+            if "metadata_processing" not in config:
+                raise ValueError("Missing metadata_processing section")
+
+            processing = config["metadata_processing"]
+            if "phases" not in processing:
+                raise ValueError("Missing phases section in metadata_processing")
+
+            # Validate phase configurations
+            required_phases = {"discovery", "transformation"}
+            phases = processing["phases"]
+            if missing := required_phases - set(phases):
+                raise ValueError(f"Missing required phases: {missing}")
+
+            # Validate phase content
+            for phase in required_phases:
+                phase_config = phases[phase]
+                if phase == "discovery":
+                    if "extractors" not in phase_config:
+                        raise ValueError("Missing extractors in discovery phase")
+                    if "validation_rules" not in phase_config:
+                        raise ValueError("Missing validation_rules in discovery phase")
+
+                elif phase == "transformation":
+                    if "rules" not in phase_config:
+                        raise ValueError("Missing rules in transformation phase")
+
+        except Exception as e:
+            self.logger.error(f"Error validating metadata config: {str(e)}")
+            raise ValueError(f"Invalid metadata configuration: {str(e)}")
+
+    def _get_context_rules(
+        self,
+        context: ProcessingContext,
+        phase: ProcessingPhase
+    ) -> Dict[str, Any]:
+        """Get context-specific rules."""
+        try:
+            # Get base context rules
+            context_rules = self._context_validation_config.get("validation_rules", {})
+            context_specific = context_rules.get("context", {})
+
+            # Apply phase-specific rules
+            phase_rules = context_specific.get("phases", {}).get(phase.value, {})
+
+            # Apply scope-specific rules
+            scope_rules = context_specific.get("scope_validation", {}).get(
+                "rules", {}
+            ).get(context.scope.value, {})
+
+            # Merge rules
+            return {
+                **phase_rules,
+                **scope_rules,
+                "metadata_inheritance": scope_rules.get("metadata_inheritance", True)
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error getting context rules: {str(e)}")
+            return {}
+
+    def _get_context_key_rules(self, context: ProcessingContext) -> Dict[str, Any]:
+        """Get context-specific key resolution rules."""
+        try:
+            # Get base key resolution rules
+            key_rules = self._key_resolution_config.get("resolution_rules", {})
+
+            # Get scope-specific rules
+            scope_rules = key_rules.get("scope_rules", {}).get(
+                context.scope.value, {}
+            )
+
+            # Apply context-specific overrides
+            context_refs = context.metadata_state.metadata_refs
+            if isinstance(context_refs, dict):  # Type check
+                if key_resolution := context_refs.get("key_resolution"):
+                    # Ensure key_resolution is a dictionary
+                    if isinstance(key_resolution, dict):
+                        scope_rules = self._merge_rules(scope_rules, key_resolution)
+                    else:
+                        self.logger.warning(
+                            f"Invalid key_resolution format in context {context.context_id}: "
+                            f"expected dict, got {type(key_resolution)}"
+                        )
+
+            return scope_rules
+
+        except Exception as e:
+            self.logger.error(f"Error getting context key rules: {str(e)}")
+            return {}
+
 
     #################################
     # Core configuration management #
     #################################
+
+    def _load_metadata_config(self) -> Dict[str, Any]:
+            """Load metadata processing configuration."""
+            try:
+                config_path = self.config_path / "metadata_schema.json"
+                if not config_path.exists():
+                    raise FileNotFoundError(f"Metadata config not found: {config_path}")
+
+                with open(config_path) as f:
+                    config = json.load(f)
+
+                # Validate configuration
+                self._validate_metadata_config(config)
+                return config
+
+            except Exception as e:
+                self.logger.error(f"Error loading metadata config: {str(e)}")
+                return {}
+
+    def get_metadata_rules(
+        self,
+        phase: ProcessingPhase,
+        element_type: ElementType,
+        context: Optional[ProcessingContext] = None
+    ) -> Dict[str, Any]:
+        """
+        Get metadata processing rules for phase and element type.
+
+        Args:
+            phase: Current processing phase
+            element_type: Element type
+            context: Optional processing context
+
+        Returns:
+            Dict containing applicable rules
+        """
+        try:
+            # Get base rules
+            base_rules = self._metadata_config.get("metadata_processing", {})
+            phase_rules = base_rules.get("phases", {}).get(phase.value, {})
+
+            # Get element-specific rules
+            element_rules = {}
+            if element_type == ElementType.DITA:
+                element_rules = phase_rules.get("extractors", {}).get("dita", {})
+            elif element_type == ElementType.MARKDOWN:
+                element_rules = phase_rules.get("extractors", {}).get("markdown", {})
+
+            # Apply context overrides if provided
+            if context:
+                context_rules = self._get_context_rules(context, phase)
+                element_rules = self._merge_rules(element_rules, context_rules)
+
+            return element_rules
+
+        except Exception as e:
+            self.logger.error(f"Error getting metadata rules: {str(e)}")
+            return {}
+
+    def get_key_resolution_rules(
+        self,
+        scope: ContentScope,
+        context: Optional[ProcessingContext] = None
+    ) -> Dict[str, Any]:
+        """Get key resolution rules for scope."""
+        try:
+            # Get base rules
+            base_rules = self._key_resolution_config.get("resolution_rules", {})
+            scope_rules = base_rules.get("scope_rules", {}).get(scope.value, {})
+
+            # Apply context if provided
+            if context:
+                context_rules = self._get_context_key_rules(context)
+                scope_rules = self._merge_rules(scope_rules, context_rules)
+
+            return scope_rules
+
+        except Exception as e:
+            self.logger.error(f"Error getting key resolution rules: {str(e)}")
+            return {}
+
+    def validate_metadata_schema(
+        self,
+        metadata: Dict[str, Any],
+        element_type: ElementType,
+        phase: ProcessingPhase
+    ) -> ValidationResult:
+        """Validate metadata against schema."""
+        try:
+            # Get validation rules
+            rules = self._metadata_config.get("metadata_processing", {})
+            phase_rules = rules.get("phases", {}).get(phase.value, {})
+            validation_rules = phase_rules.get("validation_rules", {})
+
+            messages = []
+
+            # Validate required fields
+            if required_fields := validation_rules.get("required_fields", []):
+                for field in required_fields:
+                    if field not in metadata:
+                        messages.append(
+                            ValidationMessage(
+                                path=field,
+                                message=f"Missing required field: {field}",
+                                severity=ValidationSeverity.ERROR,
+                                code="missing_required_field"
+                            )
+                        )
+
+            # Validate field types
+            for field, value in metadata.items():
+                if field_rules := validation_rules.get(field):
+                    if not self._validate_field(value, field_rules):
+                        messages.append(
+                            ValidationMessage(
+                                path=field,
+                                message=f"Invalid value for field: {field}",
+                                severity=ValidationSeverity.ERROR,
+                                code="invalid_field_value"
+                            )
+                        )
+
+            return ValidationResult(
+                is_valid=len(messages) == 0,
+                messages=messages
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error validating metadata schema: {str(e)}")
+            return ValidationResult(
+                is_valid=False,
+                messages=[
+                    ValidationMessage(
+                        path="",
+                        message=str(e),
+                        severity=ValidationSeverity.ERROR,
+                        code="validation_error"
+                    )
+                ]
+            )
+
+    def _validate_field(self, value: Any, rules: Dict[str, Any]) -> bool:
+        """Validate field value against rules."""
+        try:
+            field_type = rules.get("type")
+
+            if field_type == "string":
+                if not isinstance(value, str):
+                    return False
+                if min_length := rules.get("min_length"):
+                    if len(value) < min_length:
+                        return False
+                if allowed := rules.get("allowed"):
+                    if value not in allowed:
+                        return False
+
+            elif field_type == "list":
+                if not isinstance(value, list):
+                    return False
+                if min_items := rules.get("min_items"):
+                    if len(value) < min_items:
+                        return False
+
+            # Add more type validations as needed
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error validating field: {str(e)}")
+            return False
+
+    def _merge_rules(
+        self,
+        base_rules: Dict[str, Any],
+        override_rules: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Merge rule sets with proper inheritance."""
+        try:
+            merged = base_rules.copy()
+
+            for key, value in override_rules.items():
+                if key in merged and isinstance(merged[key], dict):
+                    if isinstance(value, dict):
+                        merged[key] = self._merge_rules(merged[key], value)
+                    else:
+                        merged[key] = value
+                else:
+                    merged[key] = value
+
+            return merged
+
+        except Exception as e:
+            self.logger.error(f"Error merging rules: {str(e)}")
+            return base_rules
+
 
     def load_environment_config(self) -> None:
         """
