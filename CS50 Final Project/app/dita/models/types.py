@@ -82,6 +82,8 @@ class ProcessingState(Enum):
     ERROR = "error"
 
 
+
+
 @dataclass
 class ProcessingStateInfo:
     """
@@ -251,6 +253,18 @@ class ValidationResult:
     is_valid: bool
     messages: List[ValidationMessage] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.now)
+
+@dataclass
+class MetadataState:
+    """Tracks metadata state during processing."""
+    content_id: str
+    phase: ProcessingPhase
+    state: ProcessingState
+    timestamp: datetime = field(default_factory=datetime.now)
+    cached: bool = False
+    validation_state: Optional[ValidationResult] = None
+    key_references: List[str] = field(default_factory=list)
+    metadata_refs: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -427,6 +441,7 @@ class ContentRelationship:
     relation_type: ContentRelationType
     scope: ContentScope
     metadata: Dict[str, Any] = field(default_factory=dict)
+    key_refs: Set[str] = field(default_factory=set)
 
 @dataclass
 class NavigationContext:
@@ -487,6 +502,15 @@ class ProcessingContext:
 
     # Metadata access (references, not storage)
     metadata_refs: Dict[str, str] = field(default_factory=dict)
+
+    # New metadata fields
+    metadata_state: MetadataState = field(default_factory=lambda: MetadataState(
+        content_id="",
+        phase=ProcessingPhase.DISCOVERY,
+        state=ProcessingState.PENDING
+    ))
+    key_refs: Set[str] = field(default_factory=set)
+    metadata_cache: Dict[str, Any] = field(default_factory=dict)
 
     def get(self, key: str, default: Any = None) -> Any:
             """Get context attribute with fallback."""
@@ -632,12 +656,21 @@ class ProcessingMetadata:
         new_phase: Optional[ProcessingPhase] = None,
         error: Optional[str] = None
     ) -> None:
-        """Update processing state."""
-        self.processing_state.update(
-            new_state=new_state,
-            new_phase=new_phase,
-            error=error
-        )
+        """
+        Update processing state.
+
+        Args:
+            new_state: Optional new state
+            new_phase: Optional new phase
+            error: Optional error message
+        """
+        if new_state is not None:
+            self.processing_state.state = new_state
+        if new_phase is not None:
+            self.processing_state.phase = new_phase
+        if error is not None:
+            self.processing_state.error_message = error
+        self.processing_state.timestamp = datetime.now()
 
     def cleanup(self) -> None:
         """Cleanup transient data."""
@@ -733,9 +766,20 @@ class Topic:
         phase: Optional[ProcessingPhase] = None,
         state: Optional[ProcessingState] = None
     ) -> None:
-        """Update topic processing state."""
-        self.processing_metadata.update_state(phase, state)
+        """
+        Update topic processing state.
 
+        Args:
+            phase: New processing phase
+            state: New processing state
+        """
+        # First update the state
+        if state is not None:
+            self.processing_metadata.update_state(new_state=state)
+
+        # Then update the phase if provided
+        if phase is not None:
+            self.processing_metadata.processing_state.phase = phase
 
 @dataclass
 class Map:

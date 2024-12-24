@@ -11,7 +11,7 @@ from .event_manager import EventManager, EventType
 from .utils.cache import ContentCache
 
 # Handlers & Managers
-from .utils.metadata import MetadataHandler
+from .metadata.metadata_manager import MetadataManager
 from .config_manager import ConfigManager
 
 # Custom Types
@@ -23,6 +23,7 @@ from .models.types import (
     ProcessingContext,
     ElementType,
     TrackedElement,
+    MetadataState,
     ProcessingPhase,
     ProcessingState,
     ProcessingStateInfo
@@ -40,7 +41,7 @@ class ContextManager:
         self,
         event_manager: EventManager,
         content_cache: ContentCache,
-        metadata_handler: MetadataHandler,
+        metadata_manager: MetadataManager,
         config_manager: ConfigManager,
         logger: DITALogger
     ):
@@ -57,7 +58,7 @@ class ContextManager:
         # Core dependencies
         self.event_manager = event_manager
         self.content_cache = content_cache
-        self.metadata_handler = metadata_handler
+        self.metadata_manager = metadata_manager
         self.config_manager = config_manager
         self.logger = logger
 
@@ -68,6 +69,10 @@ class ContextManager:
 
         # Scope & hierarchy tracking
         self._hierarchy_paths: Dict[str, List[str]] = {}
+
+        # Metadata tracking
+        self._metadata_states: Dict[str, MetadataState] = {}
+        self._key_relationships: Dict[str, Set[str]] = {}
 
         # Register for events
         self._register_event_handlers()
@@ -91,6 +96,13 @@ class ContextManager:
         except Exception as e:
             self.logger.error(f"Error registering event handlers: {str(e)}")
             raise
+
+    def _register_metadata_handlers(self) -> None:
+            """Register for metadata-related events."""
+            self.event_manager.subscribe(
+                EventType.STATE_CHANGE,
+                self._handle_metadata_state_change
+            )
 
     def _update_context_state(self, **event_data: Any) -> None:
         """
@@ -134,7 +146,7 @@ class ContextManager:
             # Update metadata
             if metadata_updates := updates.get('metadata'):
                 # Store persistent metadata
-                self.metadata_handler.store_metadata(content_id, metadata_updates)
+                self.metadata_manager.store_metadata(content_id, metadata_updates)
 
             # Update navigation context if provided
             if nav_updates := updates.get('navigation'):
@@ -165,15 +177,15 @@ class ContextManager:
         element_type: ElementType,
         metadata: Dict[str, Any]
     ) -> None:
-        """
-        Register new context for content tracking.
-
-        Args:
-            content_id: Content identifier
-            element_type: Type of element
-            metadata: Initial metadata
-        """
+        """Register context with metadata awareness."""
         try:
+            # Create metadata state
+            metadata_state = MetadataState(
+                content_id=content_id,
+                phase=ProcessingPhase.DISCOVERY,
+                state=ProcessingState.PENDING
+            )
+
             # Create processing context
             context = ProcessingContext(
                 context_id=content_id,
@@ -191,14 +203,16 @@ class ContextManager:
                     parent_id=None,
                     root_map=content_id
                 ),
-                scope=ContentScope.LOCAL
+                scope=ContentScope.LOCAL,
+                metadata_state=metadata_state
             )
 
             # Store context
             self._active_contexts[content_id] = context
+            self._metadata_states[content_id] = metadata_state
 
-            # Store metadata
-            self.metadata_handler.store_metadata(content_id, metadata)
+            # Process initial metadata
+            self._process_initial_metadata(content_id, metadata)
 
             # Emit event
             self.event_manager.emit(
@@ -210,6 +224,161 @@ class ContextManager:
         except Exception as e:
             self.logger.error(f"Error registering context: {str(e)}")
             raise
+
+    def _process_initial_metadata(
+            self,
+            content_id: str,
+            metadata: Dict[str, Any]
+        ) -> None:
+            """Process initial metadata for context."""
+            try:
+                # Extract key references
+                if key_refs := metadata.get('key_refs', []):
+                    self._key_relationships[content_id] = set(key_refs)
+                    self._metadata_states[content_id].key_references = key_refs
+
+                # Store metadata references
+                if metadata_refs := metadata.get('metadata_refs', {}):
+                    self._metadata_states[content_id].metadata_refs = metadata_refs
+
+                # Cache metadata
+                self.content_cache.set(
+                    f"metadata_{content_id}",
+                    metadata,
+                    ElementType.UNKNOWN,
+                    ProcessingPhase.DISCOVERY
+                )
+
+            except Exception as e:
+                self.logger.error(f"Error processing initial metadata: {str(e)}")
+
+    def _handle_metadata_state_change(self, **event_data: Any) -> None:
+            """Handle metadata state changes."""
+            try:
+                element_id = event_data.get("element_id")
+                metadata_state = event_data.get("metadata_state")
+
+                if element_id and metadata_state:
+                    if current_state := self._metadata_states.get(element_id):
+                        # Update state
+                        current_state.phase = metadata_state.phase
+                        current_state.state = metadata_state.state
+                        current_state.timestamp = datetime.now()
+
+                        # Update context
+                        if context := self._active_contexts.get(element_id):
+                            context.metadata_state = current_state
+
+            except Exception as e:
+                self.logger.error(f"Error handling metadata state change: {str(e)}")
+
+    def register_metadata_relationship(
+        self,
+        source_id: str,
+        target_id: str,
+        relationship_type: ContentRelationType,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Register metadata-based relationship."""
+        try:
+            relationship = ContentRelationship(
+                source_id=source_id,
+                target_id=target_id,
+                relation_type=relationship_type,
+                scope=self._determine_scope(source_id, target_id),
+                metadata=metadata or {},
+                key_refs=set()  # Will be populated if keys are referenced
+            )
+
+            # Store relationship
+            if source_id not in self._content_relationships:
+                self._content_relationships[source_id] = []
+            self._content_relationships[source_id].append(relationship)
+
+            # Process metadata references
+            if metadata and 'key_refs' in metadata:
+                relationship.key_refs.update(metadata['key_refs'])
+                # Update key relationships
+                self._key_relationships.setdefault(source_id, set()).update(
+                    metadata['key_refs']
+                )
+
+        except Exception as e:
+            self.logger.error(f"Error registering metadata relationship: {str(e)}")
+            raise
+
+    def get_metadata_state(
+        self,
+        content_id: str
+    ) -> Optional[MetadataState]:
+        """Get current metadata state."""
+        return self._metadata_states.get(content_id)
+
+    def get_key_relationships(
+        self,
+        content_id: str
+    ) -> Set[str]:
+        """Get key relationships for content."""
+        return self._key_relationships.get(content_id, set())
+
+    def validate_metadata_relationship(
+        self,
+        source_id: str,
+        target_id: str,
+        metadata: Dict[str, Any]
+    ) -> bool:
+        """Validate metadata relationship."""
+        try:
+            # Get source and target contexts
+            source_context = self._active_contexts.get(source_id)
+            target_context = self._active_contexts.get(target_id)
+
+            if not source_context or not target_context:
+                return False
+
+            # Check scope compatibility
+            if not self._validate_scope_compatibility(
+                source_context.scope,
+                target_context.scope
+            ):
+                return False
+
+            # Check key reference validity
+            if key_refs := metadata.get('key_refs', []):
+                if not all(
+                    self.metadata_manager.key_manager.resolve_key(  # Updated reference
+                        key=key,
+                        context_map=source_context.navigation.root_map
+                    ) for key in key_refs
+                ):
+                    return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error validating metadata relationship: {str(e)}")
+            return False
+
+
+    def _validate_scope_compatibility(
+            self,
+            source_scope: ContentScope,
+            target_scope: ContentScope
+        ) -> bool:
+            """Validate scope compatibility between source and target."""
+            # Local scope can only reference local or peer
+            if source_scope == ContentScope.LOCAL:
+                return target_scope in {ContentScope.LOCAL, ContentScope.PEER}
+
+            # Peer scope can reference any scope
+            if source_scope == ContentScope.PEER:
+                return True
+
+            # External scope can only reference external
+            if source_scope == ContentScope.EXTERNAL:
+                return target_scope == ContentScope.EXTERNAL
+
+            return False
 
     def register_relationship(
         self,
@@ -564,7 +733,7 @@ class ContextManager:
                 return cached
 
             # Get relationships from metadata handler
-            relationships = self.metadata_handler.get_content_relationships(content_id)
+            relationships = self.metadata_manager.get_content_relationships(content_id)
 
             # Filter by relationship type if specified
             if relationship_type:
@@ -624,13 +793,7 @@ class ContextManager:
         content_id: str,
         parent_id: Optional[str] = None
     ) -> None:
-        """
-        Register a node in the content hierarchy.
-
-        Args:
-            content_id: Content identifier to register
-            parent_id: Optional parent content identifier
-        """
+        """Register a node in the content hierarchy."""
         try:
             # Get current context
             context = self._active_contexts.get(content_id)
@@ -663,10 +826,11 @@ class ContextManager:
                 'root_map': navigation.root_map
             }
 
-            with self.metadata_handler.transaction(content_id) as txn:
-                txn.updates = {
-                    'hierarchy': hierarchy_metadata
-                }
+            # Store using metadata manager
+            self.metadata_manager.store_metadata(
+                content_id,
+                {'hierarchy': hierarchy_metadata}
+            )
 
             # Update hierarchy paths
             if content_id not in self._hierarchy_paths:
