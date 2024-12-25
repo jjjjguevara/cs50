@@ -165,9 +165,10 @@ class ContentCache:
                 self._evict_entries(entry_type)
 
             # Calculate expiration
+            ttl_seconds = ttl if ttl is not None else self.default_ttl
             expires_at = (
-                datetime.now() + timedelta(seconds=ttl or self.default_ttl)
-                if ttl is not None or self.default_ttl is not None
+                datetime.now() + timedelta(seconds=float(ttl_seconds))
+                if ttl_seconds is not None
                 else None
             )
 

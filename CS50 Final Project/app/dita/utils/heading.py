@@ -22,7 +22,7 @@ from ..models.types import (
 from ..event_manager import EventManager, EventType
 
 # Utils
-from ..utils.id_handler import DITAIDHandler
+from ..utils.id_handler import DITAIDHandler, IDType
 from ..utils.logger import DITALogger
 
 @dataclass
@@ -164,8 +164,8 @@ class HeadingHandler:
             # Generate heading ID
             heading_id = self.id_handler.generate_id(
                 base=text,
-                element_type="heading",
-                level=level
+                id_type=IDType.HEADING,
+                level=level  # level is now handled by kwargs in generate_id
             )
 
             # Update heading number

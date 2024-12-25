@@ -36,11 +36,11 @@ from .models.types import (
 
 # Import handlers we'll integrate with
 from .context_manager import ContextManager
-from app.dita.utils.id_handler import DITAIDHandler
+from app.dita.utils.id_handler import DITAIDHandler, IDType
 from app.dita.metadata.metadata_manager import MetadataManager
 from .event_manager import EventManager, EventType
 from .utils.logger import DITALogger
-from .utils.cache import ContentCache
+from .utils.cache import ContentCache, CacheEntryType
 
 
 # Types and enums
@@ -1301,7 +1301,10 @@ class ConfigManager:
             if level_config := schema["hierarchy"]["levels"].get(level):
                 # Try cache first
                 cache_key = f"{level}_{element_type.value}"
-                if cached := self.content_cache.get(cache_key):
+                if cached := self.content_cache.get(
+                    cache_key,
+                    entry_type=CacheEntryType.CONTENT
+                ):
                     return cached
 
                 config = {}
@@ -1335,8 +1338,9 @@ class ConfigManager:
                     self.content_cache.set(
                         cache_key,
                         config,
-                        element_type,
-                        ProcessingPhase.DISCOVERY
+                        entry_type=CacheEntryType.CONTENT,
+                        element_type=element_type,
+                        phase=ProcessingPhase.DISCOVERY
                     )
 
                 return config
@@ -1805,7 +1809,7 @@ class ConfigManager:
             # Generate unique rule ID using id_handler
             rule_id = self.id_handler.generate_id(
                 base=f"{rule_type.value}_{element_type.value}",
-                element_type="rule"
+                id_type=IDType.REFERENCE  # or we could add a RULE type to IDType
             )
 
             # Create rule instance

@@ -1,82 +1,114 @@
-# app/dita/utils/html_helpers.py
-
-import html
-import re
-from typing import Dict, List, Optional, Any, Union, Sequence
+from typing import Dict, List, Optional, Any, Union, Set, Tuple
+from dataclasses import dataclass
 from pathlib import Path
-from bs4 import BeautifulSoup, Tag
 import logging
-from app.dita.models.types import (
+from bs4 import BeautifulSoup, Tag
+import re
+from datetime import datetime
+
+# Core types
+from ..models.types import (
     ProcessedContent,
     ProcessingMetadata,
-    ProcessingContext
+    ProcessingContext,
+    ElementType,
+    ValidationResult,
+    ValidationMessage,
+    ValidationSeverity,
+    ContentScope
 )
 
-from app.dita.utils.id_handler import DITAIDHandler
+# Utils
+from .id_handler import DITAIDHandler, IDType
+from .logger import DITALogger
+from ..utils.heading import HeadingMetadata
 
-# Global config
-from app_config import DITAConfig
-
-def consolidate_transformed_html(transformed_contents: Sequence[Union[str, ProcessedContent]]) -> str:
-    """Consolidate unique transformed HTML contents."""
-    seen = set()
-    unique_html = []
-    for content in transformed_contents:
-        if isinstance(content, ProcessedContent):
-            html_content = content.html
-        elif isinstance(content, str):
-            html_content = content
-        else:
-            raise ValueError(f"Unexpected content type: {type(content)}")
-
-        if html_content not in seen:
-            unique_html.append(html_content)
-            seen.add(html_content)
-    return "\n".join(unique_html)
+@dataclass
+class HTMLRenderOptions:
+    """Configuration options for HTML rendering."""
+    pretty_print: bool = True
+    minify: bool = False
+    escape_html: bool = True
+    include_metadata: bool = True
+    add_aria: bool = True
 
 class HTMLHelper:
-    """Utilities for HTML manipulation and validation."""
+    """
+    Helper class for HTML manipulation and validation.
+    Handles HTML generation and element manipulation.
+    """
 
-
-    def __init__(self, dita_root: Optional[Path] = None):
+    def __init__(
+        self,
+        dita_root: Optional[Path] = None,
+        id_handler: Optional[DITAIDHandler] = None,
+        logger: Optional[DITALogger] = None,
+        render_options: Optional[HTMLRenderOptions] = None
+    ):
         """
         Initialize HTML helper.
 
         Args:
             dita_root: Optional path to DITA root directory
+            id_handler: Optional ID handler instance
+            logger: Optional logger instance
+            render_options: Optional rendering configuration
         """
-        self.logger = logging.getLogger(__name__)
+        # Core dependencies
+        self.logger = logger or logging.getLogger(__name__)
         self.dita_root = dita_root
-        self._cache: Dict[str, Any] = {}
+        self.id_handler = id_handler or DITAIDHandler()
+        self.render_options = render_options or HTMLRenderOptions()
 
-    def configure_helper(self, config: DITAConfig) -> None:
+        # Element caching
+        self._element_cache: Dict[str, Tag] = {}
+        self._tag_cache: Dict[str, Dict[str, Any]] = {}
+
+        # Template storage
+        self._templates: Dict[str, str] = {}
+
+        # HTML validation patterns
+        self._validation_patterns: Dict[str, re.Pattern] = {}
+
+        # Statistics tracking
+        self._stats = {
+            "elements_created": 0,
+            "elements_modified": 0,
+            "validations_performed": 0,
+            "validation_failures": 0
+        }
+
+
+    def create_element(
+        self,
+        tag: str,
+        attrs: Dict[str, Any],
+        content: str = "",
+        element_id: Optional[str] = None
+    ) -> Tag:
         """
-        Configure HTML helper with provided settings.
+        Create HTML element with attributes and content.
 
         Args:
-            config (DITAConfig): Configuration object containing relevant settings.
+            tag: HTML tag name
+            attrs: Element attributes
+            content: Element content
+            element_id: Optional unique identifier
+
+        Returns:
+            BeautifulSoup Tag element
         """
         try:
-            self.logger.debug("Configuring HTML helper")
+            # Generate or validate ID
+            element_id = element_id or self.id_handler.generate_id(
+                base=f"element_{self._stats['elements_created']}",
+                id_type=IDType.HTML_ELEMENT
+            )
 
-            # Validate that the dita_root attribute exists in the config
-            if not hasattr(config, 'topics_dir') or not config.topics_dir:
-                raise ValueError("DITAConfig must have a valid 'topics_dir' attribute.")
+            # Check cache first
+            if element_id in self._element_cache:
+                return self._element_cache[element_id]
 
-            # Update root path
-            self.dita_root = config.topics_dir.parent
-
-            self.logger.debug(f"HTML helper configured with DITA root: {self.dita_root}")
-
-        except Exception as e:
-            self.logger.error(f"HTML helper configuration failed: {str(e)}")
-            raise
-
-
-
-    def create_element(self, tag: str, attrs: Dict[str, Any], content: str) -> str:
-        """Create HTML element with attributes and content."""
-        try:
             # Create new tag
             soup = BeautifulSoup("", "html.parser")
             element = soup.new_tag(tag)
@@ -84,248 +116,308 @@ class HTMLHelper:
             # Add attributes
             for key, value in attrs.items():
                 if key == "class":
-                    element["class"] = value if isinstance(value, str) else " ".join(value)
+                    if isinstance(value, (list, tuple)):
+                        element["class"] = " ".join(value)
+                    else:
+                        element["class"] = value
                 else:
                     element[key] = value
 
             # Add content
             if content:
-                element.string = content
+                if self.render_options.escape_html:
+                    element.string = content
+                else:
+                    element.append(BeautifulSoup(content, "html.parser"))
 
-            return str(element)
+            # Add to cache
+            self._element_cache[element_id] = element
+            self._stats["elements_created"] += 1
+
+            return element
 
         except Exception as e:
             self.logger.error(f"Error creating element: {str(e)}")
+            raise
+
+    def generate_toc(self, headings: List['HeadingMetadata']) -> str:
+        """Generate table of contents HTML."""
+        try:
+            toc_html = ['<nav class="toc"><ul>']
+            for heading in headings:
+                toc_html.append(
+                    f'<li class="toc-level-{heading.level}">'
+                    f'<a href="#{heading.id}">{heading.text}</a></li>'
+                )
+            toc_html.append('</ul></nav>')
+            return '\n'.join(toc_html)
+        except Exception as e:
+            self.logger.error(f"Error generating TOC: {str(e)}")
             return ""
 
-    def create_container(self, tag: str, children: List[str], attrs: Dict[str, Any]) -> str:
-        """Create container element with child elements."""
-        try:
-            # Create base container tag
-            soup = BeautifulSoup("", "html.parser")
-            container = soup.new_tag(tag)
+    def create_container(
+        self,
+        tag: str,
+        children: List[Union[Tag, str]],
+        attrs: Dict[str, Any],
+        container_id: Optional[str] = None
+    ) -> Tag:
+        """
+        Create container element with child elements.
 
-            # Add attributes
-            for key, value in attrs.items():
-                if key == "class":
-                    container["class"] = value if isinstance(value, str) else " ".join(value)
-                else:
-                    container[key] = value
+        Args:
+            tag: Container tag name
+            children: List of child elements
+            attrs: Container attributes
+            container_id: Optional container identifier
+
+        Returns:
+            BeautifulSoup Tag container
+        """
+        try:
+            # Create base container
+            container = self.create_element(tag, attrs, "", container_id)
 
             # Add children
             for child in children:
-                child_soup = BeautifulSoup(child, "html.parser")
-                if child_soup.body:
-                    container.append(child_soup.body.decode_contents())
+                if isinstance(child, Tag):
+                    container.append(child)
                 else:
-                    container.append(child_soup.decode_contents())
+                    if self.render_options.escape_html:
+                        container.append(child)
+                    else:
+                        container.append(BeautifulSoup(child, "html.parser"))
 
-            return str(container)
+            return container
 
         except Exception as e:
             self.logger.error(f"Error creating container: {str(e)}")
-            return ""
+            raise
 
-    def assemble_topic(self, elements: List[str], metadata: Dict[str, Any]) -> str:
-        """Assemble topic HTML with metadata."""
+    def validate_html(self, html_content: str) -> ValidationResult:
+        """
+        Validate HTML syntax and structure.
+
+        Args:
+            html_content: HTML content to validate
+
+        Returns:
+            ValidationResult with validation status and messages
+        """
         try:
-            soup = BeautifulSoup("", "html.parser")
+            self._stats["validations_performed"] += 1
+            messages: List[ValidationMessage] = []
 
-            # Create article container
-            article = soup.new_tag("article", attrs={
-                "class": "topic-content",
-                "data-topic-id": metadata.get("id", ""),
-                "data-topic-type": metadata.get("type", "topic")
-            })
-            soup.append(article)
-
-            # Add metadata section
-            meta_div = soup.new_tag("div", attrs={"class": "topic-metadata"})
-            for key, value in metadata.items():
-                meta_div["data-" + key] = str(value)
-            article.append(meta_div)
-
-            # Add content elements
-            for element in elements:
-                elem_soup = BeautifulSoup(element, "html.parser")
-                if elem_soup.body:
-                    article.append(elem_soup.body.decode_contents())
-                else:
-                    article.append(elem_soup.decode_contents())
-
-            return str(soup)
-
-        except Exception as e:
-            self.logger.error(f"Error assembling topic: {str(e)}")
-            return ""
-
-
-    def convert_html(self, content: str) -> str:
-        """Basic HTML conversion with proper parsing."""
-        try:
-            soup = BeautifulSoup(content, 'html.parser')
-            return str(soup)
-        except Exception as e:
-            self.logger.error(f"HTML conversion failed: {str(e)}")
-            return content
-
-    def validate_html(self, html_content: str) -> bool:
-        """Validate HTML syntax and structure."""
-        try:
             if not html_content.strip():
-                return False
+                messages.append(
+                    ValidationMessage(
+                        path="content",
+                        message="Empty HTML content",
+                        severity=ValidationSeverity.ERROR,
+                        code="empty_content"
+                    )
+                )
+                return ValidationResult(is_valid=False, messages=messages)
+
+            # Parse HTML
             soup = BeautifulSoup(html_content, 'html.parser')
-            return bool(soup.find() and "<html" not in html_content.lower())
-        except Exception:
-            return False
 
+            # Check for basic HTML structure
+            if soup.find():
+                # Validate specific elements
+                messages.extend(self._validate_elements(soup))
 
-    def escape_html(self, content: str) -> str:
-        """
-        Escape HTML special characters in content.
+                # Validate attributes
+                messages.extend(self._validate_attributes(soup))
 
-        Args:
-            content: String content to escape
+                # Validate accessibility
+                if self.render_options.add_aria:
+                    messages.extend(self._validate_accessibility(soup))
 
-        Returns:
-            Escaped HTML content
-        """
-        try:
-            return html.escape(content, quote=True)
+            else:
+                messages.append(
+                    ValidationMessage(
+                        path="structure",
+                        message="Invalid HTML structure",
+                        severity=ValidationSeverity.ERROR,
+                        code="invalid_structure"
+                    )
+                )
+
+            is_valid = not any(
+                msg.severity == ValidationSeverity.ERROR
+                for msg in messages
+            )
+
+            if not is_valid:
+                self._stats["validation_failures"] += 1
+
+            return ValidationResult(is_valid=is_valid, messages=messages)
+
         except Exception as e:
-            self.logger.error(f"Error escaping HTML: {str(e)}")
-            return ""
+            self.logger.error(f"Error validating HTML: {str(e)}")
+            self._stats["validation_failures"] += 1
+            return ValidationResult(
+                is_valid=False,
+                messages=[
+                    ValidationMessage(
+                        path="validation",
+                        message=str(e),
+                        severity=ValidationSeverity.ERROR,
+                        code="validation_error"
+                    )
+                ]
+            )
 
-    def process_final_content(self, html_content: str) -> str:
-            """Process final HTML content before rendering."""
-            try:
-                # Unescape any previously escaped HTML
-                html_content = html.unescape(html_content)
+    def _validate_elements(self, soup: BeautifulSoup) -> List[ValidationMessage]:
+        """Validate HTML elements structure."""
+        messages = []
 
-                # Parse with BeautifulSoup to properly format HTML
-                soup = BeautifulSoup(html_content, 'html.parser')
+        # Validate heading hierarchy
+        headings = soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
+        current_level = 0
+        for heading in headings:
+            level = int(heading.name[1])
+            if level > current_level + 1:
+                messages.append(
+                    ValidationMessage(
+                        path=f"heading_{heading.get('id', '')}",
+                        message=f"Invalid heading hierarchy: h{current_level} to h{level}",
+                        severity=ValidationSeverity.WARNING,
+                        code="heading_hierarchy"
+                    )
+                )
+            current_level = level
 
-                # Return properly formatted HTML
-                return str(soup)
+        return messages
 
-            except Exception as e:
-                self.logger.error(f"Error processing HTML content: {str(e)}")
-                return html_content
+    def _validate_attributes(self, soup: BeautifulSoup) -> List[ValidationMessage]:
+        """Validate HTML element attributes."""
+        messages = []
 
+        for tag in soup.find_all(True):  # Find all tags
+            # Check for required attributes
+            if tag.name == 'img':
+                if not tag.get('alt'):
+                    messages.append(
+                        ValidationMessage(
+                            path=f"img_{tag.get('id', '')}",
+                            message="Image missing alt attribute",
+                            severity=ValidationSeverity.ERROR,
+                            code="missing_alt"
+                        )
+                    )
+                if not tag.get('src'):
+                    messages.append(
+                        ValidationMessage(
+                            path=f"img_{tag.get('id', '')}",
+                            message="Image missing src attribute",
+                            severity=ValidationSeverity.ERROR,
+                            code="missing_src"
+                        )
+                    )
 
+            # Validate links
+            if tag.name == 'a':
+                if not tag.get('href'):
+                    messages.append(
+                        ValidationMessage(
+                            path=f"link_{tag.get('id', '')}",
+                            message="Link missing href attribute",
+                            severity=ValidationSeverity.ERROR,
+                            code="missing_href"
+                        )
+                    )
 
-    def find_target_element(self, soup: BeautifulSoup, target_id: str) -> Optional[Tag]:
-        """
-        Find target element by ID in BeautifulSoup object.
+        return messages
 
-        Args:
-            soup: BeautifulSoup object to search
-            target_id: ID to find
+    def _validate_accessibility(self, soup: BeautifulSoup) -> List[ValidationMessage]:
+        """Validate accessibility requirements."""
+        messages = []
 
-        Returns:
-            Target element if found and is a Tag, None otherwise
-        """
-        try:
-            element = soup.find(id=target_id)
-            # Only return if element is a Tag
-            if isinstance(element, Tag):
-                return element
-            return None
-        except Exception as e:
-            self.logger.error(f"Error finding target element: {str(e)}")
-            return None
+        # Check for ARIA landmarks
+        if not soup.find(role="main"):
+            messages.append(
+                ValidationMessage(
+                    path="landmarks",
+                    message="Missing main landmark",
+                    severity=ValidationSeverity.WARNING,
+                    code="missing_landmark"
+                )
+            )
 
+        # Check for proper ARIA attributes
+        for tag in soup.find_all(True):
+            if tag.get('role') and not tag.get('aria-label'):
+                messages.append(
+                    ValidationMessage(
+                        path=f"{tag.name}_{tag.get('id', '')}",
+                        message=f"Element with role missing aria-label",
+                        severity=ValidationSeverity.WARNING,
+                        code="missing_aria_label"
+                    )
+                )
 
+        return messages
 
     def resolve_image_path(self, src: str, topic_path: Path) -> str:
-        """Resolve image path relative to topic file."""
+        """
+        Resolve image path relative to topic file.
+
+        Args:
+            src: Source image path
+            topic_path: Path to topic file
+
+        Returns:
+            Resolved image path
+        """
         try:
             if not self.dita_root:
                 self.logger.error("DITA root not set")
                 return src
 
+            # Clean the source path
+            src = src.strip('/')
+
             # Get topic directory and media path
             topic_dir = topic_path.parent
             media_dir = topic_dir / 'media'
 
-            # Clean the source path and construct full path
-            src = src.strip('/')
+            # Construct full path
             img_path = (media_dir / src).resolve()
 
-            self.logger.debug(f"Trying to resolve image: {img_path}")
-
-            # Make path relative to DITA root for serving
+            # Check if image exists
             if img_path.exists():
+                # Make path relative to DITA root
                 relative_path = img_path.relative_to(self.dita_root)
-                self.logger.debug(f"Image found, serving from: {relative_path}")
                 return f'/static/topics/{relative_path}'
             else:
-                self.logger.warning(f"Image not found at: {img_path}")
+                self.logger.warning(f"Image not found: {img_path}")
                 return src
 
         except Exception as e:
             self.logger.error(f"Error resolving image path: {str(e)}")
             return src
 
-    # Cleanup
+    def get_stats(self) -> Dict[str, int]:
+        """Get HTML helper statistics."""
+        return self._stats.copy()
 
     def cleanup(self) -> None:
-        """Clean up helper resources and state."""
+        """Clean up helper resources."""
         try:
-            self.logger.debug("Starting HTML helper cleanup")
-
-            # Reset state
-            self.dita_root = None
-            self._cache.clear()
-
+            self._element_cache.clear()
+            self._tag_cache.clear()
+            self._templates.clear()
+            self._validation_patterns.clear()
+            self._stats = {
+                "elements_created": 0,
+                "elements_modified": 0,
+                "validations_performed": 0,
+                "validation_failures": 0
+            }
             self.logger.debug("HTML helper cleanup completed")
 
         except Exception as e:
-            self.logger.error(f"HTML helper cleanup failed: {str(e)}")
+            self.logger.error(f"Error during cleanup: {str(e)}")
             raise
-
-
-    #########
-    # Content Objects
-    #########
-
-    def generate_toc(self, metadata: ProcessingMetadata) -> str:
-        """
-        Generate a Table of Contents (TOC) from ProcessingMetadata.
-
-        Args:
-            metadata: The ProcessingMetadata object containing heading references.
-
-        Returns:
-            str: A structured HTML string for the TOC.
-        """
-        try:
-            toc_html = "<nav class='toc'><ul>"
-            for heading_id, heading_data in metadata.references["headings"].items():
-                level = heading_data["level"]
-                text = heading_data["text"]
-                toc_html += f"<li class='toc-level-{level}'><a href='#{heading_id}'>{text}</a></li>"
-            toc_html += "</ul></nav>"
-            return toc_html
-        except Exception as e:
-            self.logger.error(f"Error generating TOC: {str(e)}")
-            return "<!-- TOC generation failed -->"
-
-    def generate_xref(self, source_id: str, target_ref: str, id_handler: DITAIDHandler) -> str:
-        """
-        Generate an HTML anchor for a cross-reference.
-
-        Args:
-            source_id: The source topic ID.
-            target_ref: The target reference (e.g., topic#heading).
-            id_handler: An instance of the DITAIDHandler.
-
-        Returns:
-            str: An HTML anchor tag.
-        """
-        try:
-            href = id_handler.resolve_xref(source_id, target_ref)
-            return f"<a href='{href}'>{target_ref}</a>"
-        except Exception as e:
-            self.logger.error(f"Error generating xref for {target_ref}: {str(e)}")
-            return f"<a href='#'>{target_ref}</a>"

@@ -1,8 +1,7 @@
-# app/dita/transformers/base_transformer.py
-
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any, Type
+from typing import Dict, List, Optional, Any, Type, Set, Tuple
 from pathlib import Path
+import logging
 
 # Core managers
 from ..event_manager import EventManager, EventType
@@ -11,9 +10,10 @@ from ..config_manager import ConfigManager
 from ..key_manager import KeyManager
 
 # Utils
-from ..utils.cache import ContentCache
+from ..utils.cache import ContentCache, CacheEntryType
 from ..utils.html_helpers import HTMLHelper
 from ..utils.heading import HeadingHandler
+from ..utils.id_handler import DITAIDHandler, IDType
 from ..utils.logger import DITALogger
 
 # Types
@@ -25,11 +25,33 @@ from ..models.types import (
     ElementType,
     ProcessingMetadata,
     ProcessingContext,
-    ValidationResult
+    ValidationResult,
+    ValidationMessage,
+    ValidationSeverity,
+    ContentScope,
+    ProcessingStateInfo
 )
 
-class TransformationStrategy(ABC):
+class TransformStrategy(ABC):
     """Base strategy for content transformation."""
+
+    @abstractmethod
+    def can_transform(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> bool:
+        """
+        Check if this strategy can transform the element.
+
+        Args:
+            element: Element to transform
+            context: Processing context
+
+        Returns:
+            bool: True if strategy can handle the element
+        """
+        pass
 
     @abstractmethod
     def transform(
@@ -37,9 +59,38 @@ class TransformationStrategy(ABC):
         element: TrackedElement,
         context: ProcessingContext,
         metadata: ProcessingMetadata,
-        rules: Dict[str, Any]
+        config: Dict[str, Any]
     ) -> ProcessedContent:
-        """Transform element according to strategy."""
+        """
+        Transform element according to strategy.
+
+        Args:
+            element: Element to transform
+            context: Processing context
+            metadata: Processing metadata
+            config: Transformation configuration
+
+        Returns:
+            ProcessedContent: Transformed content
+        """
+        pass
+
+    @abstractmethod
+    def validate(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> ValidationResult:
+        """
+        Validate element before transformation.
+
+        Args:
+            element: Element to validate
+            context: Processing context
+
+        Returns:
+            ValidationResult: Validation result
+        """
         pass
 
 class BaseTransformer(ABC):
@@ -54,8 +105,10 @@ class BaseTransformer(ABC):
         content_cache: ContentCache,
         html_helper: HTMLHelper,
         heading_handler: HeadingHandler,
+        id_handler: DITAIDHandler,
         logger: Optional[DITALogger] = None
     ):
+        """Initialize transformer."""
         # Core dependencies
         self.event_manager = event_manager
         self.context_manager = context_manager
@@ -64,13 +117,21 @@ class BaseTransformer(ABC):
         self.content_cache = content_cache
         self.html_helper = html_helper
         self.heading_handler = heading_handler
+        self.id_handler = id_handler
         self.logger = logger or logging.getLogger(__name__)
 
-        # Initialize strategies
-        self._strategies: Dict[ElementType, TransformationStrategy] = {}
-        self._initialize_strategies()
+        # Strategy registry
+        self._strategies: Dict[ElementType, List[TransformStrategy]] = {}
 
-        # Register for events
+        # State tracking
+        self._processed_elements: Set[str] = set()
+        self._active_transformations: Dict[str, ProcessingStateInfo] = {}
+
+        # Feature flags
+        self._feature_flags: Dict[str, bool] = {}
+
+        # Initialize
+        self._initialize_strategies()
         self._register_event_handlers()
 
     def _initialize_strategies(self) -> None:
@@ -88,13 +149,14 @@ class BaseTransformer(ABC):
             self._handle_state_change
         )
 
+    @abstractmethod
     def transform_content(
         self,
         element: TrackedElement,
         context: Optional[ProcessingContext] = None
     ) -> ProcessedContent:
         """
-        Transform content with phase management and caching.
+        Transform content with phase management.
 
         Args:
             element: Element to transform
@@ -103,125 +165,34 @@ class BaseTransformer(ABC):
         Returns:
             ProcessedContent: Transformed content
         """
-        try:
-            # Get or create context
-            if not context:
-                context = self.context_manager.get_context(element.id)
-                if not context:
-                    context = self.context_manager.register_context(
-                        content_id=element.id,
-                        element_type=element.type,
-                        metadata=element.metadata
-                    )
-
-            # Check cache
-            cache_key = f"transform_{element.id}"
-            if cached := self.content_cache.get_transformed_content(
-                element.id,
-                ProcessingPhase.TRANSFORMATION
-            ):
-                return cached
-
-            # Start transformation phase
-            self.event_manager.start_phase(
-                element.id,
-                ProcessingPhase.TRANSFORMATION
-            )
-
-            # Get transformation strategy
-            strategy = self._get_strategy(element.type)
-            if not strategy:
-                raise ValueError(f"No strategy for type: {element.type}")
-
-            # Get processing rules
-            rules = self.config_manager.get_processing_rules(
-                element.type,
-                context
-            )
-
-            # Create processing metadata
-            metadata = ProcessingMetadata(
-                content_id=element.id,
-                content_type=element.type,
-                content_scope=context.scope
-            )
-
-            # Transform content
-            transformed = strategy.transform(
-                element,
-                context,
-                metadata,
-                rules
-            )
-
-            # Cache result
-            self.content_cache.register_transformed_content(
-                element.id,
-                ProcessingPhase.TRANSFORMATION,
-                transformed
-            )
-
-            # End transformation phase
-            self.event_manager.end_phase(
-                element.id,
-                ProcessingPhase.TRANSFORMATION
-            )
-
-            return transformed
-
-        except Exception as e:
-            self.logger.error(f"Transform error for {element.id}: {str(e)}")
-            self.event_manager.update_element_state(
-                element.id,
-                ProcessingState.ERROR
-            )
-            raise
-
-    def _get_strategy(
-        self,
-        element_type: ElementType
-    ) -> Optional[TransformationStrategy]:
-        """Get appropriate transformation strategy."""
-        return self._strategies.get(element_type)
+        pass
 
     @abstractmethod
-    def enrich_content(
+    def register_strategy(
         self,
-        content: ProcessedContent,
-        context: ProcessingContext
-    ) -> ProcessedContent:
+        element_type: ElementType,
+        strategy: TransformStrategy
+    ) -> None:
         """
-        Enrich transformed content with additional features.
-        Implemented by specialized transformers.
+        Register a transformation strategy.
+
+        Args:
+            element_type: Type of element
+            strategy: Strategy implementation
         """
         pass
 
+    def _get_strategies(
+        self,
+        element_type: ElementType
+    ) -> List[TransformStrategy]:
+        """Get transformation strategies for element type."""
+        return self._strategies.get(element_type, [])
+
     def _handle_phase_start(self, **event_data: Any) -> None:
         """Handle phase start events."""
-        try:
-            element_id = event_data.get("element_id")
-            phase = event_data.get("phase")
-
-            if phase == ProcessingPhase.TRANSFORMATION:
-                # Prepare for transformation
-                self.content_cache.invalidate_pattern(
-                    f"transform_{element_id}"
-                )
-
-        except Exception as e:
-            self.logger.error(f"Error handling phase start: {str(e)}")
+        pass  # Implemented by subclasses
 
     def _handle_state_change(self, **event_data: Any) -> None:
         """Handle state change events."""
-        try:
-            element_id = event_data.get("element_id")
-            state = event_data.get("state")
-
-            if state == ProcessingState.ERROR:
-                # Cleanup on error
-                self.content_cache.invalidate_pattern(
-                    f"transform_{element_id}"
-                )
-
-        except Exception as e:
-            self.logger.error(f"Error handling state change: {str(e)}")
+        pass  # Implemented by subclasses

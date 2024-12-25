@@ -1,252 +1,584 @@
-from datetime import datetime
-import logging
-from pathlib import Path
-from html import escape
-import html
-from bs4 import BeautifulSoup, Tag
-from typing import Optional, Dict, Any, Callable, List
-from lxml import etree
-from ..models.types import (
-    DITAElementType,
-    DITAElementInfo,
-    TrackedElement,
-    ProcessedContent,
-    ProcessingContext,
+# app/dita/transformers/dita_transformer.py
+
+from typing import (
+    Dict,
+    List,
+    Optional,
+    Any,
+    Type,
+    Set,
+    Tuple,
+    Union,
+    Generator
 )
-from app_config import DITAConfig
-from .base_transformer import BaseTransformer
-from ..processors.dita_parser import DITAParser
-from app.dita.processors.content_processors import ContentProcessor
-from ..processors.dita_elements import DITAElementProcessor
+from bs4 import Tag
+from pathlib import Path
+import logging
+
+# Base classes
+from .base_transformer import BaseTransformer, TransformStrategy
+
+# Core managers
+from ..event_manager import EventManager, EventType
+from ..context_manager import ContextManager
+from ..config_manager import ConfigManager
+from ..key_manager import KeyManager
+
+# Utils
+from ..utils.cache import ContentCache, CacheEntryType
 from ..utils.html_helpers import HTMLHelper
-from ..utils.id_handler import DITAIDHandler
 from ..utils.heading import HeadingHandler
-from xml.etree import ElementTree
-from app.dita.utils import heading
+from ..utils.id_handler import DITAIDHandler, IDType
+from ..utils.logger import DITALogger
+
+# Types
+from ..models.types import (
+    ProcessedContent,
+    TrackedElement,
+    ProcessingPhase,
+    ProcessingState,
+    ElementType,
+    DITAElementType,
+    ProcessingMetadata,
+    ProcessingContext,
+    ValidationResult,
+    ValidationMessage,
+    ValidationSeverity,
+    ContentScope,
+    ProcessingStateInfo,
+    KeyDefinition
+)
+
+class DITATransformStrategy(TransformStrategy):
+    """Base strategy for DITA-specific transformations."""
+
+    def __init__(self, transformer: 'DITATransformer'):
+        self.transformer = transformer
 
 
-class DITATransformer(BaseTransformer):
-    """Transforms DITA content to HTML using the BaseTransformer approach."""
+class DITATopicStrategy(DITATransformStrategy):
+    """Strategy for DITA topic transformation."""
 
-    def __init__(self, dita_root: Path):
-        super().__init__(dita_root)
-        self.logger = logging.getLogger(__name__)
-        self.dita_root = dita_root
-        self.dita_parser = DITAParser()
-        self.html_helper = HTMLHelper(dita_root)
-        self.id_handler = DITAIDHandler()
-        self.heading_handler = HeadingHandler()
+    def can_transform(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> bool:
+        return element.type == ElementType.TOPIC
 
-        # Initialize content processor first
-        content_processor = ContentProcessor(
-            dita_root=dita_root,
-            markdown_root=dita_root
+    def transform(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext,
+        metadata: ProcessingMetadata,
+        config: Dict[str, Any]
+    ) -> ProcessedContent:
+        """Transform DITA topic."""
+        try:
+            # Get specialization type if any
+            specialization = self._get_specialization_type(element, context)
+
+            # Get transformation rules
+            rules = self.transformer.config_manager.get_dita_element_rules(
+                specialization or DITAElementType.TOPIC
+            )
+
+            # Create topic container
+            container = self.transformer.html_helper.create_element(
+                tag=rules.get("html_tag", "article"),
+                attrs={
+                    "class": rules.get("default_classes", ["dita-topic"]),
+                    "id": element.id,
+                    **rules.get("attributes", {})
+                }
+            )
+
+            # Handle key resolution
+            self._resolve_keys(element, context)
+
+            # Transform child elements
+            children = self._transform_children(element, context, metadata)
+            container = self.transformer.html_helper.create_container(
+                tag=rules["html_tag"],
+                children=children,
+                attrs=container.attrs
+            )
+
+            return ProcessedContent(
+                element_id=element.id,
+                html=str(container),
+                metadata=metadata.transient_attributes
+            )
+
+        except Exception as e:
+            self.transformer.logger.error(f"Error transforming topic: {str(e)}")
+            raise
+
+    def validate(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> ValidationResult:
+        """Validate DITA topic."""
+        messages = []
+
+        # Validate required elements
+        if not element.content:
+            messages.append(
+                ValidationMessage(
+                    path=element.id,
+                    message="Empty topic content",
+                    severity=ValidationSeverity.ERROR,
+                    code="empty_topic"
+                )
+            )
+
+        # Validate specialization if present
+        if specialization := self._get_specialization_type(element, context):
+            if not self.transformer.specialization_rules.get(specialization.value):
+                messages.append(
+                    ValidationMessage(
+                        path=element.id,
+                        message=f"Unknown specialization: {specialization.value}",
+                        severity=ValidationSeverity.ERROR,
+                        code="invalid_specialization"
+                    )
+                )
+
+        return ValidationResult(
+            is_valid=not any(
+                msg.severity == ValidationSeverity.ERROR
+                for msg in messages
+            ),
+            messages=messages
         )
 
-        self.content_processor = DITAElementProcessor(content_processor)
+    def _get_specialization_type(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> Optional[DITAElementType]:
+        """Get specialization type for element."""
+        if element.id in self.transformer._specialized_elements:
+            return self.transformer._specialized_elements[element.id]
 
-        # Map DITA elements to their transformers
-        self._element_transformers: Dict[DITAElementType, Callable[[DITAElementInfo], str]] = {
-            DITAElementType.CODE_BLOCK: self._transform_code_block,
-            DITAElementType.STEP: self._transform_step,
-            DITAElementType.PREREQ: self._transform_prereq,
-            DITAElementType.CMD: self._transform_cmd,
-            DITAElementType.INFO: self._transform_info,
-            DITAElementType.SUBSTEP: self._transform_substep,
-            DITAElementType.METADATA: self._transform_metadata,
-            DITAElementType.QUOTE: self._transform_quote,
-            DITAElementType.CONCEPT: self._transform_concept,
-            DITAElementType.TASK: self._transform_task,
-            DITAElementType.REFERENCE: self._transform_reference,
-            DITAElementType.SECTION: self._transform_section,
-            DITAElementType.PARAGRAPH: self._transform_paragraph,
-            DITAElementType.NOTE: self._transform_note,
-            DITAElementType.TABLE: self._transform_table,
-            DITAElementType.LIST: self._transform_list,
-            DITAElementType.ORDERED_LIST: self._transform_ordered_list,
-            DITAElementType.CODE_PHRASE: self._transform_code_phrase,
-            DITAElementType.FIGURE: self._transform_figure,
-            DITAElementType.IMAGE: self._transform_image,
-            DITAElementType.XREF: self._transform_xref,
-            DITAElementType.LINK: self._transform_link,
-            DITAElementType.SHORTDESC: self._transform_shortdesc,
-            DITAElementType.ABSTRACT: self._transform_abstract,
-            DITAElementType.STEPS: self._transform_steps,
-            DITAElementType.SUBSTEPS: self._transform_substeps,
-            DITAElementType.DEFINITION: self._transform_definition,
-            DITAElementType.TERM: self._transform_term,
-            DITAElementType.TASKBODY: self._transform_taskbody
-        }
+        specialization = context.metadata_refs.get("specialization")
+        if specialization:
+            try:
+                return DITAElementType(specialization)
+            except ValueError:
+                pass
 
-    def configure(self, config: DITAConfig):
-            """
-            Apply additional configuration settings.
-            """
-            self.logger.debug("Configuring DITATransformer")
-            # Example: Add custom configuration logic
-            # e.g., setting up specific extensions or paths
-            self.some_configured_attribute = getattr(config, 'some_attribute', None)
+        return None
 
-    def transform_topic(
+    def _resolve_keys(
             self,
-            element: TrackedElement,  # Changed from parsed_element: ParsedElement
+            element: TrackedElement,
             context: ProcessingContext
-        ) -> ProcessedContent:
-            try:
-                # Let parser handle XML parsing
-                xml_tree = self.dita_parser.parse_xml_content(element.content)
-                # Let content processor handle element processing
-                processed_elements = self.content_processor.process_elements(xml_tree)
-                # Transform to HTML (our only concern)
-                html_content = self._convert_to_html(processed_elements, context)
+        ) -> None:
+            """Resolve keys using transformer's key manager."""
+            self.transformer._resolve_keys(element, context)
 
-                return ProcessedContent(
-                    html=html_content,
-                    element_id=element.id,
-                    metadata=element.metadata
-                )
-            except Exception as e:
-                self.logger.error(f"Error transforming DITA topic: {str(e)}")
-                raise
+    def _transform_children(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext,
+        metadata: ProcessingMetadata
+    ) -> List[Union[Tag, str]]:
+        """Transform child elements."""
+        children = []
+        # Parse element content into child elements
+        child_elements = self.transformer.content_cache.get(
+            f"children_{element.id}",
+            entry_type=CacheEntryType.CONTENT
+        )
 
+        if not child_elements:
+            # Parse content into child elements - this should be done by processor
+            # and stored in cache, but for now we'll return empty list
+            return []
 
+        # Transform each child element
+        for child_element in child_elements:
+            if isinstance(child_element, TrackedElement):
+                processed = self.transformer.transform_content(child_element, context)
+                if processed and processed.html:
+                    children.append(processed.html)
+        return children
 
+class DITAMapStrategy(DITATransformStrategy):
+    """Strategy for DITA map transformation."""
 
-    def _transform_step(self, element_info: DITAElementInfo) -> str:
-        """Transform a step element."""
-        content = html.escape(element_info.content or "")
-        step_number = element_info.attributes.get('step-number', '1')
-        return f'<div class="step"><h3 class="step-title">{step_number}. {content}</h3>'
+    def can_transform(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> bool:
+        return element.type == ElementType.DITAMAP
 
-    def _transform_substep(self, element_info: DITAElementInfo) -> str:
-        """Transform a substep element."""
-        content = html.escape(element_info.content or "")
-        substep_num = element_info.attributes.get('substep-number')
+    def transform(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext,
+        metadata: ProcessingMetadata,
+        config: Dict[str, Any]
+    ) -> ProcessedContent:
+        """Transform DITA map."""
         try:
-            num = int(substep_num) if substep_num is not None else 0
-            substep_letter = chr(ord('a') + num)
-        except (ValueError, TypeError):
-            substep_letter = 'a'
-        return f'<div class="substep"><p class="substep-title">{substep_letter}) {content}</p>'
+            # Update current map context
+            self.transformer._current_map_id = element.id
 
-    def _transform_info(self, element_info: DITAElementInfo) -> str:
-        """Transform an info element."""
-        content = html.escape(element_info.content or "")
-        return f'<div class="info-block alert alert-info">{content}</div>'
-
-    def _transform_cmd(self, element_info: DITAElementInfo) -> str:
-        """Transform a command element."""
-        content = html.escape(element_info.content or "")
-        return f'<h4 class="cmd-title">{content}</h4>'
-
-    def _transform_prereq(self, element_info: DITAElementInfo) -> str:
-        """Transform a prerequisite element."""
-        content = html.escape(element_info.content or "")
-        return f'<div class="prereq-block alert alert-warning">{content}</div>'
-
-    def _transform_steps_container(self, _: DITAElementInfo) -> str:
-        """Transform a steps container element."""
-        return '<div class="steps-container">'
-
-    def _transform_substeps_container(self, _: DITAElementInfo) -> str:
-        """Transform a substeps container element."""
-        return '<div class="substeps-container ms-4">'
-
-    def _transform_unordered_list(self, element_info: DITAElementInfo) -> str:
-        """Transform an unordered list element."""
-        content = html.escape(element_info.content or "")
-        return f'<ul class="task-list">{content}</ul>'
-
-    def _transform_list_item(self, element_info: DITAElementInfo) -> str:
-        """Transform a list item element."""
-        content = html.escape(element_info.content or "")
-        return f'<li class="task-list-item">• {content}</li>'
-
-
-    def _transform_code_block(self, element_info: DITAElementInfo) -> str:
-        """Transform DITA code blocks with consistent styling."""
-        try:
-            if element_info.type != DITAElementType.CODE_BLOCK:
-                return ""
-
-            language = element_info.attributes.get('outputclass', '')
-            content = html.escape(element_info.content or "")
-
-            language_label = f'<div class="code-label">{language}</div>' if language else ''
-
-            return (
-                f'<pre class="code-block" data-language="{language}">'
-                f'{language_label}'
-                f'<code class="language-{language}">{content}</code>'
-                '</pre>'
+            # Get transformation rules
+            rules = self.transformer.config_manager.get_dita_element_rules(
+                DITAElementType.MAP
             )
-        except Exception as e:
-            self.logger.error(f"Error transforming code block: {str(e)}")
-            return ""
 
-    def _transform_metadata(self, metadata_elem: Any) -> str:
-        """Transform metadata into an HTML table."""
+            # Create map container
+            container = self.transformer.html_helper.create_element(
+                tag=rules.get("html_tag", "div"),
+                attrs={
+                    "class": rules.get("default_classes", ["dita-map"]),
+                    "id": element.id,
+                    **rules.get("attributes", {})
+                }
+            )
+
+            # Process topic refs
+            topic_refs = self._process_topic_refs(element, context)
+
+            # Create ToC if enabled
+            if context.features.get("show_toc", True):
+                toc = self._create_toc(element.id, context)  # Changed to pass element.id instead of topic_refs
+                children: List[Union[Tag, str]] = [toc]
+                children.extend(topic_refs)
+                container = self.transformer.html_helper.create_container(
+                    tag=rules["html_tag"],
+                    children=children,
+                    attrs=container.attrs
+                )
+            else:
+                container = self.transformer.html_helper.create_container(
+                    tag=rules["html_tag"],
+                    children=topic_refs,
+                    attrs=container.attrs
+                )
+
+            return ProcessedContent(
+                element_id=element.id,
+                html=str(container),
+                metadata=metadata.transient_attributes
+            )
+
+        except Exception as e:
+            self.transformer.logger.error(f"Error transforming map: {str(e)}")
+            raise
+
+    def _create_toc(
+        self,
+        map_id: str,
+        context: ProcessingContext
+    ) -> str:
+        """Create table of contents."""
+        return self.transformer.html_helper.generate_toc(
+            self.transformer.heading_handler.get_topic_headings(map_id)
+        )
+
+    def validate(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> ValidationResult:
+        """Validate DITA map."""
+        messages = []
+
+        # Validate topic refs
+        if not element.topics:
+            messages.append(
+                ValidationMessage(
+                    path=element.id,
+                    message="Map contains no topics",
+                    severity=ValidationSeverity.WARNING,
+                    code="empty_map"
+                )
+            )
+
+        # Validate title
+        if not element.title:
+            messages.append(
+                ValidationMessage(
+                    path=element.id,
+                    message="Map missing title",
+                    severity=ValidationSeverity.ERROR,
+                    code="missing_title"
+                )
+            )
+
+        return ValidationResult(
+            is_valid=not any(
+                msg.severity == ValidationSeverity.ERROR
+                for msg in messages
+            ),
+            messages=messages
+        )
+
+    def _process_topic_refs(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> List[Union[Tag, str]]:  # Updated return type
+        """Process topic references in map."""
+        topic_refs = []
+        for topic_id in element.topics:
+            topic_context = self.transformer.context_manager.get_context(topic_id)
+            if not topic_context:
+                continue
+            processed = self.transformer.transform_content(
+                TrackedElement.from_discovery(
+                    path=Path(topic_id),
+                    element_type=ElementType.TOPIC,
+                    id_handler=self.transformer.id_handler
+                ),
+                topic_context
+            )
+            if processed and processed.html:
+                topic_refs.append(processed.html)
+        return topic_refs
+
+
+class DITAElementStrategy(DITATransformStrategy):
+    """Strategy for general DITA element transformation."""
+
+    def can_transform(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> bool:
+        return True  # Default strategy for any DITA element
+
+    def transform(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext,
+        metadata: ProcessingMetadata,
+        config: Dict[str, Any]
+    ) -> ProcessedContent:
+        """Transform general DITA element."""
         try:
-            rows = []
-            rows.append("<table class='metadata-table'>")
-            rows.append("<thead><tr><th>Property</th><th>Value</th></tr></thead>")
-            rows.append("<tbody>")
+            # Get element rules
+            rules = self.transformer.config_manager.get_dita_element_rules(
+                DITAElementType.UNKNOWN
+            )
 
-            for child in metadata_elem:
-                if isinstance(child.tag, str):
-                    name = child.tag
-                    value = child.text or child.get('content', '')
-                    rows.append(f"<tr><td>{name}</td><td>{value}</td></tr>")
+            # Create element
+            transformed = self.transformer.html_helper.create_element(
+                tag=rules.get("html_tag", "div"),
+                attrs={
+                    "class": rules.get("default_classes", ["dita-element"]),
+                    "id": element.id,
+                    **rules.get("attributes", {})
+                },
+                content=element.content
+            )
 
-            rows.append("</tbody></table>")
-            return "\n".join(rows)
+            return ProcessedContent(
+                element_id=element.id,
+                html=str(transformed),
+                metadata=metadata.transient_attributes
+            )
+
         except Exception as e:
-            self.logger.error(f"Error transforming metadata: {str(e)}")
-            return ""
+            self.transformer.logger.error(f"Error transforming element: {str(e)}")
+            raise
+
+    def validate(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> ValidationResult:
+        """Validate DITA element."""
+        return ValidationResult(is_valid=True, messages=[])
+
+class DITATransformer(BaseTransformer):
+    """
+    DITA-specific transformer implementation.
+    Handles DITA content transformation with specialization support.
+    """
+
+    def __init__(
+        self,
+        event_manager: EventManager,
+        context_manager: ContextManager,
+        config_manager: ConfigManager,
+        key_manager: KeyManager,
+        content_cache: ContentCache,
+        html_helper: HTMLHelper,
+        heading_handler: HeadingHandler,
+        id_handler: DITAIDHandler,
+        logger: Optional[DITALogger] = None,
+        specialization_rules: Optional[Dict[str, Any]] = None
+    ):
+        """Initialize DITA transformer."""
+        super().__init__(
+            event_manager=event_manager,
+            context_manager=context_manager,
+            config_manager=config_manager,
+            key_manager=key_manager,
+            content_cache=content_cache,
+            html_helper=html_helper,
+            heading_handler=heading_handler,
+            id_handler=id_handler,
+            logger=logger
+        )
+
+        # DITA-specific configuration
+        self.specialization_rules = specialization_rules or {}
+
+        # Key resolution cache
+        self._key_resolution_cache: Dict[str, KeyDefinition] = {}
+
+        # Specialization tracking
+        self._specialized_elements: Dict[str, DITAElementType] = {}
+
+        # Transform state
+        self._current_map_id: Optional[str] = None
+        self._topic_hierarchy: Dict[str, List[str]] = {}
+
+        # Initialize DITA-specific strategies
+        self._initialize_dita_strategies()
+
+
+    def _initialize_dita_strategies(self) -> None:
+        """Initialize DITA-specific transformation strategies."""
+        self._strategies[ElementType.TOPIC] = [DITATopicStrategy(self)]
+        self._strategies[ElementType.DITAMAP] = [DITAMapStrategy(self)]
+        self._strategies[ElementType.UNKNOWN] = [DITAElementStrategy(self)]
+
+    def transform_content(
+        self,
+        element: TrackedElement,
+        context: Optional[ProcessingContext] = None
+    ) -> ProcessedContent:
+        """Transform DITA content."""
+        try:
+            # Get or create context
+            if not context:
+                ctx = self.context_manager.get_context(element.id)
+                if not ctx:
+                    ctx = self.context_manager.register_context(
+                        content_id=element.id,
+                        element_type=element.type,
+                        metadata=element.metadata
+                    )
+            else:
+                ctx = context
+
+            if not ctx:
+                raise ValueError(f"Could not create context for {element.id}")
+
+            # Validate element
+            validation_result = self._validate_element(element, ctx)
+            if not validation_result.is_valid:
+                raise ValueError(
+                    f"Validation failed for {element.id}: "
+                    f"{validation_result.messages[0].message}"
+                )
+
+            # Get appropriate strategies
+            strategies = self._get_strategies(element.type)
+            if not strategies:
+                raise ValueError(f"No strategy found for {element.type}")
+
+            # Find suitable strategy
+            strategy = next(
+                (s for s in strategies if s.can_transform(element, ctx)),
+                None
+            )
+            if not strategy:
+                raise ValueError(f"No suitable strategy for {element.id}")
+
+            # Create processing metadata
+            metadata = ProcessingMetadata(
+                content_id=element.id,
+                content_type=element.type,
+                content_scope=ctx.scope
+            )
+
+            # Get transformation config
+            config = self.config_manager.get_processing_rules(
+                element.type,
+                ctx
+            )
+
+            return strategy.transform(element, ctx, metadata, config)
+
+        except Exception as e:
+            self.logger.error(f"Error transforming DITA content: {str(e)}")
+            raise
+
+    def _resolve_keys(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> None:
+        """Resolve key references in element."""
+        try:
+            if key_refs := element.metadata.get("key_references"):
+                current_map = self._current_map_id
+                if not current_map:
+                    self.logger.warning(f"No current map ID for key resolution: {element.id}")
+                    return
+
+                for key in key_refs:
+                    if key not in self._key_resolution_cache:
+                        resolved = self.key_manager.resolve_key(
+                            key=key,
+                            context_map=current_map
+                        )
+                        if resolved:
+                            self._key_resolution_cache[key] = resolved
+                            context.metadata_refs[key] = resolved.href or ""
+
+        except Exception as e:
+            self.logger.error(f"Error resolving keys: {str(e)}")
+
+    def register_strategy(
+        self,
+        element_type: ElementType,
+        strategy: TransformStrategy
+    ) -> None:
+        """Register a DITA transformation strategy."""
+        if element_type not in self._strategies:
+            self._strategies[element_type] = []
+        self._strategies[element_type].append(strategy)
 
 
 
-    def _create_html_element(
-            self,
-            soup: BeautifulSoup,
-            element_info: DITAElementInfo
-        ) -> Optional[Tag]:
-            """
-            Create HTML element from DITA element info.
+    def _validate_element(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> ValidationResult:
+        """Validate element before transformation."""
+        try:
+            strategies = self._get_strategies(element.type)
+            for strategy in strategies:
+                if strategy.can_transform(element, context):
+                    return strategy.validate(element, context)
+            return ValidationResult(
+                is_valid=True,
+                messages=[]
+            )
 
-            Args:
-                soup: BeautifulSoup instance for creating new tags
-                element_info: Processed DITA element information
-
-            Returns:
-                Optional[Tag]: Created HTML element or None if creation fails
-            """
-            try:
-                # Get HTML tag name from mapping
-                tag_name = self._element_mappings.get(element_info.type, 'div')
-                new_elem = soup.new_tag(tag_name)
-
-                # Apply attributes
-                if element_info.attributes.id:
-                    new_elem['id'] = element_info.attributes.id
-                if element_info.attributes.classes:
-                    new_elem['class'] = ' '.join(element_info.attributes.classes)
-                for key, value in element_info.attributes.custom_attrs.items():
-                    new_elem[key] = value
-
-                # Add content
-                if element_info.content:
-                    new_elem.string = element_info.content
-
-                # Process children if any
-                if element_info.children:
-                    for child in element_info.children:
-                        child_elem = self._create_html_element(soup, child)
-                        if child_elem:
-                            new_elem.append(child_elem)
-
-                return new_elem
-
-            except Exception as e:
-                self.logger.error(f"Error creating HTML element: {str(e)}")
-                return None
+        except Exception as e:
+            self.logger.error(f"Error validating element: {str(e)}")
+            return ValidationResult(
+                is_valid=False,
+                messages=[
+                    ValidationMessage(
+                        path=element.id,
+                        message=str(e),
+                        severity=ValidationSeverity.ERROR,
+                        code="validation_error"
+                    )
+                ]
+            )
