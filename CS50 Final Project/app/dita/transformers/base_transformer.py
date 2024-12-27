@@ -1,7 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any, Type, Set, Tuple
+from typing import Dict, List, Optional, Any, Type, Set, Tuple, Protocol
 from pathlib import Path
+from bs4 import Tag, BeautifulSoup
 import logging
+import re
+
+# Latex transformation
+from ..utils.latex.latex_processor import LaTeXProcessor
+from ..utils.latex.latex_validator import LaTeXValidator
+from ..utils.latex.katex_renderer import KaTeXRenderer
+from ..models.types import LaTeXEquation, ProcessedEquation
 
 # Core managers
 from ..event_manager import EventManager, EventType
@@ -93,6 +101,223 @@ class TransformStrategy(ABC):
         """
         pass
 
+
+class ContentEnricher(Protocol):
+    """Protocol for content enrichment strategies."""
+    def can_enrich(self, content: ProcessedContent, context: ProcessingContext) -> bool:
+        """Check if content can be enriched."""
+        ...
+
+    def enrich(
+        self,
+        content: ProcessedContent,
+        context: ProcessingContext,
+        config: Dict[str, Any]
+    ) -> ProcessedContent:
+        """Enrich content."""
+        ...
+
+class LaTeXEnricher(ContentEnricher):
+    """LaTeX equation enrichment strategy."""
+
+    def __init__(self, transformer: 'BaseTransformer'):
+        self.transformer = transformer
+        self.latex_processor = LaTeXProcessor()
+        self.latex_validator = LaTeXValidator()
+        self.katex_renderer = KaTeXRenderer()
+
+    def can_enrich(self, content: ProcessedContent, context: ProcessingContext) -> bool:
+        """Check if content contains LaTeX equations."""
+        return '$$' in content.html or '$' in content.html
+
+    def enrich(
+        self,
+        content: ProcessedContent,
+        context: ProcessingContext,
+        config: Dict[str, Any]
+    ) -> ProcessedContent:
+        """Enrich content with rendered LaTeX equations."""
+        try:
+            equations = self._extract_equations(content.html)
+            processed_equations = self.latex_processor.process_equations(equations)
+
+            # Replace equations in content
+            html = content.html
+            for processed_eq in processed_equations:
+                placeholder = f'<latex-equation id="{processed_eq.id}"></latex-equation>'
+                # Convert ProcessedEquation back to LaTeXEquation
+                latex_eq = LaTeXEquation(
+                    id=processed_eq.id,
+                    content=processed_eq.original,
+                    is_block=processed_eq.is_block
+                )
+                rendered = self.katex_renderer.render_equation(latex_eq)
+                html = html.replace(placeholder, rendered)
+
+            return ProcessedContent(
+                element_id=content.element_id,
+                html=html,
+                metadata={
+                    **(content.metadata or {}),
+                    "equations": [eq.id for eq in equations]
+                }
+            )
+
+        except Exception as e:
+            self.transformer.logger.error(f"LaTeX enrichment failed: {str(e)}")
+            return content
+
+    def _extract_equations(self, html: str) -> List[LaTeXEquation]:
+        """Extract LaTeX equations from HTML content."""
+        equations = []
+
+        # Extract block equations
+        block_pattern = r'\$\$(.*?)\$\$'
+        for idx, match in enumerate(re.finditer(block_pattern, html, re.DOTALL)):
+            equations.append(LaTeXEquation(
+                id=f'eq-block-{idx}',
+                content=match.group(1).strip(),
+                is_block=True
+            ))
+
+        # Extract inline equations
+        inline_pattern = r'(?<!\$)\$(.*?)\$(?!\$)'
+        for idx, match in enumerate(re.finditer(inline_pattern, html)):
+            equations.append(LaTeXEquation(
+                id=f'eq-inline-{idx}',
+                content=match.group(1).strip(),
+                is_block=False
+            ))
+
+        return equations
+
+class MediaEnricher(ContentEnricher):
+    """Media content enrichment strategy."""
+
+    def __init__(self, transformer: 'BaseTransformer'):
+        self.transformer = transformer
+
+    def can_enrich(self, content: ProcessedContent, context: ProcessingContext) -> bool:
+        """Check if content contains media elements."""
+        return any(tag in content.html.lower() for tag in ['<img', '<video', '<audio', '<iframe'])
+
+    def enrich(
+        self,
+        content: ProcessedContent,
+        context: ProcessingContext,
+        config: Dict[str, Any]
+    ) -> ProcessedContent:
+        """Enrich media elements with proper attributes and loading."""
+        try:
+            soup = BeautifulSoup(content.html, 'html.parser')
+
+            # Process images
+            for img in soup.find_all('img'):
+                self._process_image(img, context, config)
+
+            # Process videos
+            for video in soup.find_all('video'):
+                self._process_video(video, context, config)
+
+            # Process audio
+            for audio in soup.find_all('audio'):
+                self._process_audio(audio, context, config)
+
+            # Process iframes
+            for iframe in soup.find_all('iframe'):
+                self._process_iframe(iframe, context, config)
+
+            return ProcessedContent(
+                element_id=content.element_id,
+                html=str(soup),
+                metadata=content.metadata
+            )
+
+        except Exception as e:
+            self.transformer.logger.error(f"Media enrichment failed: {str(e)}")
+            return content
+
+    def _process_image(
+        self,
+        img: Tag,
+        context: ProcessingContext,
+        config: Dict[str, Any]
+    ) -> None:
+        """Process image element."""
+        img['loading'] = 'lazy'
+        img['decoding'] = 'async'
+
+        # Handle classes properly
+        current_classes = img.get('class', [])
+        if isinstance(current_classes, str):
+            current_classes = current_classes.split()
+        img['class'] = ' '.join(current_classes + ['img-fluid'])
+
+        # Resolve source path - handle potential list type
+        src = img.get('src')
+        if src and isinstance(src, str):  # Ensure src is a string
+            img['src'] = self.transformer.html_helper.resolve_image_path(
+                src,
+                Path(context.metadata_refs.get('topic_path', ''))
+            )
+
+    def _process_audio(
+        self,
+        audio: Tag,
+        context: ProcessingContext,
+        config: Dict[str, Any]
+    ) -> None:
+        """Process audio element."""
+        audio['controls'] = ''
+        audio['preload'] = 'metadata'
+
+        # Add source if not present
+        if not audio.find('source'):
+            src = audio.get('src')
+            if src:
+                source = BeautifulSoup().new_tag('source')
+                source['src'] = src
+                source['type'] = 'audio/mpeg'  # Default to MP3
+                audio.append(source)
+                del audio['src']
+
+    def _process_video(
+        self,
+        video: Tag,
+        context: ProcessingContext,
+        config: Dict[str, Any]
+    ) -> None:
+        """Process video element."""
+        video['controls'] = ''
+        video['preload'] = 'metadata'
+
+        # Handle classes properly
+        current_classes = video.get('class', [])
+        if isinstance(current_classes, str):
+            current_classes = current_classes.split()
+        video['class'] = ' '.join(current_classes + ['video-fluid'])
+
+    def _process_iframe(
+        self,
+        iframe: Tag,
+        context: ProcessingContext,
+        config: Dict[str, Any]
+    ) -> None:
+        """Process iframe element."""
+        iframe['loading'] = 'lazy'
+
+        # Handle classes properly
+        current_classes = iframe.get('class', [])
+        if isinstance(current_classes, str):
+            current_classes = current_classes.split()
+        iframe['class'] = ' '.join(current_classes + ['iframe-fluid'])
+
+        # Security attributes
+        iframe['sandbox'] = 'allow-scripts allow-same-origin'
+        iframe['referrerpolicy'] = 'no-referrer'
+
+
+
 class BaseTransformer(ABC):
     """Base transformer orchestrating content transformation pipeline."""
 
@@ -133,6 +358,12 @@ class BaseTransformer(ABC):
         # Initialize
         self._initialize_strategies()
         self._register_event_handlers()
+
+        # Initialize enrichers
+        self._enrichers: List[ContentEnricher] = [
+            LaTeXEnricher(self),
+            MediaEnricher(self)
+        ]
 
     def _initialize_strategies(self) -> None:
         """Initialize transformation strategies."""
@@ -196,3 +427,27 @@ class BaseTransformer(ABC):
     def _handle_state_change(self, **event_data: Any) -> None:
         """Handle state change events."""
         pass  # Implemented by subclasses
+
+    def enrich_content(
+        self,
+        content: ProcessedContent,
+        context: ProcessingContext
+    ) -> ProcessedContent:
+        """Enrich content with LaTeX and media processing."""
+        try:
+            enriched = content
+            config = self.config_manager.get_processing_rules(
+                ElementType.UNKNOWN,  # Use default rules
+                context
+            )
+
+            # Apply each enricher that can handle the content
+            for enricher in self._enrichers:
+                if enricher.can_enrich(enriched, context):
+                    enriched = enricher.enrich(enriched, context, config)
+
+            return enriched
+
+        except Exception as e:
+            self.logger.error(f"Content enrichment failed: {str(e)}")
+            return content

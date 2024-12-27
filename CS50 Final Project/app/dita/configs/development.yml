@@ -1,0 +1,39 @@
+# development.yml
+environment: development
+debug: true
+
+paths:
+  content: content/
+  output: output/
+  cache: cache/
+  logs: logs/
+
+features:
+  show_toc: true
+  show_flyout: true
+  index_numbers: true
+  latex: true
+  artifacts: true
+  code_highlight: true
+
+processing:
+  cache_enabled: true
+  cache_ttl: 3600
+  parallel_processing: false
+  max_workers: 4
+
+logging:
+  level: DEBUG
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: dita_processing.log
+
+cors:
+  origins: "*"
+  methods: ["GET", "POST", "OPTIONS"]
+  allow_headers: ["Content-Type", "Authorization"]
+  supports_credentials: true
+
+metadata:
+  store_type: "sqlite"
+  auto_backup: true
+  backup_interval: 86400

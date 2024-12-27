@@ -1,18 +1,19 @@
 # app/dita/context_manager.py
-from typing import Dict, List, Optional, Any, Set
+from typing import Dict, List, Optional, Any, Set, TYPE_CHECKING
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from uuid import uuid4
+if TYPE_CHECKING:
+    from .metadata.metadata_manager import MetadataManager
+    from .config_manager import ConfigManager
 
 # Event and Cache
 from .event_manager import EventManager, EventType
-from .utils.cache import ContentCache
+from .utils.cache import ContentCache, CacheEntryType
+from .utils.logger import DITALogger
 
-# Handlers & Managers
-from .metadata.metadata_manager import MetadataManager
-from .config_manager import ConfigManager
 
 # Custom Types
 from .models.types import (
@@ -29,8 +30,6 @@ from .models.types import (
     ProcessingStateInfo
 )
 
-# Logger
-from .utils.logger import DITALogger
 
 class ContextManager:
     """
@@ -41,9 +40,9 @@ class ContextManager:
         self,
         event_manager: EventManager,
         content_cache: ContentCache,
-        metadata_manager: MetadataManager,
-        config_manager: ConfigManager,
-        logger: DITALogger
+        metadata_manager: 'MetadataManager',  # Forward reference in quotes
+        config_manager: 'ConfigManager',      # Forward reference in quotes
+        logger: Optional[DITALogger] = None
     ):
         """
         Initialize context manager with required dependencies.
@@ -60,7 +59,7 @@ class ContextManager:
         self.content_cache = content_cache
         self.metadata_manager = metadata_manager
         self.config_manager = config_manager
-        self.logger = logger
+        self.logger = logger or DITALogger()
 
         # Context tracking
         self._active_contexts: Dict[str, ProcessingContext] = {}
@@ -243,10 +242,11 @@ class ContextManager:
 
                 # Cache metadata
                 self.content_cache.set(
-                    f"metadata_{content_id}",
-                    metadata,
-                    ElementType.UNKNOWN,
-                    ProcessingPhase.DISCOVERY
+                    key=f"metadata_{content_id}",
+                    data=metadata,
+                    entry_type=CacheEntryType.METADATA,
+                    element_type=ElementType.UNKNOWN,
+                    phase=ProcessingPhase.DISCOVERY
                 )
 
             except Exception as e:
@@ -321,12 +321,7 @@ class ContextManager:
         """Get key relationships for content."""
         return self._key_relationships.get(content_id, set())
 
-    def validate_metadata_relationship(
-        self,
-        source_id: str,
-        target_id: str,
-        metadata: Dict[str, Any]
-    ) -> bool:
+    def validate_metadata_relationship(self, source_id: str, target_id: str, metadata: Dict[str, Any]) -> bool:
         """Validate metadata relationship."""
         try:
             # Get source and target contexts
@@ -337,16 +332,18 @@ class ContextManager:
                 return False
 
             # Check scope compatibility
-            if not self._validate_scope_compatibility(
-                source_context.scope,
-                target_context.scope
-            ):
+            if not self._validate_scope_compatibility(source_context.scope, target_context.scope):
+                return False
+
+            # Validate metadata manager is initialized
+            if self.metadata_manager is None or self.metadata_manager.key_manager is None:
+                self.logger.warning("Metadata manager or key manager not initialized")
                 return False
 
             # Check key reference validity
             if key_refs := metadata.get('key_refs', []):
                 if not all(
-                    self.metadata_manager.key_manager.resolve_key(  # Updated reference
+                    self.metadata_manager.key_manager.resolve_key(
                         key=key,
                         context_map=source_context.navigation.root_map
                     ) for key in key_refs
@@ -488,16 +485,15 @@ class ContextManager:
         return self._active_contexts.get(content_id)
 
 
-    def invalidate_context(self, content_id: str) -> None:
-        """
-        Invalidate cached context.
 
-        Args:
-            content_id: Content identifier
-        """
+    def invalidate_context(self, content_id: str) -> None:
+        """Invalidate cached context."""
         try:
             cache_key = f"context_{content_id}"
-            self.content_cache.invalidate(cache_key)
+            self.content_cache.invalidate(
+                key=cache_key,
+                entry_type=CacheEntryType.CONTENT
+            )
 
             # Emit event
             self.event_manager.emit(
@@ -724,12 +720,11 @@ class ContextManager:
         """
         try:
             # Check cache first
-            cache_key = (
-                f"related_{content_id}"
-                f"{'_' + relationship_type.value if relationship_type else ''}"
-            )
-
-            if cached := self.content_cache.get(cache_key):
+            cache_key = f"related_{content_id}"
+            if cached := self.content_cache.get(
+                key=cache_key,
+                entry_type=CacheEntryType.CONTENT
+            ):
                 return cached
 
             # Get relationships from metadata handler
@@ -770,10 +765,11 @@ class ContextManager:
 
             # Cache results
             self.content_cache.set(
-                cache_key,
-                result,
-                ElementType.UNKNOWN,
-                ProcessingPhase.DISCOVERY,
+                key=cache_key,
+                data=result,
+                entry_type=CacheEntryType.CONTENT,
+                element_type=ElementType.UNKNOWN,
+                phase=ProcessingPhase.DISCOVERY,
                 ttl=3600  # Cache for 1 hour
             )
 
@@ -841,9 +837,9 @@ class ContextManager:
                 self._hierarchy_paths[content_id] = parent_path + [parent_id]
 
             # Invalidate related caches
-            self.content_cache.invalidate_pattern(f"context_{content_id}")
+            self.content_cache.invalidate_by_pattern(f"context_{content_id}")
             if parent_id:
-                self.content_cache.invalidate_pattern(f"context_{parent_id}")
+                self.content_cache.invalidate_by_pattern(f"context_{parent_id}")
 
             self.logger.debug(
                 f"Registered hierarchy node: {content_id} "
@@ -867,9 +863,11 @@ class ContextManager:
         try:
             # Check cache first
             cache_key = f"path_{content_id}"
-            if cached := self.content_cache.get(cache_key):
+            if cached := self.content_cache.get(
+                key=cache_key,
+                entry_type=CacheEntryType.CONTENT
+            ):
                 return cached
-
             # Get current context
             context = self._active_contexts.get(content_id)
             if not context:
@@ -881,10 +879,11 @@ class ContextManager:
 
             # Cache result
             self.content_cache.set(
-                cache_key,
-                path,
-                ElementType.UNKNOWN,
-                ProcessingPhase.DISCOVERY,
+                key=cache_key,
+                data=path,
+                entry_type=CacheEntryType.CONTENT,
+                element_type=ElementType.UNKNOWN,
+                phase=ProcessingPhase.DISCOVERY,
                 ttl=3600  # Cache for 1 hour
             )
 
@@ -912,7 +911,10 @@ class ContextManager:
 
             # Check cache first
             cache_key = f"level_{content_id}"
-            if cached := self.content_cache.get(cache_key):
+            if cached := self.content_cache.get(
+                key=cache_key,
+                entry_type=CacheEntryType.CONTENT
+            ):
                 return cached
 
             # Get level from navigation context
@@ -920,10 +922,11 @@ class ContextManager:
 
             # Cache result
             self.content_cache.set(
-                cache_key,
-                level,
-                ElementType.UNKNOWN,
-                ProcessingPhase.DISCOVERY,
+                key=cache_key,
+                data=level,
+                entry_type=CacheEntryType.CONTENT,
+                element_type=ElementType.UNKNOWN,
+                phase=ProcessingPhase.DISCOVERY,
                 ttl=3600  # Cache for 1 hour
             )
 
@@ -1044,7 +1047,7 @@ class ContextManager:
                     self._update_child_levels(child_id, parent_level + 1)
 
                     # Invalidate cache
-                    self.content_cache.invalidate_pattern(f"context_{child_id}")
+                    self.content_cache.invalidate_by_pattern(f"context_{child_id}")
 
         except Exception as e:
             self.logger.error(f"Error updating child levels: {str(e)}")

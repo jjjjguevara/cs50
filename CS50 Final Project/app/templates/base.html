@@ -1,35 +1,32 @@
+{# templates/base.html #}
 <!doctype html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{% block title %}DITA Documentation{% endblock %}</title>
+        <title>{% block title %}{% endblock %} - DITA Content</title>
 
-        <!-- Common CSS -->
-        <link href="https://cdn.tailwindcss.com" rel="stylesheet" />
+        <!-- Include KaTeX for LaTeX rendering -->
         <link
-            href="{{ url_for('static', filename='css/dita.css') }}"
             rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"
+        />
+        <script
+            defer
+            src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"
+        ></script>
+
+        <!-- Base styles -->
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='css/main.css') }}"
         />
 
-        <!-- Page specific CSS -->
-        {% block css %}{% endblock %}
+        {% block extra_head %}{% endblock %}
     </head>
-    <body class="bg-gray-50">
-        <!-- Header -->
-        {% block header %}{% endblock %}
+    <body>
+        <div class="content-wrapper">{% block content %}{% endblock %}</div>
 
-        <!-- Main Content -->
-        <main>{% block content %}{% endblock %}</main>
-
-        <!-- Footer -->
-        {% block footer %}{% endblock %}
-
-        <!-- Common Scripts -->
-        <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-        <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-        <!-- Page specific Scripts -->
         {% block scripts %}{% endblock %}
     </body>
 </html>

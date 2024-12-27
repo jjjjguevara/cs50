@@ -1,12 +1,13 @@
 """Content metadata extraction for DITA processing."""
-
-from typing import Dict, Optional, Any, List
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 from pathlib import Path
 import yaml
 from datetime import datetime
 from lxml import etree
 import re
 import logging
+if TYPE_CHECKING:
+    from ..config_manager import ConfigManager
 
 from ..models.types import (
     TrackedElement,
@@ -18,7 +19,7 @@ from ..models.types import (
     ValidationResult
 )
 from ..config_manager import ConfigManager
-from ..utils.cache import ContentCache
+from ..utils.cache import ContentCache, CacheEntryType
 from ..utils.logger import DITALogger
 
 class MetadataExtractor:
@@ -26,9 +27,9 @@ class MetadataExtractor:
 
     def __init__(
         self,
-        cache: ContentCache,
-        config_manager: ConfigManager,
-        logger: Optional[DITALogger] = None
+        cache: 'ContentCache',
+        config_manager: 'ConfigManager',
+        logger: Optional['DITALogger'] = None
     ):
         self.logger = logger or logging.getLogger(__name__)
         self.cache = cache
@@ -51,7 +52,10 @@ class MetadataExtractor:
         try:
             # Check cache first
             cache_key = f"metadata_{element.id}_{phase.value}"
-            if cached := self.cache.get(cache_key):
+            if cached := self.cache.get(
+                key=cache_key,
+                entry_type=CacheEntryType.METADATA
+            ):
                 return cached
 
             # Get extractor
@@ -80,6 +84,7 @@ class MetadataExtractor:
             self.cache.set(
                 key=cache_key,
                 data=metadata,
+                entry_type=CacheEntryType.METADATA,
                 element_type=element.type,
                 phase=phase
             )

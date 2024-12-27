@@ -1,7 +1,6 @@
 {
   "version": "1.0",
   "description": "Unified schema for DITA content processing",
-
   "hierarchy": {
     "levels": {
       "config_files": {
@@ -21,7 +20,25 @@
             "resolution_rules": {
               "element_types": {
                 "paths": ["element_rules.{type_path}"],
-                "mapping": "element_type_mapping"
+                "mapping": {
+                  "concept": "structure.concept",
+                  "task": "structure.task",
+                  "reference": "structure.reference",
+                  "section": "block.section",
+                  "paragraph": "block.paragraph",
+                  "note": "block.note",
+                  "code_block": "block.code_block",
+                  "table": "tables.base",
+                  "bold": "inline.bold",
+                  "italic": "inline.italic",
+                  "underline": "inline.underline",
+                  "highlight": "inline.highlight",
+                  "strikethrough": "inline.strikethrough",
+                  "link": "links.link",
+                  "xref": "links.xref",
+                  "title": "headings.title",
+                  "shortdesc": "headings.shortdesc"
+                }
               }
             }
           },
@@ -67,7 +84,6 @@
       }
     }
   },
-
   "resolution_rules": {
     "attribute_inheritance": {
       "props": "merge",
@@ -83,7 +99,6 @@
       "validation": "strict"
     }
   },
-
   "validation": {
     "required_attributes": {
       "image": ["src", "alt"],
@@ -105,7 +120,6 @@
       "allows_custom": false
     }
   },
-
   "attribute_types": {
     "string": {
       "type": "string",
@@ -131,7 +145,6 @@
       "merge_strategy": "deep"
     }
   },
-
   "processing": {
     "stages": [
       "discovery",
@@ -149,73 +162,6 @@
       "missing_feature": false,
       "invalid_attribute": "remove",
       "missing_required": "error"
-    }
-  },
-  "context_rules": {
-    "content_types": {
-      "journal": {
-        "metadata_hierarchy": [
-          "journal_metadata",
-          "issue_metadata",
-          "article_metadata",
-          "section_metadata",
-          "content_metadata"
-        ],
-        "content_relationships": {
-          "article": {
-            "required": ["abstract", "authors", "doi"],
-            "optional": ["supplementary", "acknowledgments"],
-            "allowed_children": ["section", "appendix", "references"],
-            "allowed_parents": ["issue", "volume"]
-          },
-          "section": {
-            "required": ["title"],
-            "allowed_children": ["subsection", "paragraph", "figure"],
-            "allowed_parents": ["article", "section"]
-          }
-        },
-        "reuse_contexts": {
-          "citation": {
-            "scope": "global",
-            "validation": ["doi", "authors", "year"],
-            "required_metadata": ["citation_style", "reference_type"]
-          },
-          "equation": {
-            "scope": "local",
-            "validation": ["equation_id", "latex_content"],
-            "required_metadata": ["equation_number", "reference_type"]
-          }
-        }
-      }
-    },
-    "scopes": {
-      "local": {
-        "description": "Content valid within current topic",
-        "allows_external_refs": false,
-        "requires_validation": false
-      },
-      "map": {
-        "description": "Content valid within current map",
-        "allows_external_refs": true,
-        "requires_validation": true
-      },
-      "global": {
-        "description": "Content valid across all maps",
-        "allows_external_refs": true,
-        "requires_validation": true
-      }
-    },
-    "attribute_inheritance": {
-      "audience": {
-        "inherit": true,
-        "override": "child",
-        "valid_values": ["researcher", "student", "practitioner"]
-      },
-      "access_level": {
-        "inherit": true,
-        "override": "parent",
-        "valid_values": ["public", "subscriber", "institution"]
-      }
     }
   }
 }

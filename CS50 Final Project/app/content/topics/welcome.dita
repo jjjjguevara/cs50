@@ -1,0 +1,17 @@
+<!-- app/content/topics/welcome.dita -->
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="welcome">
+    <title>Welcome</title>
+    <body>
+        <p>This is a test DITA topic.</p>
+        <section>
+            <title>Test Section</title>
+            <p>This section demonstrates basic DITA markup:</p>
+            <ul>
+                <li>List item one</li>
+                <li>List item two</li>
+            </ul>
+        </section>
+    </body>
+</topic>

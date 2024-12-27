@@ -150,10 +150,7 @@ class BaseProcessor(ABC):
             raise ValueError(f"No strategy registered for element type: {element_type}")
 
     def process_element(self, element: TrackedElement) -> ProcessedContent:
-        """
-        Process an element through the pipeline phases.
-        No transformation occurs here - just orchestration.
-        """
+        """Process an element through the pipeline phases."""
         try:
             # Get processing strategy based on element type
             strategy = self._get_processing_strategy(element.type)
@@ -168,9 +165,8 @@ class BaseProcessor(ABC):
                     element_type=element.type,
                     metadata=element.metadata
                 )
-
-            if not context:
-                raise ValueError(f"Could not create context for element {element.id}")
+                if not context:
+                    raise ValueError(f"Failed to create context for element {element.id}")
 
             # Get processing rules
             rules = self.config_manager.get_processing_rules(element.type)
@@ -188,7 +184,7 @@ class BaseProcessor(ABC):
                 content_type=element.type,
                 content_scope=ContentScope.LOCAL,
             )
-            metadata.transient_attributes = raw_metadata  # Store raw metadata in transient attributes
+            metadata.transient_attributes = raw_metadata  # Store raw metadata
 
             # Process using appropriate strategy
             return strategy.process(element, context, metadata, rules)

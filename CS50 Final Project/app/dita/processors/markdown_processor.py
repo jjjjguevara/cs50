@@ -124,6 +124,39 @@ class MarkdownProcessor(BaseProcessor):
         self._strategies[ElementType.NOTE] = self.MarkdownCalloutStrategy(self)
         self._strategies[ElementType.MAP] = self.MDMapStrategy(self)
 
+    def process_file(self, file_path: Path) -> ProcessedContent:
+        """Process a Markdown file."""
+        try:
+            # For Markdown, we need to determine if it's an MDITA map
+            if self._is_mdita_map(file_path):
+                return self.process_map(file_path)
+            else:
+                return self.process_topic(file_path)
+
+        except Exception as e:
+            self.logger.error(f"Error processing file {file_path}: {str(e)}")
+            raise
+
+    def _is_mdita_map(self, file_path: Path) -> bool:
+        """Check if file is an MDITA map."""
+        try:
+            if not file_path.exists():
+                return False
+
+            if file_path.suffix.lower() == '.md':
+                content = file_path.read_text()
+                # Check for YAML frontmatter and list structure
+                return (
+                    content.startswith("---") and
+                    "---" in content[3:] and
+                    any(line.strip().startswith("- [") for line in content.splitlines())
+                )
+
+            return False
+
+        except Exception:
+            return False
+
     def process_topic(self, topic_path: Path) -> ProcessedContent:
         """Process a Markdown topic."""
         # Create tracked element for markdown topic

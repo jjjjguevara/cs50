@@ -1,11 +1,26 @@
 """Metadata management orchestration for DITA content processing."""
-
-from typing import Dict, Optional, Any, Generator, List
+from typing import Dict, Optional, Any, Generator, List, Union, TYPE_CHECKING, Type
+from dataclasses import dataclass, field
 from pathlib import Path
 from contextlib import contextmanager
 import logging
 from datetime import datetime
+import importlib
 
+# Type checking imports
+if TYPE_CHECKING:
+    from ..config_manager import ConfigManager
+    from ..context_manager import ContextManager
+    from ..key_manager import KeyManager
+
+# Direct imports
+from .extractor import MetadataExtractor
+from .storage import MetadataStorage
+from ..event_manager import EventManager, EventType
+from ..utils.cache import ContentCache, CacheEntryType
+from ..utils.logger import DITALogger
+
+# Type imports
 from ..models.types import (
     TrackedElement,
     ProcessingContext,
@@ -16,61 +31,98 @@ from ..models.types import (
     MetadataTransaction,
     ValidationResult
 )
-from .extractor import MetadataExtractor
-from .storage import MetadataStorage
-from ..key_manager import KeyManager
-from ..event_manager import EventManager, EventType
-from ..context_manager import ContextManager
-from ..config_manager import ConfigManager
-from ..utils.cache import ContentCache
-from ..utils.logger import DITALogger
 
 class MetadataManager:
     """
     Orchestrates metadata operations throughout the processing pipeline.
     Coordinates between storage, extraction, and key resolution systems.
     """
-
     def __init__(
         self,
-        db_path: Path,
+        db_path: Union[str, Path],
         cache: ContentCache,
         event_manager: EventManager,
-        context_manager: ContextManager,
-        config_manager: ConfigManager,
+        context_manager: Optional['ContextManager'] = None,
+        config_manager: Optional['ConfigManager'] = None,
         logger: Optional[DITALogger] = None
     ):
-        self.logger = logger or logging.getLogger(__name__)
+        # Initialize logger first
+        self.logger = logger if isinstance(logger, DITALogger) else DITALogger(name=__name__)
 
-        # Core system references
-        self.event_manager = event_manager
-        self.context_manager = context_manager
-        self.config_manager = config_manager
+        # Store core dependencies
+        self.db_path = Path(db_path)
         self.cache = cache
+        self.event_manager = event_manager
 
-        # Initialize components
+        # Store optional dependencies
+        self._context_manager = context_manager
+        self._config_manager = config_manager
+
+        # Initialize storage with required dependencies
         self.storage = MetadataStorage(
-            db_path=db_path,
-            cache=cache,
-            event_manager=event_manager,
-            logger=logger
+            db_path=self.db_path,
+            cache=self.cache,
+            event_manager=self.event_manager,
+            logger=self.logger
         )
-        self.extractor = MetadataExtractor(
-            cache=cache,
-            config_manager=config_manager,
-            logger=logger
-        )
-        self.key_manager = KeyManager(
-            event_manager=event_manager,
-            cache=cache,
-            config_manager=config_manager,
-            context_manager=context_manager,
-            logger=logger
-        )
+
+        # Initialize placeholders for dependent components
+        self.extractor = None
+        self.key_manager = None
 
         # Register event handlers
         self._register_event_handlers()
 
+
+    @property
+    def context_manager(self) -> Optional['ContextManager']:
+        return self._context_manager
+
+    @context_manager.setter
+    def context_manager(self, manager: 'ContextManager') -> None:
+        self._context_manager = manager
+        self._initialize_dependent_components()
+
+    @property
+    def config_manager(self) -> Optional['ConfigManager']:
+        return self._config_manager
+
+    @config_manager.setter
+    def config_manager(self, manager: 'ConfigManager') -> None:
+        self._config_manager = manager
+        self._initialize_dependent_components()
+
+
+    def _initialize_dependent_components(self) -> None:
+        """Initialize components that require both config and context managers."""
+        if self._config_manager is not None and self._context_manager is not None:
+            # Initialize extractor
+            self.extractor = MetadataExtractor(
+                cache=self.cache,
+                config_manager=self._config_manager,
+                logger=self.logger
+            )
+
+            # Import KeyManager dynamically to avoid circular imports
+            try:
+                key_manager_module = importlib.import_module('..key_manager', __package__)
+                KeyManager: Type = getattr(key_manager_module, 'KeyManager')
+
+                # Initialize key manager
+                self.key_manager = KeyManager(
+                    event_manager=self.event_manager,
+                    cache=self.cache,
+                    config_manager=self._config_manager,
+                    context_manager=self._context_manager,
+                    metadata_storage=self.storage,
+                    logger=self.logger
+                )
+            except ImportError as e:
+                self.logger.error(f"Failed to import KeyManager: {str(e)}")
+                raise
+            except Exception as e:
+                self.logger.error(f"Failed to initialize KeyManager: {str(e)}")
+                raise
 
     def store_metadata(
             self,
@@ -123,6 +175,14 @@ class MetadataManager:
             Dict containing processed metadata
         """
         try:
+            # Validate required components
+            if self.extractor is None:
+                raise ValueError("MetadataExtractor not initialized")
+            if self.key_manager is None:
+                raise ValueError("KeyManager not initialized")
+            if self._config_manager is None:
+                raise ValueError("ConfigManager not initialized")
+
             # Extract base metadata
             metadata = self.extractor.extract_metadata(
                 element=element,
@@ -140,7 +200,7 @@ class MetadataManager:
                     metadata["resolved_keyref"] = resolved_key.key
 
             # Get processing rules
-            rules = self.config_manager.get_processing_rules(
+            rules = self._config_manager.get_processing_rules(
                 element_type=element.type,
                 context=context
             )
@@ -303,7 +363,10 @@ class MetadataManager:
             element_id = event_data.get("element_id")
             if element_id:
                 # Invalidate in cache
-                self.cache.invalidate(f"metadata_{element_id}")
+                self.cache.invalidate(
+                    key=f"metadata_{element_id}",
+                    entry_type=CacheEntryType.METADATA
+                )
                 # Invalidate in storage
                 with self.storage.transaction(element_id) as txn:
                     txn.updates = {}  # Clear metadata
@@ -326,13 +389,60 @@ class MetadataManager:
         scope: Optional[ContentScope] = None
     ) -> Dict[str, Any]:
         """Get metadata with scope filtering."""
-        return self.storage.get_metadata(element_id, scope)
+        # storage.get_metadata only takes element_id
+        base_metadata = self.storage.get_metadata(element_id)
+
+        # Apply scope filtering if needed
+        if scope:
+            return {k: v for k, v in base_metadata.items()
+                    if self._is_in_scope(k, scope)}
+        return base_metadata
+
+    def _is_in_scope(self, key: str, scope: ContentScope) -> bool:
+        """
+        Check if metadata key is in the given scope.
+
+        Args:
+            key: Metadata key to check
+            scope: Scope to check against
+
+        Returns:
+            bool: True if metadata key is in scope
+        """
+        try:
+            # Global scope includes all metadata
+            if scope == ContentScope.GLOBAL:
+                return True
+
+            # Local scope includes only local metadata
+            if scope == ContentScope.LOCAL:
+                return not key.startswith(('peer_', 'external_'))
+
+            # Peer scope includes local and peer metadata
+            if scope == ContentScope.PEER:
+                return not key.startswith('external_')
+
+            # External scope only includes external metadata
+            if scope == ContentScope.EXTERNAL:
+                return key.startswith('external_')
+
+            return False
+
+        except Exception as e:
+            self.logger.error(f"Error checking metadata scope: {str(e)}")
+            return False
 
     def cleanup(self) -> None:
         """Clean up manager resources."""
         try:
+            # Clean up storage
             self.storage.cleanup()
-            self.key_manager.cleanup()
+
+            # Clean up key manager if initialized
+            if self.key_manager is not None:
+                self.key_manager.cleanup()
+
+            # Clear cache
             self.cache.clear()
             self.logger.debug("Metadata manager cleanup completed")
         except Exception as e:

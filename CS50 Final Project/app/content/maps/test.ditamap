@@ -1,8 +1,7 @@
+<!-- app/content/maps/test.ditamap -->
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
     <title>Test DITA Map</title>
-    <topicref href="topics/test-topic.md" format="markdown">
-        <navtitle>Test Markdown Topic</navtitle>
-    </topicref>
+    <topicref href="../topics/welcome.dita"/>
 </map>

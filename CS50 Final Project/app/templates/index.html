@@ -1,20 +1,35 @@
+<!-- app/templates/index.html -->
 <!doctype html>
-<html>
+<html lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Documentation Interface</title>
+        <title>DITA Content Browser</title>
         <link
             rel="stylesheet"
-            href="{{ url_for('static', filename='css/dita.css') }}"
+            href="{{ url_for('static', filename='css/main.css') }}"
         />
     </head>
     <body>
-        <div id="root"></div>
-        <!-- Update to use the built file instead of the source JSX -->
-        <script
-            type="module"
-            src="{{ url_for('static', filename='dist/app.js') }}"
-        ></script>
+        <div class="container">
+            <h1>Articles</h1>
+
+            {% if maps %}
+            <ul class="map-list">
+                {% for map in maps %}
+                <li class="map-item">
+                    <a
+                        href="{{ url_for('main.entry', entry_name=map.name) }}"
+                        class="map-link"
+                    >
+                        {{ map.name }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="no-maps">No DITA maps found in content directory.</p>
+            {% endif %}
+        </div>
     </body>
 </html>

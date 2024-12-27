@@ -78,9 +78,9 @@ class DITATopicStrategy(DITATransformStrategy):
             # Get specialization type if any
             specialization = self._get_specialization_type(element, context)
 
-            # Get transformation rules
+            # Get transformation rules using the string value of the enum
             rules = self.transformer.config_manager.get_dita_element_rules(
-                specialization or DITAElementType.TOPIC
+                (specialization or DITAElementType.TOPIC).value
             )
 
             # Create topic container
@@ -228,9 +228,9 @@ class DITAMapStrategy(DITATransformStrategy):
             # Update current map context
             self.transformer._current_map_id = element.id
 
-            # Get transformation rules
+            # Get transformation rules using the string value of the enum
             rules = self.transformer.config_manager.get_dita_element_rules(
-                DITAElementType.MAP
+                DITAElementType.MAP.value
             )
 
             # Create map container
@@ -248,7 +248,7 @@ class DITAMapStrategy(DITATransformStrategy):
 
             # Create ToC if enabled
             if context.features.get("show_toc", True):
-                toc = self._create_toc(element.id, context)  # Changed to pass element.id instead of topic_refs
+                toc = self._create_toc(element.id, context)
                 children: List[Union[Tag, str]] = [toc]
                 children.extend(topic_refs)
                 container = self.transformer.html_helper.create_container(
@@ -364,9 +364,9 @@ class DITAElementStrategy(DITATransformStrategy):
     ) -> ProcessedContent:
         """Transform general DITA element."""
         try:
-            # Get element rules
+            # Get element rules using the string value of the enum
             rules = self.transformer.config_manager.get_dita_element_rules(
-                DITAElementType.UNKNOWN
+                DITAElementType.UNKNOWN.value
             )
 
             # Create element

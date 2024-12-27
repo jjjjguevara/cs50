@@ -6,13 +6,17 @@
       "platform": "override",
       "features": "merge"
     },
-    "fallback_order": ["map-specific", "topic-specific", "global"],
+    "fallback_order": [
+      "element_defaults",
+      "audience_metadata",
+      "global_defaults"
+    ],
     "validation": {
       "required_fields": ["href", "scope"],
       "scope_rules": {
-        "local": ["local", "peer"],
-        "peer": ["local", "peer", "external"],
-        "external": ["external"]
+        "local": ["peer"],
+        "peer": ["external"],
+        "external": []
       }
     }
   }

@@ -1,4 +1,5 @@
 # app/dita/utils/types.py
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -6,63 +7,141 @@ from typing import List, Dict, TypedDict, Optional, Any, Set, Union, TYPE_CHECKI
 from pathlib import Path
 from uuid import uuid4
 if TYPE_CHECKING:
-    from app.dita.utils.id_handler import DITAIDHandler
+    from ..utils.id_handler import DITAIDHandler
+
 
 
 # Type aliases
 MetadataDict = Dict[str, Any]
 PathLike = Union[str, Path]
 HTMLString = str
-IDType = str
 
 class ElementType(Enum):
     """Types of elements that can be parsed"""
+    # Core types
     DITA = "dita"
     DITAMAP = "ditamap"
     MAP = "map"
-    MAP_TITLE = "map_title"
-    MARKDOWN = "markdown"
-    LATEX = "latex"
-    ARTIFACT = "artifact"
     TOPIC = "topic"
+    MARKDOWN = "markdown"
+
+    # Structural elements
+    DEFAULT = "default"          # Default fallback type
     HEADING = "heading"
     TITLE = "title"
+    MAP_TITLE = "map_title"
     BODY = "body"
+    SECTION = "section"
+    SPECIALIZATIONS = "specializations"
+    BLOCK = "block"
+
+    # Block elements
     PARAGRAPH = "paragraph"
-    UNORDERED_LIST = "ul"
-    ORDERED_LIST = "ol"
-    TODO_LIST = "todo"
-    LIST_ITEM = "li"
-    CODE_BLOCK = "codeblock"
-    CODE_PHRASE = "codeph"
+    CODE_BLOCK = "code_block"
     BLOCKQUOTE = "blockquote"
-    FIGURE = "fig"
+    NOTE = "note"
+
+    # List elements (aligned with JSON)
+    UNORDERED_LIST = "unordered"
+    ORDERED_LIST = "ordered"
+    LIST_ITEM = "item"
+
+    # Inline elements (aligned with JSON)
+    CODE_PHRASE = "codeph"
+    BOLD = "bold"
+    ITALIC = "italic"
+    UNDERLINE = "underline"
+    PHRASE = "phrase"
+    HIGHLIGHT = "highlight"
+    STRIKETHROUGH = "strikethrough"
+    QUOTE = "quote"
+    CITE = "cite"
+
+    # Media elements
+    FIGURE = "figure"
     IMAGE = "image"
+
+    # Link elements
     XREF = "xref"
     LINK = "link"
-    NOTE = "note"
+
+    # Table elements
     TABLE = "table"
     TABLE_HEADER = "table_header"
     TABLE_ROW = "table_row"
     TABLE_CELL = "table_cell"
+
+    # Special elements
+    INNER = "inner"
     SHORTDESC = "shortdesc"
     ABSTRACT = "abstract"
     PREREQ = "prereq"
     STEPS = "steps"
-    DEFINITION = "dlentry"
+    STEP = "step"
+    SUBSTEP = "substep"
+    SUBSTEPS = "substeps"
+    DEFINITION = "definition"
     TERM = "term"
-    BOLD = "b"
-    ITALIC = "i"
-    UNDERLINE = "u"
-    PHRASE = "ph"
-    HIGHLIGHT = "highlight"
-    STRIKETHROUGH = "strikethrough"
-    QUOTE = "q"
-    PRE = "pre"
-    CITE = "cite"
     METADATA = "metadata"
     TOPICREF = "topicref"
+    CONCEPT = "concept"
+    TASK = "task"
+    REFERENCE = "reference"
+    BASE = "base"
+    CMD = "cmd"
+    INFO = "info"
+    DLENTRY = "dlentry"
+    TOPICGROUP = "topicgroup"
     UNKNOWN = "unknown"
+
+    @classmethod
+    def from_string(cls, element_type: str) -> 'ElementType':
+        """Convert string to ElementType with fallback."""
+        try:
+            return cls(element_type)
+        except ValueError:
+            return cls.UNKNOWN
+
+    @classmethod
+    def is_block_element(cls, element_type: 'ElementType') -> bool:
+        """Check if element type is a block element."""
+        block_elements = {
+            cls.PARAGRAPH, cls.CODE_BLOCK, cls.BLOCKQUOTE,
+            cls.NOTE, cls.SECTION, cls.FIGURE
+        }
+        return element_type in block_elements
+
+    @classmethod
+    def is_inline_element(cls, element_type: 'ElementType') -> bool:
+        """Check if element type is an inline element."""
+        inline_elements = {
+            cls.CODE_PHRASE, cls.BOLD, cls.ITALIC, cls.UNDERLINE,
+            cls.PHRASE, cls.HIGHLIGHT, cls.STRIKETHROUGH, cls.QUOTE
+        }
+        return element_type in inline_elements
+
+class IDType(Enum):
+    """Types of IDs that require different patterns."""
+    MAP = "map"
+    TOPIC = "topic"
+    HEADING = "heading"
+    ARTIFACT = "artifact"
+    FIGURE = "figure"
+    TABLE = "table"
+    FORMULA = "formula"
+    EQUATION = "equation"
+    CITATION = "citation"
+    SECTION = "section"
+    APPENDIX = "appendix"
+    SUPPLEMENTAL = "supplemental"
+    REFERENCE = "reference"
+    HTML_ELEMENT = "element"
+    CACHE_ENTRY = "cache"
+    METADATA = "meta"
+    EVENT = "event"
+    STATE = "state"
+    TRANSFORM = "transform"
+    VALIDATION = "validation"
 
 # Enums for validation
 class ProcessingPhase(Enum):
@@ -174,6 +253,58 @@ class ProcessingStateInfo:
         """Check if element is blocked by dependencies."""
         return bool(self.blocking_ids)
 
+class ProcessingRuleType(Enum):
+    """Types of processing rules with hierarchical validation."""
+    ELEMENT = "element"           # Basic element processing
+    TRANSFORMATION = "transform"  # Content transformation
+    VALIDATION = "validation"     # Content validation
+    SPECIALIZATION = "special"    # Content specialization
+    ENRICHMENT = "enrichment"     # Content enrichment
+    PUBLICATION = "publication"   # Publication-specific
+    TITLES = "titles"             # Title processing
+    BLOCKS = "blocks"             # Block element processing
+    TABLES = "tables"             # Table processing
+    EMPHASIS = "emphasis"         # Emphasis processing
+    LINKS = "links"               # Link processing
+    HEADINGS = "headings"         # Heading processing
+    LISTS = "lists"               # List processing
+    MEDIA = "media"               # Media processing
+    INLINE = "inline"             # Inline element processing
+    CODE_BLOCK = "code_block"     # Code block processing
+    BLOCK = "block"               # Block element processing
+    STRUCTURE = "structure"       # Structure processing
+    TASK_ELEMENTS = "task_elements" # Task elements processing
+    DEFINITION = "definition"     # Definition list entry processing
+    METADATA = "metadata"         # Metadata processing
+    NAVIGATION = "navigation"     # Navigation element processing
+    DEFAULT = "default"           # Default processing
+
+    @classmethod
+    def validate_rule_type(cls, rule_type: str) -> bool:
+        """Validate if a rule type is valid."""
+        return rule_type in [member.value for member in cls]
+
+    @classmethod
+    def get_parent_type(cls, rule_type: str) -> Optional[str]:
+        """Get parent rule type if exists."""
+        hierarchy = {
+            "titles": "element",
+            "blocks": "element",
+            "tables": "blocks",
+            "emphasis": "inline",
+            "links": "element",
+            "headings": "titles",
+            "lists": "blocks",
+            "media": "element",
+            "inline": "element",
+            "definition": "blocks",
+            "metadata": "element",
+            "navigation": "element",
+            "default": "element"
+        }
+        return hierarchy.get(rule_type)
+
+
 class ContentType(Enum):
     DITA = "dita"
     MARKDOWN = "markdown"
@@ -228,9 +359,13 @@ class MetadataTransaction:
     """Represents a metadata update transaction."""
     content_id: str
     updates: Dict[str, Any]
-    timestamp: datetime = field(default_factory=datetime.now)
     is_committed: bool = False
+    timestamp: datetime = field(default_factory=datetime.now)
     conflicts: List[str] = field(default_factory=list)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Retrieve a value from updates with a default fallback."""
+        return self.updates.get(key, default)
 
 
 class ValidationSeverity(Enum):
@@ -375,7 +510,11 @@ class TrackedElement:
         )
 
     @classmethod
-    def create_map(cls, path: Path, title: str, id_handler: DITAIDHandler) -> "TrackedElement":
+    def create_map(cls,
+        path: Path,
+        title: str,
+        id_handler: 'DITAIDHandler'
+    ) -> "TrackedElement":
         """
         Create a TrackedElement for a DITA map.
 
@@ -390,7 +529,7 @@ class TrackedElement:
         try:
             map_id = id_handler.generate_id(
                 base=path.stem,
-                element_type="map"  # Prepend "map" for consistent ID generation
+                id_type=IDType.MAP  # Use proper IDType enum
             )
             return cls(
                 id=map_id,
@@ -405,10 +544,13 @@ class TrackedElement:
 
 
     @classmethod
-    def from_discovery(cls, path: Path, element_type: ElementType, id_handler: DITAIDHandler) -> "TrackedElement":
+    def from_discovery(cls, path: Path, element_type: ElementType, id_handler: 'DITAIDHandler') -> "TrackedElement":
         """Create a TrackedElement during the discovery phase."""
         return cls(
-            id=id_handler.generate_id(path.stem),
+            id=id_handler.generate_id(
+                base=path.stem,
+                id_type=IDType.TOPIC if element_type == ElementType.TOPIC else IDType.MAP
+            ),
             type=element_type,
             path=path,
             source_path=path,
@@ -1004,6 +1146,7 @@ class MDElementType(Enum):
     BOLD = "bold"
     UNDERLINE = "underline"
     STRIKETHROUGH = "strikethrough"
+    HIGHLIGHT = "highlight"
     TODO = "todo"
     YAML_METADATA = "yaml_metadata"
     UNKNOWN = "unknown"

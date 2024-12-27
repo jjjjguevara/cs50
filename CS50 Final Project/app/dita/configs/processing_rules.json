@@ -3,107 +3,246 @@
   "description": "Processing rules for content transformation",
   "rules": {
     "titles": {
-      "default": {
-        "html_tag": "h1",
-        "default_classes": [
-          "map-title",
-          "main-title",
-          "text-3xl",
-          "font-bold",
-          "mb-6"
-        ],
-        "attributes": {
-          "role": "heading",
-          "aria-level": "1"
+      "reference-titles_default": {
+        "element_type": "title",
+        "operation": "transform",
+        "target": "title",
+        "action": {
+          "html_tag": "h1",
+          "default_classes": [
+            "map-title",
+            "main-title",
+            "text-3xl",
+            "font-bold",
+            "mb-6"
+          ],
+          "attributes": {
+            "role": "heading",
+            "aria-level": "1"
+          }
         }
       },
-      "headings": {
-        "html_tag": "h{level}",
-        "default_classes": ["heading", "topic-heading"],
-        "level_classes": {
-          "1": ["text-2xl", "font-bold", "mb-4"],
-          "2": ["text-xl", "font-bold", "mb-3"],
-          "3": ["text-lg", "font-semibold", "mb-2"]
-        },
-        "attributes": {
-          "role": "heading"
-        }
-      }
-    },
-    "blocks": {
-      "paragraph": {
-        "html_tag": "p",
-        "default_classes": ["prose"]
-      },
-      "note": {
-        "html_tag": "div",
-        "default_classes": ["note", "alert"],
-        "type_classes": {
-          "warning": "alert-warning",
-          "danger": "alert-danger",
-          "tip": "alert-info"
-        },
-        "attributes": {
-          "role": "note"
-        }
-      },
-      "code_block": {
-        "html_tag": "pre",
-        "default_classes": ["code-block", "highlight"],
-        "inner": {
-          "tag": "code",
-          "classes": ["language-{language}"]
-        }
-      }
-    },
-    "tables": {
-      "default": {
-        "html_tag": "table",
-        "default_classes": ["table", "table-bordered"],
-        "attributes": {
-          "role": "grid"
-        }
-      },
-      "specializations": {
-        "bibliography": {
-          "extra_classes": ["bibliography-table"],
-          "extra_attributes": {
-            "data-citation-format": "{citation_format}"
+      "reference-titles_headings": {
+        "element_type": "heading",
+        "operation": "transform",
+        "target": "heading",
+        "action": {
+          "html_tag": "h{level}",
+          "default_classes": ["heading", "topic-heading"],
+          "level_classes": {
+            "1": ["text-2xl", "font-bold", "mb-4"],
+            "2": ["text-xl", "font-bold", "mb-3"],
+            "3": ["text-lg", "font-semibold", "mb-2"]
+          },
+          "attributes": {
+            "role": "heading"
           }
         }
       }
     },
-    "emphasis": {
-      "bold": {
-        "html_tag": "strong",
-        "default_classes": ["font-bold"]
+    "blocks": {
+      "reference-blocks_paragraph": {
+        "element_type": "paragraph",
+        "operation": "transform",
+        "target": "p",
+        "action": {
+          "html_tag": "p",
+          "default_classes": ["prose"]
+        }
       },
-      "italic": {
-        "html_tag": "em",
-        "default_classes": ["italic"]
+      "reference-blocks_note": {
+        "element_type": "note",
+        "operation": "transform",
+        "target": "note",
+        "action": {
+          "html_tag": "div",
+          "default_classes": ["note", "alert"],
+          "type_classes": {
+            "warning": "alert-warning",
+            "danger": "alert-danger",
+            "tip": "alert-info"
+          },
+          "attributes": {
+            "role": "note"
+          }
+        }
       },
-      "underline": {
-        "html_tag": "u",
-        "default_classes": ["underline"]
-      },
-      "highlight": {
-        "html_tag": "mark",
-        "default_classes": ["bg-yellow-200"]
-      },
-      "strikethrough": {
-        "html_tag": "del",
-        "default_classes": ["line-through"]
-      }
-    },
-    "links": {
-      "default": {
-        "html_tag": "a",
-        "default_classes": ["link"],
-        "external_attributes": {
-          "target": "_blank",
-          "rel": "noopener noreferrer"
+      "reference-blocks_code_block": {
+        "element_type": "code_block",
+        "operation": "transform",
+        "target": "codeblock",
+        "action": {
+          "html_tag": "pre",
+          "default_classes": ["code-block", "highlight"],
+          "inner": {
+            "tag": "code",
+            "classes": ["language-{language}"]
+          }
         }
       }
+    },
+    "lists": {
+      "reference-lists_unordered": {
+        "element_type": "unordered_list",
+        "operation": "transform",
+        "target": "ul",
+        "action": {
+          "html_tag": "ul",
+          "default_classes": ["list-disc", "pl-5"]
+        }
+      },
+      "reference-lists_ordered": {
+        "element_type": "ordered_list",
+        "operation": "transform",
+        "target": "ol",
+        "action": {
+          "html_tag": "ol",
+          "default_classes": ["list-decimal", "pl-5"]
+        }
+      },
+      "reference-lists_list_item": {
+        "element_type": "list_item",
+        "operation": "transform",
+        "target": "li",
+        "action": {
+          "html_tag": "li",
+          "default_classes": ["list-item"]
+        }
+      }
+    },
+    "tables": {
+      "reference-tables_default": {
+        "element_type": "table",
+        "operation": "transform",
+        "target": "table",
+        "action": {
+          "html_tag": "table",
+          "default_classes": ["table", "table-bordered"],
+          "attributes": {
+            "role": "grid"
+          }
+        }
+      },
+      "reference-tables_header": {
+        "element_type": "table_header",
+        "operation": "transform",
+        "target": "thead",
+        "action": {
+          "html_tag": "thead",
+          "default_classes": ["table-header"]
+        }
+      },
+      "reference-tables_row": {
+        "element_type": "table_row",
+        "operation": "transform",
+        "target": "tr",
+        "action": {
+          "html_tag": "tr",
+          "default_classes": ["table-row"]
+        }
+      },
+      "reference-tables_cell": {
+        "element_type": "table_cell",
+        "operation": "transform",
+        "target": "td",
+        "action": {
+          "html_tag": "td",
+          "default_classes": ["table-cell"]
+        }
+      }
+    },
+    "emphasis": {
+      "reference-emphasis_bold": {
+        "element_type": "bold",
+        "operation": "transform",
+        "target": "b",
+        "action": {
+          "html_tag": "strong",
+          "default_classes": ["font-bold"]
+        }
+      },
+      "reference-emphasis_italic": {
+        "element_type": "italic",
+        "operation": "transform",
+        "target": "i",
+        "action": {
+          "html_tag": "em",
+          "default_classes": ["italic"]
+        }
+      },
+      "reference-emphasis_underline": {
+        "element_type": "underline",
+        "operation": "transform",
+        "target": "u",
+        "action": {
+          "html_tag": "u",
+          "default_classes": ["underline"]
+        }
+      },
+      "reference-emphasis_highlight": {
+        "element_type": "highlight",
+        "operation": "transform",
+        "target": "highlight",
+        "action": {
+          "html_tag": "mark",
+          "default_classes": ["bg-yellow-200"]
+        }
+      }
+    },
+    "concept": {
+      "concept_default": {
+        "element_type": "concept",
+        "operation": "transform",
+        "target": "concept",
+        "action": {
+          "html_tag": "article",
+          "default_classes": ["concept-class"]
+        }
+      }
+    },
+    "task": {
+      "task_default": {
+        "element_type": "task",
+        "operation": "transform",
+        "target": "task",
+        "action": {
+          "html_tag": "section",
+          "default_classes": ["task-class"]
+        }
+      }
+    },
+    "reference": {
+      "reference_default": {
+        "element_type": "reference",
+        "operation": "transform",
+        "target": "reference",
+        "action": {
+          "html_tag": "aside",
+          "default_classes": ["reference-class"]
+        }
+      }
+    },
+    "fallback": {
+      "unknown": {
+        "element_type": "unknown",
+        "operation": "transform",
+        "target": "div",
+        "action": {
+          "html_tag": "div",
+          "default_classes": ["unknown-element"]
+        }
+      }
+    }
+  },
+  "defaults": {
+    "html_attributes": {
+      "lang": "en",
+      "dir": "ltr"
+    },
+    "processing": {
+      "validate_html": true,
+      "minify_output": false,
+      "preserve_whitespace": false
     }
   }
 }

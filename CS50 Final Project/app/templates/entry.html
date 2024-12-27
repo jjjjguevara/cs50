@@ -1,0 +1,57 @@
+{% extends "base.html" %} {% block title %}{{ title }}{% endblock %} {% block
+extra_head %}
+<style>
+    .entry-content {
+        display: grid;
+        grid-template-columns: minmax(250px, 1fr) minmax(600px, 3fr);
+        gap: 2rem;
+    }
+
+    @media (max-width: 768px) {
+        .entry-content {
+            grid-template-columns: 1fr;
+        }
+
+        .toc {
+            position: relative;
+            border-right: none;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 2rem;
+        }
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="content-container">
+    <div class="entry-content">
+        <!-- Content is dynamically injected here -->
+        {{ content | safe }}
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const options = {
+            delimiters: [
+                { left: "$$", right: "$$", display: true },
+                { left: "$", right: "$", display: false },
+            ],
+            throwOnError: false,
+        };
+
+        document
+            .querySelectorAll(".katex-block, .katex-inline")
+            .forEach((elem) => {
+                try {
+                    const tex = elem.textContent;
+                    const isDisplay = elem.classList.contains("katex-block");
+                    katex.render(tex, elem, {
+                        ...options,
+                        displayMode: isDisplay,
+                    });
+                } catch (e) {
+                    console.error("KaTeX rendering error:", e);
+                }
+            });
+    });
+</script>
+{% endblock %}

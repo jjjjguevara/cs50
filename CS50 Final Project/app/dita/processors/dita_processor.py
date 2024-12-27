@@ -1,6 +1,7 @@
 # app/dita/processors/dita_processor.py
 
 from pathlib import Path
+from datetime import datetime
 from typing import Dict, List, Optional, Any, Type
 
 # Base processor and strategy
@@ -133,17 +134,53 @@ class DITAProcessor(BaseProcessor):
         self._strategies[ElementType.DITA] = self.DITATopicStrategy(self)
         self._strategies[ElementType.DITAMAP] = self.DITAMapStrategy(self)
 
+
+    def process_file(self, file_path: Path) -> ProcessedContent:
+        """Process a DITA file."""
+        try:
+            # Determine if it's a map or topic
+            if file_path.suffix == '.ditamap':
+                return self.process_map(file_path)
+            elif file_path.suffix == '.dita':
+                return self.process_topic(file_path)
+            else:
+                raise ValueError(f"Unsupported file type: {file_path.suffix}")
+
+        except Exception as e:
+            self.logger.error(f"Error processing file {file_path}: {str(e)}")
+            raise
+
+
     def process_map(self, map_path: Path) -> ProcessedContent:
         """Process a DITA map."""
-        # Create tracked element for map
-        element = TrackedElement.create_map(
-            path=map_path,
-            title="",  # Will be extracted during processing
-            id_handler=self.id_handler
-        )
+        try:
+            # Create tracked element for map
+            element = TrackedElement.create_map(
+                path=map_path,
+                title="",  # Will be extracted during processing
+                id_handler=self.id_handler
+            )
 
-        # Process using base processor's element processing
-        return self.process_element(element)
+            # Extract map metadata before processing
+            metadata = {
+                "content_type": "map",
+                "file_path": str(map_path),
+                "element_type": ElementType.DITAMAP.value,
+                "creation_time": datetime.now().isoformat()
+            }
+
+            element.metadata = metadata
+
+            # Process using base processor's element processing
+            result = self.process_element(element)
+            if not result:
+                raise ValueError(f"Failed to process map: {map_path}")
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error processing map {map_path}: {str(e)}")
+            raise
 
     def process_topic(self, topic_path: Path) -> ProcessedContent:
         """Process a DITA topic."""
@@ -169,10 +206,16 @@ class DITAProcessor(BaseProcessor):
                     # Get DITA element type
                     dita_type = DITAElementType(specialization_type)
 
-                    # Get specialized rules
-                    specialized_rules.update(
-                        self.config_manager.get_dita_element_rules(dita_type)
-                    )
+                    # Get specialized rules using string value of dita_type
+                    dita_rules = self.config_manager.get_dita_element_rules(dita_type.value)
+
+                    # Ensure the result is a dictionary and update
+                    if isinstance(dita_rules, dict):
+                        specialized_rules.update(dita_rules)
+                    else:
+                        self.logger.warning(
+                            f"DITA element rules for {specialization_type} are not a dictionary"
+                        )
 
             return specialized_rules
 

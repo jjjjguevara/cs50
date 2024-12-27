@@ -1,339 +1,289 @@
-# app/routes.py
-from datetime import datetime
-from pathlib import Path
-import logging
-import html
-from typing import Union, Optional, List
+"""Routes module for DITA processing application."""
 from flask import (
-    Blueprint,
-    current_app,
-    jsonify,
-    render_template,
-    send_from_directory,
-    redirect,
-    url_for
+    Blueprint, render_template, abort, send_file, current_app, request, jsonify, g
 )
-from flask.typing import ResponseReturnValue
+from pathlib import Path
+from typing import Optional
+import logging
 
-from .dita.processor import DITAProcessor
-from app_config import DITAConfig
-from .dita.config_manager import ConfigManager, config_manager
-from .models import Topic, Map, ProcessedContent, ContentType
-from .dita.models.types import ProcessedContent, ParsedElement, ElementType, ParsedMap, ElementType
+# Core factory and managers
+from .dita.content_factory import ContentFactory, AssemblyOptions
 from .dita.processors.dita_parser import DITAParser
-from app.dita.utils.html_helpers import consolidate_transformed_html
+from .dita.event_manager import EventManager
+from .dita.context_manager import ContextManager
+from .dita.config_manager import ConfigManager
+from .dita.key_manager import KeyManager
+from .dita.metadata.metadata_manager import MetadataManager
 
+# Types
+from .dita.models.types import ProcessingPhase, IDType
 
-bp = Blueprint('debug', __name__, url_prefix='/debug')
+# Utils
+from .dita.utils.cache import ContentCache
+from .dita.utils.html_helpers import HTMLHelper
+from .dita.utils.heading import HeadingHandler
+from .dita.utils.id_handler import DITAIDHandler
+from .dita.utils.logger import DITALogger
 
-# Initialize logger
-logger = logging.getLogger(__name__)
+# Create blueprints
+main_bp = Blueprint('main', __name__)
+dita_bp = Blueprint('dita', __name__)
 
+def init_managers(app):
+    """Initialize all managers within application context."""
+    # Initialize utilities
+    content_cache = ContentCache()
+    logger = DITALogger(name="routes")
+    id_handler = DITAIDHandler()
 
-# Initialize blueprint
-bp = Blueprint(
-    'main',
-    __name__,
-    url_prefix='/',
-    static_folder='static',
-    template_folder='templates'
-)
+    # Initialize event manager
+    event_manager = EventManager(cache=content_cache)
 
-def clean_topic_path(topic_path: str, base_dir: Path) -> Optional[Path]:
-    """
-    Sanitize and resolve the topic path.
+    # Initialize core managers
+    config_manager = ConfigManager(
+        metadata_manager=None,
+        context_manager=None,
+        content_cache=content_cache,
+        event_manager=event_manager,
+        id_handler=id_handler
+    )
 
-    Args:
-        topic_path (str): Relative path to the topic file.
-        base_dir (Path): Base directory for topics.
+    metadata_manager = MetadataManager(
+        db_path=app.config.get('METADATA_DB_PATH', Path(app.instance_path) / 'metadata.db'),
+        cache=content_cache,
+        event_manager=event_manager,
+        context_manager=None,
+        config_manager=config_manager,
+        logger=logger
+    )
 
-    Returns:
-        Path: Resolved and sanitized path.
-    """
+    context_manager = ContextManager(
+        event_manager=event_manager,
+        content_cache=content_cache,
+        metadata_manager=metadata_manager,
+        config_manager=config_manager,
+        logger=logger
+    )
+
+    # Resolve circular dependencies
+    metadata_manager.context_manager = context_manager
+    config_manager.metadata_manager = metadata_manager
+    config_manager.context_manager = context_manager
+
+    # Initialize additional utilities
+    html_helper = HTMLHelper(dita_root=app.config.get('DITA_ROOT'))
+    heading_handler = HeadingHandler(event_manager=event_manager)
+
+    # Store initialized managers in app config
+    app.config.update(
+        CONTENT_CACHE=content_cache,
+        LOGGER=logger,
+        ID_HANDLER=id_handler,
+        EVENT_MANAGER=event_manager,
+        CONFIG_MANAGER=config_manager,
+        METADATA_MANAGER=metadata_manager,
+        CONTEXT_MANAGER=context_manager,
+        HTML_HELPER=html_helper,
+        HEADING_HANDLER=heading_handler
+    )
+
+    return app
+
+def get_content_factory():
+    """Get or create ContentFactory instance."""
+    if 'content_factory' not in g:
+        metadata_storage = current_app.config['METADATA_MANAGER'].storage
+        g.content_factory = ContentFactory(
+            event_manager=current_app.config['EVENT_MANAGER'],
+            context_manager=current_app.config['CONTEXT_MANAGER'],
+            config_manager=current_app.config['CONFIG_MANAGER'],
+            key_manager=KeyManager(
+                event_manager=current_app.config['EVENT_MANAGER'],
+                cache=current_app.config['CONTENT_CACHE'],
+                config_manager=current_app.config['CONFIG_MANAGER'],
+                context_manager=current_app.config['CONTEXT_MANAGER'],
+                metadata_storage=metadata_storage,  # Pass metadata_storage
+                logger=current_app.config['LOGGER']
+            ),
+            metadata_manager=current_app.config['METADATA_MANAGER'],
+            content_cache=current_app.config['CONTENT_CACHE'],
+            html_helper=current_app.config['HTML_HELPER'],
+            heading_handler=current_app.config['HEADING_HANDLER'],
+            id_handler=current_app.config['ID_HANDLER'],
+            logger=current_app.config['LOGGER']
+        )
+    return g.content_factory
+
+def get_content_path(entry_name: str) -> Optional[Path]:
+    """Get content file path from entry name."""
     try:
-        resolved_path = (base_dir / topic_path).resolve()
-        if not str(resolved_path).startswith(str(base_dir)):
-            raise ValueError("Path traversal detected")
-        return resolved_path
+        content_root = current_app.config['CONTENT_ROOT']  # New config variable
+        for folder in ['maps', 'topics']:
+            for ext in ['.ditamap', '.dita', '.md']:
+                path = content_root / folder / f"{entry_name}{ext}"
+                if path.exists():
+                    return path
+        return None
     except Exception as e:
-        logger.error(f"Invalid topic path: {topic_path}, Error: {str(e)}")
+        current_app.config['LOGGER'].error(f"Error getting content path: {str(e)}")
         return None
 
+def init_app(app):
+    """Initialize routes and components."""
+    app = init_managers(app)
+    app.register_blueprint(main_bp)
+    app.register_blueprint(dita_bp)
 
-
-@bp.route('/')
-def index() -> ResponseReturnValue:
-    """Redirect home to roadmap."""
-    try:
-        logger.info("Redirecting home to roadmap")
-        return redirect(url_for('main.view_entry', topic_id='roadmap'))
-    except Exception as e:
-        logger.error(f"Error in home redirect: {str(e)}")
-        return jsonify({'error': 'Failed to load roadmap'}), 500
-
-
-@bp.route('/entry/<topic_id>')
-def view_entry(topic_id: str) -> ResponseReturnValue:
-    """
-    View a topic or map entry.
-
-    Args:
-        topic_id (str): The ID of the topic or map to render.
-
-    Returns:
-        ResponseReturnValue: Rendered HTML page or error response.
-    """
-    processor = None  # Ensure `processor` is always defined
-    try:
-        # Load configuration
-        dita_config = config_manager.get_config()
-
-        # Initialize processor
-        processor = DITAProcessor(config=dita_config)
-
-        # Retrieve the topic or map path
-        topic_path = processor.get_topic(topic_id)
-
-        # Log resolved topic path
-        if topic_path:
-            processor.logger.debug(f"Resolved topic path for {topic_id}: {topic_path}")
-        else:
-            processor.logger.error(f"Failed to resolve topic path for {topic_id}")
-
-        if not topic_path or not isinstance(topic_path, Path):
-            processor.logger.error(f"Invalid topic path for: {topic_id}")
-            return render_template('academic.html', error="Entry not found"), 404
-
-        # Log path existence check
-        if not topic_path.exists():
-            processor.logger.error(f"Topic file does not exist: {topic_path}")
-            return render_template('academic.html', error="Entry not found"), 404
-
-        # Process DITA map or topic
-        transformed_html = ""
-        metadata = {}
-
-        if topic_path.suffix == '.ditamap':
-            processor.logger.debug(f"Processing DITA map: {topic_path}")
-            transformed_contents, metadata = processor.process_ditamap(topic_path)
-            transformed_html = "".join(
-                content.html if isinstance(content, ProcessedContent) else str(content)
-                for content in transformed_contents
-            )
-        elif topic_path.suffix in ['.dita', '.md']:
-            processor.logger.debug(f"Processing topic: {topic_path}")
-            topic_content = processor.process_topic(topic_path)
-            transformed_html = topic_content.html
-            metadata = topic_content.metadata or {}
-        else:
-            processor.logger.error(f"Unsupported file format: {topic_path.suffix}")
-            raise ValueError("Unsupported file format")
-
-        # Render the entry page
-        processor.logger.debug(f"Rendering content for topic {topic_id}")
-        return render_template(
-            'academic.html',
-            content=transformed_html,
-            metadata=metadata
-        )
-
-    except Exception as e:
-        logger = processor.logger if processor else current_app.logger
-        logger.error(f"Error rendering topic/map {topic_id}: {str(e)}", exc_info=True)
-        return render_template('academic.html', error="Failed to render entry"), 500
-
-
-@bp.route('/dita/topics/<path:filename>')
-def serve_dita_media(filename: str) -> ResponseReturnValue:
-    """Serve media files from DITA topics directory."""
-    try:
-        # Base directory for DITA topics
-        dita_dir = Path(current_app.root_path) / 'dita' / 'topics'
-
-        # Resolve the full file path
-        file_path = (dita_dir / filename).resolve()
-
-        # Security check for path traversal
-        if not str(file_path).startswith(str(dita_dir)):
-            logger.error(f"Attempted path traversal: {filename}")
-            return jsonify({'error': 'Invalid path'}), 403
-
-        # Check if file exists
-        if not file_path.exists():
-            logger.error(f"Media file not found: {file_path}")
-            return jsonify({'error': 'File not found'}), 404
-
-        # Get the directory and filename for send_from_directory
-        directory = str(file_path.parent)
-        filename = file_path.name
-
-        logger.debug(f"Serving media file: {filename} from {directory}")
-        return send_from_directory(directory, filename)
-
-    except Exception as e:
-        logger.error(f"Error serving media file {filename}: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-
-@bp.route('/static/topics/<path:filename>')
-def serve_topic_files(filename: str) -> ResponseReturnValue:
-    """Serve files from topics directory."""
-    try:
-        topics_dir = Path(current_app.root_path) / 'dita' / 'topics'
-        file_path = (topics_dir / filename).resolve()
-
-        # Security check
-        if not str(file_path).startswith(str(topics_dir)):
-            logger.error(f"Attempted path traversal: {filename}")
-            return jsonify({'error': 'Invalid path'}), 403
-
-        # Handle image files without extension
-        if not file_path.exists() and '.' not in filename:
-            for ext in ['.svg', '.png', '.jpg', '.jpeg']:
-                test_path = (topics_dir / f"{filename}{ext}").resolve()
-                if test_path.exists():
-                    file_path = test_path
-                    break
-
-        if not file_path.exists():
-            logger.error(f"File not found: {file_path}")
-            return jsonify({'error': 'File not found'}), 404
-
-        return send_from_directory(str(file_path.parent), file_path.name)
-
-    except Exception as e:
-        logger.error(f"Error serving file {filename}: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@bp.route('/static/dist/<path:filename>')
-def serve_dist(filename: str) -> ResponseReturnValue:
-    """Serve built assets."""
-    try:
-        dist_dir = Path(current_app.root_path) / 'static' / 'dist'
-        file_path = (dist_dir / filename).resolve()
-
-        if not str(file_path).startswith(str(dist_dir)):
-            logger.error(f"Attempted path traversal: {filename}")
-            return jsonify({'error': 'Invalid path'}), 403
-
-        if not file_path.exists():
-            logger.error(f"Dist file not found: {filename}")
-            return jsonify({'error': 'File not found'}), 404
-
-        return send_from_directory(str(file_path.parent), file_path.name)
-
-    except Exception as e:
-        logger.error(f"Error serving dist file: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@bp.route('/api/maps')
-def get_maps() -> ResponseReturnValue:
-    """Get all available DITA maps."""
-    processor = None  # Ensure `processor` is always defined
-    try:
-        # Load configuration
-        dita_config = config_manager.get_config()
-
-        # Initialize processor
-        processor = DITAProcessor(config=dita_config)
-
-        # Access maps directory
-        maps_dir = processor.maps_dir
-        maps = []
-
-        for map_file in maps_dir.glob('*.ditamap'):
+    @app.before_request
+    def initialize_components():
+        """Initialize components if not already initialized."""
+        if not getattr(app, '_got_first_request', False):
             try:
-                # Parse DITA map
-                map_data = processor.dita_parser.parse_ditamap(map_file)
-                if map_data:
-                    maps.append({
-                        'id': map_file.stem,
-                        'title': map_data.title or map_file.stem,
-                        'path': str(map_file.relative_to(maps_dir)),
-                        'topics': len(map_data.topics),
-                    })
+                with app.app_context():
+                    # Initialize config manager
+                    current_app.config['CONFIG_MANAGER'].initialize()
+
+                    # Initialize metadata storage
+                    current_app.config['METADATA_MANAGER'].storage._init_db()
+
+                    current_app.logger.info("Components initialized successfully")
+                    app._got_first_request = True
             except Exception as e:
-                processor.logger.warning(f"Error parsing map {map_file}: {str(e)}")
-                continue
+                current_app.logger.error(f"Error initializing components: {str(e)}")
+                raise
 
-        return jsonify({
-            'success': True,
-            'maps': maps,
-        })
+    @app.teardown_appcontext
+    def cleanup(exc):
+        """Clean up resources safely."""
+        try:
+            # Get managers from config
+            metadata_manager = current_app.config.get('METADATA_MANAGER')
+            content_cache = current_app.config.get('CONTENT_CACHE')
+            context_manager = current_app.config.get('CONTEXT_MANAGER')
 
-    except Exception as e:
-        logger = processor.logger if processor else current_app.logger
-        logger.error(f"Error listing maps: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-        }), 500
+            # Clean up in order
+            if content_cache:
+                content_cache.clear()
+
+            if metadata_manager:
+                try:
+                    metadata_manager.cleanup()
+                except Exception as e:
+                    current_app.logger.error(f"Error cleaning metadata manager: {str(e)}")
+
+            if context_manager:
+                try:
+                    context_manager.cleanup()
+                except Exception as e:
+                    current_app.logger.error(f"Error cleaning context manager: {str(e)}")
+
+            current_app.logger.info("Cleanup completed successfully")
+
+        except Exception as e:
+            current_app.logger.error(f"Error during cleanup: {str(e)}")
 
 
-
-
-
-# Error handlers
-@bp.errorhandler(404)
-def not_found_error(error: Exception) -> ResponseReturnValue:
-    """Handle 404 errors."""
-    logger.warning(f"404 error: {error}")
-    return jsonify({'error': 'Resource not found'}), 404
-
-@bp.errorhandler(500)
-def internal_error(error: Exception) -> ResponseReturnValue:
-    """Handle 500 errors."""
-    logger.error(f"500 error: {error}")
-    return jsonify({'error': 'Internal server error'}), 500
-
-
-
-# DEBUG ROUTES
-
-@bp.route('/topic/<path:topic_path>')
-def debug_topic(topic_path: str):
-    """
-    Debug route to process and render individual topics (Markdown or DITA).
-
-    Args:
-        topic_path (str): Relative path to the topic file.
-
-    Returns:
-        Rendered HTML content for debugging.
-    """
+@main_bp.route('/')
+def index():
+    """Render index page with list of available DITA maps."""
     try:
-        # Get the full topic path
-        full_topic_path = Path(current_app.config['TOPICS_DIR']) / topic_path
+        # Get content root path from config
+        content_root = current_app.config['CONTENT_ROOT']
+        maps_dir = content_root / 'maps'
 
-        if not full_topic_path.exists():
-            return render_template('debug.html', content="File not found", metadata={}), 404
+        # Get all .ditamap files
+        available_maps = []
+        if maps_dir.exists():
+            available_maps = [
+                {
+                    'name': path.stem,
+                    'path': path.name
+                }
+                for path in maps_dir.glob('*.ditamap')
+            ]
 
-        # Load configuration
-        dita_config = config_manager.get_config()
+        # Sort maps by name
+        available_maps.sort(key=lambda x: x['name'])
 
-        # Initialize the processor
-        processor = DITAProcessor(config=dita_config)
-        parsed_element = processor.dita_parser.parse_topic(full_topic_path)
-
-        # Process based on element type
-        if parsed_element.type == ElementType.MARKDOWN:
-            transformed_content = processor.md_transformer.transform_topic(parsed_element)
-        elif parsed_element.type == ElementType.DITA:
-            transformed_content = processor.dita_transformer.transform_topic(parsed_element)
-        else:
-            return render_template('debug.html', content="Unsupported file type", metadata={}), 400
-
-        # Render the transformed content
-        return render_template(
-            'debug.html',
-            content=transformed_content.html,
-            metadata=transformed_content.metadata,
-        )
-
+        return render_template('index.html', maps=available_maps)
     except Exception as e:
-        current_app.logger.error(f"Error debugging topic {topic_path}: {str(e)}", exc_info=True)
-        return render_template(
-            'debug.html',
-            content=f"An error occurred: {str(e)}",
-            metadata={},
-        ), 500
+        current_app.config['LOGGER'].error(f"Error listing maps: {str(e)}")
+        abort(500)
+
+@main_bp.route('/entry/<entry_name>')
+def entry(entry_name: str):
+    """Process and render content entry."""
+    try:
+        content_path = get_content_path(entry_name)
+        if not content_path:
+            abort(404)
+
+        factory = get_content_factory()
+        entry_id = current_app.config['ID_HANDLER'].generate_id(entry_name, IDType.TOPIC)
+
+        with current_app.config['METADATA_MANAGER'].metadata_transaction(entry_id) as txn:
+            processed_content = factory.process_entry(
+                content_path,
+                AssemblyOptions(
+                    add_toc=True,
+                    add_navigation=True,
+                    add_metadata=True,
+                    validate_output=True,
+                    minify_html=False
+                )
+            )
+            metadata = txn.updates
+            current_app.config['METADATA_MANAGER'].store_metadata(entry_id, metadata)
+
+        return render_template('entry.html', content=processed_content, title=entry_name, metadata=metadata)
+    except Exception as e:
+        current_app.config['LOGGER'].error(f"Error processing entry {entry_name}: {str(e)}")
+        abort(500)
+
+# Routes for dita_bp
+@dita_bp.route('/api/process', methods=['POST'])
+def process_content():
+    """Process DITA content via API."""
+    try:
+        content = request.get_json()
+        if not content or 'path' not in content:
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        factory = get_content_factory()
+        content_id = current_app.config['ID_HANDLER'].generate_id(Path(content['path']).stem, IDType.TOPIC)
+
+        with current_app.config['METADATA_MANAGER'].metadata_transaction(content_id) as txn:
+            result = factory.process_entry(
+                entry_path=content['path'],
+                options=AssemblyOptions(**content.get('options', {}))
+            )
+            metadata = txn.updates
+            current_app.config['METADATA_MANAGER'].store_metadata(content_id, metadata)
+
+        return jsonify({'html': result, 'metadata': metadata, 'content_id': content_id})
+    except Exception as e:
+        current_app.config['LOGGER'].error(f"Error processing content: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@dita_bp.route('/api/metadata/<content_id>', methods=['GET', 'POST'])
+def metadata_endpoint(content_id: str):
+    """Handle metadata retrieval and updates."""
+    try:
+        if request.method == 'GET':
+            metadata = current_app.config['METADATA_MANAGER'].get_metadata(content_id)
+            if not metadata:
+                return jsonify({'error': 'Metadata not found'}), 404
+            return jsonify({'metadata': metadata})
+
+        updates = request.get_json()
+        if not updates:
+            return jsonify({'error': 'No updates provided'}), 400
+
+        with current_app.config['METADATA_MANAGER'].metadata_transaction(content_id) as txn:
+            existing = txn.updates
+            existing.update(updates)
+            current_app.config['METADATA_MANAGER'].store_metadata(content_id, existing)
+        return jsonify({'status': 'success', 'metadata': existing})
+    except Exception as e:
+        current_app.config['LOGGER'].error(f"Error handling metadata for {content_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500

@@ -6,8 +6,9 @@ import logging
 from datetime import datetime
 from functools import wraps
 
-from app.dita.utils.cache import ContentCache
+from app.dita.utils.cache import ContentCache, CacheEntryType
 from app.dita.models.types import(
+    ContentScope,
     ProcessingPhase,
     ProcessingState,
     ProcessingStateInfo,
@@ -38,6 +39,8 @@ class EventManager:
         self._processed_elements: Set[str] = set()
         self._active_phases: Dict[str, ProcessingPhase] = {}
         self._state_history: Dict[str, List[ProcessingState]] = {}
+        self._event_stack: List[str] = []  # Event stack tracking
+        self._max_event_depth = 10  # Maximum event nesting depth
 
     def subscribe(self, event_type: EventType, handler: Callable) -> None:
         """Register an event handler."""
@@ -50,12 +53,37 @@ class EventManager:
             self._handlers[event_type].remove(handler)
 
     def emit(self, event_type: EventType, **data) -> None:
-        """Emit an event to registered handlers."""
+        """Emit an event with recursion protection."""
         try:
-            for handler in self._handlers[event_type]:
-                handler(**data)
+            # Create unique event identifier
+            event_id = f"{event_type.value}_{data.get('element_id', '')}"
+
+            # Check event depth
+            if len(self._event_stack) >= self._max_event_depth:
+                self.logger.warning(f"Maximum event depth reached, skipping event: {event_id}")
+                return
+
+            # Check for recursive events
+            if event_id in self._event_stack:
+                self.logger.debug(f"Skipping recursive event: {event_id}")
+                return
+
+            # Push event to stack
+            self._event_stack.append(event_id)
+
+            try:
+                # Process event handlers
+                for handler in self._handlers.get(event_type, []):
+                    try:
+                        handler(**data)
+                    except Exception as e:
+                        self.logger.error(f"Error in event handler: {str(e)}")
+            finally:
+                # Pop event from stack
+                self._event_stack.pop()
+
         except Exception as e:
-            self.logger.error(f"Error emitting {event_type.value} event: {str(e)}")
+            self.logger.error(f"Error emitting event: {str(e)}")
 
     def start_phase(self, element_id: str, phase: ProcessingPhase) -> None:
             """Start a processing phase with proper state management."""
@@ -180,34 +208,49 @@ class EventManager:
             raise
 
     def handle_cache_update(
-            self,
-            key: str,
-            data: Any,
-            element_type: ElementType,
-            phase: ProcessingPhase
-        ) -> None:
-            """Handle cache updates with event emission."""
-            try:
-                # Update cache
-                self.cache.set(key, data, element_type, phase)
+        self,
+        key: str,
+        data: Any,
+        entry_type: CacheEntryType,
+        element_type: ElementType,
+        phase: ProcessingPhase,
+        scope: ContentScope = ContentScope.LOCAL,
+        ttl: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Handle cache updates with event emission."""
+        try:
+            # Update cache
+            self.cache.set(
+                key=key,
+                data=data,
+                entry_type=entry_type,
+                element_type=element_type,
+                phase=phase,
+                scope=scope,
+                ttl=ttl,
+                metadata=metadata
+            )
 
-                # Emit cache update event
-                self.emit(
-                    EventType.CACHE_UPDATE,
-                    cache_key=key,
-                    element_type=element_type,
-                    phase=phase
-                )
+            # Emit cache update event
+            self.emit(
+                EventType.CACHE_UPDATE,
+                cache_key=key,
+                entry_type=entry_type,
+                element_type=element_type,
+                phase=phase,
+                scope=scope
+            )
 
-            except Exception as e:
-                self.logger.error(f"Error updating cache for {key}: {str(e)}")
-                raise
+        except Exception as e:
+            self.logger.error(f"Error updating cache for {key}: {str(e)}")
+            raise
 
     def handle_cache_invalidate(self, pattern: str) -> None:
         """Handle cache invalidation with event emission."""
         try:
             # Invalidate cache entries
-            self.cache.invalidate_pattern(pattern)
+            self.cache.invalidate_by_pattern(pattern)
 
             # Emit cache invalidation event
             self.emit(

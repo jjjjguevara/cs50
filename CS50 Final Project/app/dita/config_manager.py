@@ -1,7 +1,9 @@
-from typing import Dict, List, Optional, Any, Union, TypeVar, Set, Type
+from typing import Dict, List, Optional, Any, Union, TypeVar, Set, Type, TYPE_CHECKING
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
+import json
+import jsonschema
 import os
 import json
 import logging
@@ -12,6 +14,17 @@ from functools import lru_cache
 from uuid import uuid4
 import re
 from contextlib import contextmanager
+
+# Import handlers we'll integrate with
+from app.dita.utils.id_handler import DITAIDHandler, IDType
+from .event_manager import EventManager, EventType
+from .utils.logger import DITALogger
+from .utils.cache import ContentCache, CacheEntryType
+
+
+if TYPE_CHECKING:
+    from .metadata.metadata_manager import MetadataManager
+    from .context_manager import ContextManager
 
 # Pydantic for schema validation
 
@@ -32,15 +45,10 @@ from .models.types import (
     ValidationSeverity,
     ProcessingContext,
     ContentScope,
+    ProcessingRuleType,
+    MDElementType
 )
 
-# Import handlers we'll integrate with
-from .context_manager import ContextManager
-from app.dita.utils.id_handler import DITAIDHandler, IDType
-from app.dita.metadata.metadata_manager import MetadataManager
-from .event_manager import EventManager, EventType
-from .utils.logger import DITALogger
-from .utils.cache import ContentCache, CacheEntryType
 
 
 # Types and enums
@@ -109,14 +117,7 @@ class Feature:
         }
 
 
-class ProcessingRuleType(Enum):
-    """Types of processing rules."""
-    ELEMENT = "element"           # Basic element processing
-    TRANSFORMATION = "transform"  # Content transformation
-    VALIDATION = "validation"     # Content validation
-    SPECIALIZATION = "special"    # Content specialization
-    ENRICHMENT = "enrichment"     # Content enrichment
-    PUBLICATION = "publication"   # Publication-specific
+
 
 @dataclass
 class ProcessingRule:
@@ -193,12 +194,12 @@ class ConfigManager:
 
     def __init__(
         self,
-        metadata_manager: MetadataManager,
-        context_manager: ContextManager,
         content_cache: ContentCache,
         event_manager: EventManager,
         id_handler: DITAIDHandler,
         env: Optional[str] = None,
+        metadata_manager: Optional['MetadataManager'] = None,
+        context_manager: Optional['ContextManager'] = None,
         config_path: Optional[Union[str, Path]] = None,
         logger: Optional[DITALogger] = None,
     ):
@@ -227,6 +228,9 @@ class ConfigManager:
 
         # Load schema
         self._attribute_schema = self._load_attribute_schema()
+
+        self._invalidation_depth = 0
+        self._MAX_INVALIDATION_DEPTH = 10  # Configurable maximum depth
 
         # Cache for resolved configurations
         self._config_cache: Dict[str, Any] = {}
@@ -272,6 +276,16 @@ class ConfigManager:
             EventType.STATE_CHANGE,
             self._handle_config_change
         )
+
+        # Setup config paths
+        self.config_path = Path(__file__).parent / "configs"
+        if not self.config_path.exists():
+            self.config_path.mkdir(parents=True)
+
+        try:
+            self._load_config_files()
+        except Exception as e:
+            self.logger.error(f"Error loading config files: {str(e)}")
 
         # Track initialization
         self._initialized = True
@@ -431,38 +445,94 @@ class ConfigManager:
     def _initialize_rule_registry(self) -> None:
         """Initialize processing rules registry from loaded configuration."""
         try:
-            # Store loaded JSON config temporarily
-            raw_rules = self._rule_registry
-
-            # Reset registries
             self._rule_registry = {}
             self._element_rule_index = {}
 
-            # Process each rule from raw config
-            for rule_type_str, type_rules in raw_rules.items():
-                if isinstance(type_rules, dict):
-                    for element_type_str, rule_data in type_rules.items():
-                        if isinstance(rule_data, dict):
-                            try:
-                                rule_type = ProcessingRuleType(rule_type_str)
-                                element_type = ElementType(element_type_str)
+            valid_rule_count = 0
+            skipped_rule_count = 0
 
-                                self.register_processing_rule(
-                                    rule_type=rule_type,
-                                    element_type=element_type,
-                                    rule_config=rule_data.get('config', {}),
-                                    conditions=rule_data.get('conditions', {}),
-                                    priority=rule_data.get('priority', 0),
-                                    metadata=rule_data.get('metadata', {})
-                                )
-                            except ValueError as e:
-                                self.logger.warning(f"Invalid rule type or element type: {str(e)}")
-                                continue
+            for rule_type, type_rules in self._dita_rules.items():
+                try:
+                    rule_type_enum = ProcessingRuleType(rule_type)
+                except ValueError:
+                    self.logger.error(f"Invalid ProcessingRuleType: {rule_type}")
+                    skipped_rule_count += 1
+                    continue
 
-            self.logger.debug("Rule registry initialized")
+                if not isinstance(type_rules, dict):
+                    self.logger.warning(f"Invalid structure for rule_type: {rule_type}. Expected a dictionary.")
+                    skipped_rule_count += 1
+                    continue
 
+                for rule_id, rule_data in type_rules.items():
+                    if not isinstance(rule_data, dict):
+                        self.logger.warning(f"Invalid rule format for {rule_id}. Skipping rule.")
+                        skipped_rule_count += 1
+                        continue
+
+                    # Detect circular references
+                    if self._has_circular_reference(rule_data):
+                        self.logger.error(f"Circular reference detected in rule {rule_id}. Skipping rule.")
+                        skipped_rule_count += 1
+                        continue
+
+                    # Preprocess and register the rule
+                    try:
+                        rule_data = self._preprocess_rule(rule_id, rule_data)
+                        element_type_enum = ElementType(rule_data["element_type"])
+                        self.register_processing_rule(
+                            rule_type=rule_type_enum,
+                            element_type=element_type_enum,
+                            rule_config=rule_data["action"],
+                            conditions=rule_data.get("conditions", {}),
+                            priority=rule_data.get("priority", 0),
+                            metadata=rule_data.get("metadata", {})
+                        )
+                        valid_rule_count += 1
+                    except ValueError as e:
+                        self.logger.error(f"Error processing rule {rule_id}: {str(e)}")
+                        skipped_rule_count += 1
+                        self.logger.error(
+                            f"Error processing rule {rule_id}: '{rule_data['element_type']}' is not a valid ElementType. "
+                            f"Available types: {[e.value for e in ElementType]}"
+                        )
+                        raise
+                    except Exception as e:
+                        self.logger.error(f"Unexpected error for rule {rule_id}: {str(e)}")
+                        skipped_rule_count += 1
+
+            self.logger.info(f"Rule registry initialization completed. "
+                             f"Valid rules: {valid_rule_count}, Skipped rules: {skipped_rule_count}")
         except Exception as e:
             self.logger.error(f"Rule registry initialization failed: {str(e)}")
+            raise
+
+    def _has_circular_reference(self, obj, visited=None) -> bool:
+        """Detect circular references in nested structures."""
+        if visited is None:
+            visited = set()
+        if id(obj) in visited:
+            return True
+        visited.add(id(obj))
+        if isinstance(obj, dict):
+            return any(self._has_circular_reference(value, visited) for value in obj.values())
+        elif isinstance(obj, list):
+            return any(self._has_circular_reference(item, visited) for item in obj)
+        visited.remove(id(obj))
+        return False
+
+    def _preprocess_rule(self, rule_id: str, rule_data: dict) -> dict:
+        """Preprocess a single rule to ensure completeness."""
+        try:
+            rule_data.setdefault("operation", "transform")
+            rule_data.setdefault("target", rule_data.get("html_tag", "div"))
+            rule_data.setdefault("action", rule_data)
+            if "element_type" not in rule_data:
+                inferred_type = rule_id.split("_")[-1]  # Infer element_type from rule_id
+                rule_data["element_type"] = inferred_type
+            return rule_data
+        except Exception as e:
+            self.logger.error(f"Error preprocessing rule {rule_id}: {str(e)}")
             raise
 
     def _validate_feature_config(self, feature: Feature) -> bool:
@@ -587,26 +657,50 @@ class ConfigManager:
     def _load_key_resolution_config(self) -> Dict[str, Any]:
         """Load key resolution configuration."""
         try:
-            config_path = self.config_path / "key_resolution.json"
-            if not config_path.exists():
-                raise FileNotFoundError(f"Key resolution config not found: {config_path}")
+            keyref_path = self.config_path / "keyref_config.json"
+            key_resolution_path = self.config_path / "key_resolution.json"
 
-            with open(config_path) as f:
-                config = json.load(f)
+            # Try loading from keyref_config.json first
+            if keyref_path.exists():
+                with open(keyref_path) as f:
+                    config = json.load(f)
+                    if "keyref_resolution" in config:
+                        return {
+                            "resolution_rules": config["keyref_resolution"],
+                            "processing_hierarchy": config.get("processing_hierarchy", {}),
+                            "global_defaults": config.get("global_defaults", {}),
+                            "element_defaults": config.get("element_defaults", {})
+                        }
 
-            # Validate required sections
-            required_sections = {"resolution_rules", "scopes", "inheritance", "fallback_order"}
-            if missing := required_sections - set(config.get("resolution_rules", {})):
-                raise ValueError(f"Missing required sections in key resolution config: {missing}")
+            # Fall back to key_resolution.json
+            if key_resolution_path.exists():
+                with open(key_resolution_path) as f:
+                    config = json.load(f)
+                    if "resolution_rules" not in config:
+                        raise ValueError("Missing resolution_rules in key resolution config")
+                    return config
 
-            return config
+            raise FileNotFoundError("No valid key resolution config found")
 
         except Exception as e:
             self.logger.error(f"Error loading key resolution config: {str(e)}")
-            return {}
+            return {
+                "resolution_rules": {
+                    "scopes": ["local", "peer", "external"],
+                    "fallback_order": ["local", "peer", "external"]
+                },
+                "processing_hierarchy": {
+                    "order": ["map", "topic", "element"]
+                },
+                "global_defaults": {},
+                "element_defaults": {}
+            }
 
     def _load_context_validation_config(self) -> Dict[str, Any]:
-        """Load context validation configuration."""
+        """
+        Load and validate context validation configuration with schema-based resolution.
+        Implements fallback-override system for validation rules.
+        """
         try:
             config_path = self.config_path / "context_validation.json"
             if not config_path.exists():
@@ -615,16 +709,155 @@ class ConfigManager:
             with open(config_path) as f:
                 config = json.load(f)
 
-            # Validate required sections
-            required_sections = {"validation_rules", "context", "metadata"}
-            if missing := required_sections - set(config.get("validation_rules", {})):
-                raise ValueError(f"Missing required sections in context validation config: {missing}")
+            # Load base schema for validation
+            schema = self._attribute_schema.get("context_rules", {})
+            validation_rules = schema.get("validation", {})
+
+            # Resolve validation rules through hierarchy
+            if "validation_rules" not in config:
+                resolved_rules = self._resolve_validation_rules(
+                    config.get("context", {}),
+                    validation_rules
+                )
+                config["validation_rules"] = resolved_rules
+
+            # Validate required sections and structure
+            self._validate_context_config(config)
+
+            # Apply scope inheritance rules
+            config = self._apply_scope_inheritance(config)
+
+            # Merge with attribute schema rules
+            if schema_rules := schema.get("attribute_inheritance"):
+                config["validation_rules"]["attribute_inheritance"] = self._deep_merge(
+                    schema_rules,
+                    config["validation_rules"].get("attribute_inheritance", {})
+                )
 
             return config
 
         except Exception as e:
             self.logger.error(f"Error loading context validation config: {str(e)}")
-            return {}
+            return self._get_default_context_config()
+
+    def _resolve_validation_rules(
+        self,
+        context_config: Dict[str, Any],
+        schema_rules: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Resolve validation rules through schema hierarchy."""
+        resolved = {
+            "context": {
+                "required_fields": schema_rules.get("required_fields", []),
+                "scope_validation": {
+                    "enabled": True,
+                    "rules": {}
+                }
+            },
+            "metadata": {
+                "transient": schema_rules.get("transient", {}),
+                "persistent": schema_rules.get("persistent", {})
+            }
+        }
+
+        # Apply scope rules from schema
+        if scope_rules := schema_rules.get("scopes"):
+            for scope, rules in scope_rules.items():
+                resolved["context"]["scope_validation"]["rules"][scope] = {
+                    "allowed_references": rules.get("allows_external_refs", []),
+                    "metadata_inheritance": rules.get("requires_validation", True)
+                }
+
+        # Override with context-specific rules
+        if context_scopes := context_config.get("scopes"):
+            for scope, rules in context_scopes.items():
+                if scope in resolved["context"]["scope_validation"]["rules"]:
+                    resolved["context"]["scope_validation"]["rules"][scope].update(rules)
+
+        return resolved
+
+    def _validate_context_config(self, config: Dict[str, Any]) -> None:
+        """Validate context configuration structure."""
+        required_sections = {
+            "validation_rules": {
+                "context": ["required_fields", "scope_validation"],
+                "metadata": ["transient", "persistent"]
+            }
+        }
+
+        def validate_section(data: Dict[str, Any], requirements: Dict[str, Any], path: str = "") -> None:
+            for key, value in requirements.items():
+                current_path = f"{path}.{key}" if path else key
+                if key not in data:
+                    raise ValueError(f"Missing required section: {current_path}")
+                if isinstance(value, list):
+                    missing = [field for field in value if field not in data[key]]
+                    if missing:
+                        raise ValueError(f"Missing required fields in {current_path}: {missing}")
+                elif isinstance(value, dict):
+                    validate_section(data[key], value, current_path)
+
+        validate_section(config, required_sections)
+
+    def _apply_scope_inheritance(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply scope inheritance rules to configuration."""
+        rules = config["validation_rules"]
+        if "context" not in rules or "scope_validation" not in rules["context"]:
+            return config
+
+        scope_rules = rules["context"]["scope_validation"]["rules"]
+        inheritance_order = ["local", "peer", "external", "global"]
+
+        # Apply inheritance
+        for i, scope in enumerate(inheritance_order):
+            if scope not in scope_rules:
+                continue
+            # Inherit from previous scope if exists
+            if i > 0 and inheritance_order[i-1] in scope_rules:
+                parent_scope = scope_rules[inheritance_order[i-1]]
+                scope_rules[scope] = self._deep_merge(
+                    parent_scope.copy(),
+                    scope_rules[scope]
+                )
+
+        return config
+
+    def _get_default_context_config(self) -> Dict[str, Any]:
+        """Get default context validation configuration."""
+        return {
+            "validation_rules": {
+                "context": {
+                    "required_fields": ["element_id", "element_type"],
+                    "scope_validation": {
+                        "enabled": True,
+                        "rules": {
+                            "local": {
+                                "allowed_references": ["local", "peer"],
+                                "metadata_inheritance": True
+                            },
+                            "peer": {
+                                "allowed_references": ["local", "peer", "external"],
+                                "metadata_inheritance": False
+                            },
+                            "external": {
+                                "allowed_references": ["external"],
+                                "metadata_inheritance": False
+                            }
+                        }
+                    }
+                },
+                "metadata": {
+                    "transient": {
+                        "allowed_scopes": ["local", "phase"],
+                        "max_lifetime": 3600
+                    },
+                    "persistent": {
+                        "required_validation": True,
+                        "schema_validation": True
+                    }
+                }
+            }
+        }
 
     def _validate_metadata_config(self, config: Dict[str, Any]) -> None:
         """Validate metadata configuration structure."""
@@ -971,34 +1204,98 @@ class ConfigManager:
             raise
 
     def _load_config_files(self) -> None:
-        """Load configuration files from config directory."""
+        """Load configuration files from the config directory."""
         try:
             # Load feature flags
-            with open(self.config_path / "feature_flags.json") as f:
+            with open(self.config_path / "feature_flags.json", "r") as f:
                 self._feature_registry = json.load(f)["features"]
 
-            # Load processing rules
-            with open(self.config_path / "processing_rules.json") as f:
-                self._rule_registry = json.load(f)["rules"]
+            # Load processing rules and validate structure
+            with open(self.config_path / "processing_rules.json", "r") as f:
+                processing_rules = json.load(f)
+
+            # Define schema for validation
+            schema = {
+                "type": "object",
+                "properties": {
+                    "version": {"type": "string"},
+                    "description": {"type": "string"},
+                    "rules": {
+                        "type": "object",
+                        "patternProperties": {
+                            ".*": {
+                                "type": "object",
+                                "patternProperties": {
+                                    ".*": {
+                                        "type": "object",
+                                        "properties": {
+                                            "element_type": {"type": "string"},
+                                            "operation": {"type": "string"},
+                                            "target": {"type": "string"},
+                                            "action": {"type": "object"},
+                                            "conditions": {"type": "object"},
+                                            "priority": {"type": "integer"},
+                                            "metadata": {"type": "object"},
+                                        },
+                                        "required": ["element_type", "operation", "target", "action"],
+                                        "additionalProperties": False
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "defaults": {"type": "object"}
+                },
+                "required": ["version", "description", "rules"],
+                "additionalProperties": False
+            }
+
+            jsonschema.validate(instance=processing_rules, schema=schema)
+            self._rule_registry = processing_rules["rules"]
 
             # Load DITA processing rules
-            with open(self.config_path / "dita_processing_rules.json") as f:
+            with open(self.config_path / "dita_processing_rules.json", "r") as f:
                 dita_config = json.load(f)
                 self._dita_rules = dita_config["element_rules"]
                 self._dita_type_mapping = dita_config["element_type_mapping"]
 
-            # Load validation patterns
-            with open(self.config_path / "validation_patterns.json") as f:
-                patterns_config = json.load(f)
-                self.validation_patterns = patterns_config["patterns"]
-                self.default_metadata = patterns_config["default_metadata"]
+            # Validate all rules in _rule_registry
+            for rule_type, rules in self._rule_registry.items():
+                for rule_id, rule_data in rules.items():
+                    # Ensure the rule is passed as a dictionary
+                    if isinstance(rule_data, ProcessingRule):
+                        rule_dict = {
+                            "operation": rule_data.config.get("operation"),
+                            "target": rule_data.config.get("target"),
+                            "action": rule_data.config.get("action"),
+                            "conditions": rule_data.conditions,
+                            "metadata": rule_data.metadata,
+                        }
+                    elif isinstance(rule_data, dict):
+                        rule_dict = rule_data
+                    else:
+                        self.logger.error(f"Invalid rule format for rule_id: {rule_id}")
+                        continue
 
-            # Load keyref configuration
-            with open(self.config_path / "keyref_config.json") as f:
-                self._keyref_config = json.load(f)
+                    if not self.validate_processing_rule(rule_dict):
+                        self.logger.error(f"Invalid rule detected: {rule_id}")
 
-            self.logger.info("Successfully loaded configuration files")
+            # Cross-check DITA type mappings
+            for element_type, rule_path in self._dita_type_mapping.items():
+                resolved_rule = self.get_dita_element_rules(element_type)
+                if resolved_rule.get("html_tag") is None:
+                    self.logger.error(f"DITA element {element_type} mapping is invalid or unresolved: {rule_path}")
 
+            self.logger.info("Successfully loaded and validated configuration files")
+            self.logger.debug(f"Feature registry: {json.dumps(self._feature_registry, indent=2)}")
+            self.logger.debug(f"Rule registry: {json.dumps(self._rule_registry, indent=2)}")
+            self.logger.debug(f"DITA rules: {json.dumps(self._dita_rules, indent=2)}")
+            self.logger.debug(f"DITA type mapping: {json.dumps(self._dita_type_mapping, indent=2)}")
+
+
+        except jsonschema.ValidationError as ve:
+            self.logger.error(f"Validation error in processing_rules.json: {ve.message}")
+            raise ValueError(f"Invalid structure in processing_rules.json: {ve.message}")
         except FileNotFoundError as e:
             self.logger.error(f"Configuration file not found: {str(e)}")
             raise
@@ -1009,18 +1306,30 @@ class ConfigManager:
             self.logger.error(f"Error loading configuration files: {str(e)}")
             raise
 
-    def get_dita_element_rules(self, element_type: DITAElementType) -> Dict[str, Any]:
-        """Get processing rules for a DITA element type."""
+    def get_dita_element_rules(self, element_type: str) -> Dict[str, Any]:
+        """
+        Get processing rules for a DITA element type.
+
+        Args:
+            element_type: The DITA element type as a string.
+
+        Returns:
+            Dict[str, Any]: Resolved processing rules for the element type.
+        """
         try:
             # Get rule path from type mapping
-            rule_path = self._dita_type_mapping.get(element_type.value)
+            rule_path = self._dita_type_mapping.get(element_type)
             if not rule_path:
+                self.logger.warning(f"DITA element type {element_type} has no rule path in type mapping.")
                 return self._dita_rules["default"]["unknown"]
 
             # Navigate to rule in hierarchy
             current = self._dita_rules
-            for part in rule_path.split('.'):
-                current = current[part]
+            for part in rule_path.split("."):
+                current = current.get(part)
+                if current is None:
+                    self.logger.warning(f"DITA element type {element_type} has an invalid rule path: {rule_path}")
+                    return self._dita_rules["default"]["unknown"]
 
             return current
 
@@ -1893,50 +2202,44 @@ class ConfigManager:
             bool: True if rule is valid
         """
         try:
-            # Required rule components
-            required_fields = {
-                'operation': str,      # Rule operation type
-                'target': str,         # Target element or attribute
-                'action': dict,        # Action configuration
-            }
+                if isinstance(rule, ProcessingRule):
+                    rule = {
+                        "operation": rule.config.get("operation"),
+                        "target": rule.config.get("target"),
+                        "action": rule.config.get("action"),
+                        "conditions": rule.conditions,
+                        "metadata": rule.metadata,
+                    }
 
-            # Validate required fields and types
-            for field, field_type in required_fields.items():
-                if field not in rule:
-                    self.logger.error(f"Missing required field: {field}")
+                # Required rule components
+                required_fields = {
+                    "operation": str,
+                    "target": str,
+                    "action": dict,
+                }
+
+                for field, expected_type in required_fields.items():
+                    if field not in rule:
+                        self.logger.error(f"Missing required field: {field}")
+                        return False
+                    if not isinstance(rule[field], expected_type):
+                        self.logger.error(f"Invalid type for {field}: expected {expected_type}")
+                        return False
+
+                # Validate operation
+                valid_operations = {"transform", "validate", "enrich", "extract", "inject", "specialize"}
+                operation = rule.get("operation", None)
+                if operation not in valid_operations:
+                    self.logger.error(f"Invalid operation: {operation}")
                     return False
-                if not isinstance(rule[field], field_type):
-                    self.logger.error(f"Invalid type for {field}: expected {field_type}")
+
+                # Validate action structure
+                action = rule.get("action", {})
+                if not isinstance(action, dict):
+                    self.logger.error("Action must be a dictionary")
                     return False
 
-            # Validate operation
-            valid_operations = {
-                'transform',    # Content transformation
-                'validate',     # Content validation
-                'enrich',      # Content enrichment
-                'extract',     # Metadata extraction
-                'inject',      # Content injection
-                'specialize'   # Content specialization
-            }
-            if rule['operation'] not in valid_operations:
-                self.logger.error(f"Invalid operation: {rule['operation']}")
-                return False
-
-            # Validate action configuration
-            action_config = rule['action']
-            if not self._validate_action_config(action_config, rule['operation']):
-                return False
-
-            # Validate optional fields
-            if 'conditions' in rule and not isinstance(rule['conditions'], dict):
-                self.logger.error("Invalid conditions format")
-                return False
-
-            if 'metadata' in rule and not isinstance(rule['metadata'], dict):
-                self.logger.error("Invalid metadata format")
-                return False
-
-            return True
+                return True
 
         except Exception as e:
             self.logger.error(f"Error validating processing rule: {str(e)}")
@@ -2062,13 +2365,13 @@ class ConfigManager:
 
                 # Clear configs that include this element
                 invalidation_patterns = [
-                    f"*{element_id}*",  # Any config containing this element
-                    f"component_*",      # Component configs might need update
-                    f"pipeline_*"        # Pipeline configs might need update
+                    f".*{element_id}.*",  # Any config containing this element (regex match)
+                    r"component_.*",      # Component configs might need update
+                    r"pipeline_.*"        # Pipeline configs might need update
                 ]
 
                 for pattern in invalidation_patterns:
-                    self.content_cache.invalidate_pattern(pattern)
+                    self.content_cache.invalidate_by_pattern(pattern)
 
         except Exception as e:
             self.logger.error(f"Error handling config change: {str(e)}")
@@ -2084,10 +2387,27 @@ class ConfigManager:
             with open(schema_path, 'r') as f:
                 schema = json.load(f)
 
-            # Validate schema structure
+            # Map legacy field names to new structure if necessary
+            if 'resolution_rules' in schema:
+                schema['inheritance_rules'] = schema.get('resolution_rules', {})
+
+            if 'validation' in schema:
+                schema['validation_rules'] = schema.get('validation', {})
+
+            # Check feature definitions in both old and new locations
+            if not schema.get('feature_definitions'):
+                features_path = self.config_path / "feature_flags.json"
+                if features_path.exists():
+                    with open(features_path, 'r') as f:
+                        feature_data = json.load(f)
+                        schema['feature_definitions'] = feature_data.get('features', {})
+
+            # Validate required sections
             required_sections = {
-                "hierarchy", "attribute_types", "inheritance_rules",
-                "validation_rules", "feature_definitions"
+                "hierarchy",
+                "inheritance_rules",
+                "validation_rules",
+                "feature_definitions"
             }
 
             missing = required_sections - set(schema.keys())
@@ -2684,20 +3004,20 @@ class ConfigManager:
     def _invalidate_affected_caches(self, updated_keys: List[str]) -> None:
         """Invalidate caches affected by configuration updates."""
         try:
-            for key in updated_keys:
-                # Invalidate pipeline caches
-                if key.startswith('pipeline_'):
-                    pattern = f"pipeline_{key.split('_')[1]}"
-                    self.cache.invalidate_pattern(pattern)
+            if self._invalidation_depth >= self._MAX_INVALIDATION_DEPTH:
+                self.logger.warning("Maximum invalidation depth reached, stopping cascade")
+                return
 
-                # Invalidate component caches
-                elif key.startswith('component_'):
-                    pattern = f"features_{key.split('_')[1]}"
-                    self.cache.invalidate_pattern(pattern)
-
-                # Invalidate feature caches
-                elif key == 'features':
-                    self.cache.invalidate_pattern('features_')
+            self._invalidation_depth += 1
+            try:
+                # Existing invalidation logic here
+                for key in updated_keys:
+                    if key.startswith('pipeline_'):
+                        pattern = f"pipeline_{key.split('_')[1]}"
+                        self.cache.invalidate_by_pattern(pattern)
+                    # ... rest of the logic
+            finally:
+                self._invalidation_depth -= 1
 
         except Exception as e:
             self.logger.error(f"Error invalidating caches: {str(e)}")

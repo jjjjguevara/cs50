@@ -18,29 +18,7 @@ from ..models.types import (
 
 # Global config
 from app_config import DITAConfig
-
-class IDType(Enum):
-    """Types of IDs that require different patterns."""
-    MAP = "map"
-    TOPIC = "topic"
-    HEADING = "heading"
-    ARTIFACT = "artifact"
-    FIGURE = "figure"
-    TABLE = "table"
-    FORMULA = "formula"
-    EQUATION = "equation"
-    CITATION = "citation"
-    SECTION = "section"
-    APPENDIX = "appendix"
-    SUPPLEMENTAL = "supplemental"
-    REFERENCE = "reference"
-    HTML_ELEMENT = "element"
-    CACHE_ENTRY = "cache"
-    METADATA = "meta"
-    EVENT = "event"
-    STATE = "state"
-    TRANSFORM = "transform"
-    VALIDATION = "validation"
+from ..models.types import IDType
 
 @dataclass
 class IDMetadata:

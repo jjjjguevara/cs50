@@ -1,10 +1,12 @@
 """Key reference management for DITA content processing."""
 
-from typing import Dict, Optional, Any, List, Set
+from typing import Dict, Optional, Any, List, Set, TYPE_CHECKING
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 import logging
+if TYPE_CHECKING:
+    from .metadata.metadata_manager import MetadataManager
 
 from .models.types import (
     KeyDefinition,
@@ -15,10 +17,11 @@ from .models.types import (
     ContentScope
 )
 from .event_manager import EventManager, EventType
-from .utils.cache import ContentCache
+from .utils.cache import ContentCache, CacheEntryType
 from .utils.logger import DITALogger
 from .config_manager import ConfigManager
 from .context_manager import ContextManager
+from .metadata.storage import MetadataStorage
 
 class KeyManager:
     """
@@ -30,10 +33,13 @@ class KeyManager:
         self,
         event_manager: EventManager,
         cache: ContentCache,
-        config_manager: ConfigManager,
-        context_manager: ContextManager,
+        config_manager: 'ConfigManager',
+        context_manager: 'ContextManager',
+        metadata_storage: MetadataStorage,  # Add metadata_storage parameter
         logger: Optional[DITALogger] = None
     ):
+
+        self.metadata_storage = metadata_storage  # Store metadata_storage
         self.logger = logger or logging.getLogger(__name__)
         self.event_manager = event_manager
         self.cache = cache
@@ -44,6 +50,9 @@ class KeyManager:
         self._key_definitions: Dict[str, KeyDefinition] = {}
         self._key_hierarchy: Dict[str, List[str]] = {}
 
+        self.storage = MetadataStorage
+
+
         # Resolution cache
         self._resolution_cache: Dict[str, Dict[str, Any]] = {}
 
@@ -53,27 +62,63 @@ class KeyManager:
         # Register for events
         self._register_events()
 
+        # Debugging log for key hierarchy
+        self.logger.debug(f"Key hierarchy initialized: {self._key_hierarchy}")
+
+        self._invalidation_in_progress = set()  # Track ongoing invalidations
+        self._max_invalidation_depth = 10
+
+
+
     def _initialize_from_config(self) -> None:
         """Initialize key processing rules from config."""
         try:
-            # Get key resolution config
-            self._resolution_config = self.config_manager._keyref_config[
-                "keyref_resolution"
-            ]
+            # Get key resolution config from either source
+            keyref_config = self.config_manager._keyref_config
+            key_resolution = self.config_manager._load_key_resolution_config()
 
-            # Get processing hierarchy
-            self._processing_hierarchy = self._resolution_config[
-                "processing_hierarchy"
-            ]
+            # Combine configurations
+            self._resolution_config = {
+                "keyref_resolution": keyref_config.get("keyref_resolution", {}),
+                "processing_hierarchy": keyref_config.get("processing_hierarchy", {
+                    "order": ["map", "topic", "element"]  # Default hierarchy if not specified
+                }),
+                "inheritance_rules": keyref_config.get("inheritance_rules", key_resolution.get("inheritance", {})),
+                "global_defaults": keyref_config.get("global_defaults", {}),
+                "element_defaults": keyref_config.get("element_defaults", {})
+            }
 
-            # Get inheritance rules
-            self._inheritance_rules = self._resolution_config[
-                "inheritance_rules"
-            ]
+            # Get processing hierarchy with fallback
+            self._processing_hierarchy = self._resolution_config.get(
+                "processing_hierarchy", {}).get(
+                    "order", ["map", "topic", "element"]
+            )
+
+            # Get inheritance rules with fallback
+            self._inheritance_rules = self._resolution_config.get(
+                "inheritance_rules", {
+                    "props": "merge",
+                    "outputclass": "append",
+                    "other": "override"
+                }
+            )
 
         except Exception as e:
             self.logger.error(f"Error initializing from config: {str(e)}")
-            raise
+            # Set defaults if initialization fails
+            self._processing_hierarchy = ["map", "topic", "element"]
+            self._inheritance_rules = {
+                "props": "merge",
+                "outputclass": "append",
+                "other": "override"
+            }
+            self._resolution_config = {
+                "keyref_resolution": {},
+                "processing_hierarchy": {"order": self._processing_hierarchy},
+                "inheritance_rules": self._inheritance_rules,
+                "global_defaults": {},
+                "element_defaults": {}
+            }
 
     def _register_events(self) -> None:
         """Register for key-related events."""
@@ -130,17 +175,82 @@ class KeyManager:
             return None
 
 
-
     def _handle_cache_invalidation(self, **event_data: Any) -> None:
-        """Handle cache invalidation events."""
+        """Handle cache invalidation events with recursion protection."""
         try:
             if element_id := event_data.get("element_id"):
                 if element_id.startswith("key_"):
                     key = element_id[4:]  # Remove 'key_' prefix
-                    self.invalidate_key(key)
+
+                    # Check if we're already processing this key
+                    if key in self._invalidation_in_progress:
+                        self.logger.debug(f"Skipping recursive invalidation for key: {key}")
+                        return
+
+                    self._invalidation_in_progress.add(key)
+                    try:
+                        self._process_invalidation(key)
+                    finally:
+                        self._invalidation_in_progress.remove(key)
 
         except Exception as e:
             self.logger.error(f"Error handling cache invalidation: {str(e)}")
+
+    def _process_invalidation(self, initial_key: str) -> None:
+        """Process key invalidation using iterative approach."""
+        try:
+            # Use breadth-first traversal to handle dependencies
+            to_process = {initial_key}
+            processed = set()
+            depth = 0
+
+            while to_process and depth < self._max_invalidation_depth:
+                current_level = to_process
+                to_process = set()
+
+                for key in current_level:
+                    if key not in processed:
+                        # Invalidate current key
+                        self._invalidate_single_key(key)
+                        processed.add(key)
+
+                        # Add dependencies for next level
+                        dependencies = self._get_key_dependencies(key)
+                        to_process.update(dependencies - processed)
+
+                depth += 1
+
+            if depth >= self._max_invalidation_depth:
+                self.logger.warning(f"Max invalidation depth reached for key: {initial_key}")
+
+        except Exception as e:
+            self.logger.error(f"Error processing invalidation for key {initial_key}: {str(e)}")
+
+    def _invalidate_single_key(self, key: str) -> None:
+            """Invalidate a single key's cache entries."""
+            try:
+                # Invalidate in metadata storage
+                self.metadata_storage.invalidate_keys_batch(keys_to_invalidate={key})
+
+                # Invalidate in cache
+                cache_key = f"key_{key}"
+                self.cache.invalidate(cache_key, entry_type=CacheEntryType.METADATA)
+
+            except Exception as e:
+                self.logger.error(f"Error invalidating single key {key}: {str(e)}")
+
+    def _get_key_dependencies(self, key: str) -> Set[str]:
+        """Get all keys that depend on the given key."""
+        try:
+            dependencies = set()
+            # Get direct dependencies from hierarchy
+            if deps := self._key_hierarchy.get(key, []):
+                dependencies.update(deps)
+            return dependencies
+        except Exception as e:
+            self.logger.error(f"Error getting key dependencies for {key}: {str(e)}")
+            return set()
+
 
     def _handle_state_change(self, **event_data: Any) -> None:
         """Handle state change events."""
@@ -153,7 +263,7 @@ class KeyManager:
             if map_id := metadata.get("map_id"):
                 # Invalidate resolution cache for this map
                 pattern = f"keyref_*_{map_id}"
-                self.cache.invalidate_pattern(pattern)
+                self.cache.invalidate_by_pattern(pattern)
 
         except Exception as e:
             self.logger.error(f"Error handling state change: {str(e)}")
@@ -192,44 +302,48 @@ class KeyManager:
             return None
 
     def store_key_definition(
-        self,
-        key_def: KeyDefinition,
-        map_id: str
-    ) -> None:
-        """Store key definition with context tracking."""
-        try:
-            # Register context
-            self.context_manager.register_context(
-                content_id=f"key_{key_def.key}",
-                element_type=ElementType.UNKNOWN,
-                metadata=key_def.metadata
-            )
+            self,
+            key_def: KeyDefinition,
+            map_id: str
+        ) -> None:
+            """Store key definition with context tracking."""
+            try:
+                # Register context
+                self.context_manager.register_context(
+                    content_id=f"key_{key_def.key}",
+                    element_type=ElementType.UNKNOWN,
+                    metadata=key_def.metadata
+                )
 
-            # Store definition
-            self._key_definitions[key_def.key] = key_def
+                # Store definition
+                self._key_definitions[key_def.key] = key_def
 
-            # Update hierarchy if key extends others
-            if parent_key := key_def.metadata.get("extends"):
-                self._key_hierarchy.setdefault(key_def.key, []).append(parent_key)
+                # Update hierarchy if key extends others
+                if parent_key := key_def.metadata.get("extends"):
+                    self._key_hierarchy.setdefault(key_def.key, []).append(parent_key)
 
-            # Cache definition (convert KeyDefinition to dict for caching)
-            self.cache.set(
-                f"key_{key_def.key}",
-                vars(key_def),  # Convert to dict for storage
-                ElementType.UNKNOWN,
-                ProcessingPhase.DISCOVERY
-            )
+                # Cache definition (convert KeyDefinition to dict for caching)
+                self.cache.set(
+                    key=f"key_{key_def.key}",
+                    data=vars(key_def),  # Convert to dict for storage
+                    entry_type=CacheEntryType.CONTENT,  # Added entry_type
+                    element_type=ElementType.UNKNOWN,
+                    phase=ProcessingPhase.DISCOVERY,  # Added phase
+                    scope=ContentScope.LOCAL  # Added scope for completeness
+                )
 
-            # Emit event
-            self.event_manager.emit(
-                EventType.STATE_CHANGE,
-                element_id=f"key_{key_def.key}",
-                metadata={'map_id': map_id}
-            )
+                # Emit event
+                self.event_manager.emit(
+                    EventType.STATE_CHANGE,
+                    element_id=f"key_{key_def.key}",
+                    metadata={'map_id': map_id}
+                )
 
-        except Exception as e:
-            self.logger.error(f"Error storing key definition: {str(e)}")
-            raise
+            except Exception as e:
+                self.logger.error(f"Error storing key definition: {str(e)}")
+                raise
+
+
 
     def _validate_key_scope(
         self,
@@ -276,32 +390,57 @@ class KeyManager:
             self.logger.error(f"Error getting key hierarchy: {str(e)}")
             return [key]
 
-    def invalidate_key(self, key: str) -> None:
-        """Invalidate key cache."""
+
+
+    def invalidate_key_iterative(self, key: str) -> None:
+        """Invalidate key cache using an iterative approach."""
         try:
-            # Invalidate direct key cache
-            self.cache.invalidate(f"key_{key}")
+            stack = [key]
+            visited = set()
 
-            # Invalidate resolution cache for this key
-            pattern = f"keyref_{key}_*"
-            self.cache.invalidate_pattern(pattern)
+            while stack:
+                current_key = stack.pop()
 
-            # Invalidate dependent keys
-            for dep_key, parents in self._key_hierarchy.items():
-                if key in parents:
-                    self.invalidate_key(dep_key)
+                if current_key in visited:
+                    self.logger.error(f"Cyclic dependency detected at key: {current_key}")
+                    continue
+
+                visited.add(current_key)
+
+                # Invalidate the current key
+                cache_key = f"key_{current_key}"
+                self.cache.invalidate(cache_key, entry_type=CacheEntryType.CONTENT)
+
+                # Add dependent keys to the stack
+                for dependent_key, parents in self._key_hierarchy.items():
+                    if current_key in parents and dependent_key not in visited:
+                        stack.append(dependent_key)
 
         except Exception as e:
-            self.logger.error(f"Error invalidating key: {str(e)}")
+            self.logger.error(f"Error invalidating key '{key}': {str(e)}")
+
+    def detect_circular_dependencies(self, key: str) -> bool:
+        """Detect if a key is part of a circular dependency."""
+        visited = set()
+        stack = [key]
+        while stack:
+            current = stack.pop()
+            if current in visited:
+                return True
+            visited.add(current)
+            stack.extend(self._key_hierarchy.get(current, []))
+        return False
 
     def cleanup(self) -> None:
         """Clean up manager resources."""
         try:
+            # Clear in-memory caches
             self._key_definitions.clear()
             self._key_hierarchy.clear()
             self._resolution_cache.clear()
-            self.logger.debug("Key manager cleanup completed")
 
+            # Log cleanup
+            self.logger.debug("Key manager cleanup completed")
         except Exception as e:
             self.logger.error(f"Error during cleanup: {str(e)}")
             raise

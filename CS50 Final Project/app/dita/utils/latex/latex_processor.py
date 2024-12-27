@@ -36,8 +36,9 @@ class LaTeXProcessor:
                     # Store original content
                     processed = ProcessedEquation(
                         id=equation.id,
-                        html=equation.content,  # Store raw LaTeX
                         original=equation.content,
+                        rendered="",  # Will be filled later
+                        placeholder=f"equation_{equation.id}",  # Generate placeholder
                         is_block=equation.is_block
                     )
 
