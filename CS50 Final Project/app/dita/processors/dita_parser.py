@@ -8,7 +8,7 @@ import logging
 # Core managers
 from ..event_manager import EventManager
 from ..context_manager import ContextManager
-from ..config_manager import ConfigManager
+from ..config.config_manager import ConfigManager
 from ..metadata.metadata_manager import MetadataManager
 from ..key_manager import KeyManager
 
@@ -31,7 +31,9 @@ from ..models.types import (
     ElementType,
     ProcessingMetadata,
     ProcessingContext,
-    ValidationResult
+    ProcessingRuleType,
+    ValidationResult,
+    DITAElementType
 )
 
 class ParsingStrategy(ABC):
@@ -64,16 +66,53 @@ class DITAMapStrategy(ParsingStrategy):
         parser: 'DITAParser'
     ) -> TrackedElement:
         """Parse DITA map file."""
-        # Create tracked element
-        element = TrackedElement.create_map(
-            path=file_path,
-            title="",  # Will be extracted during processing
-            id_handler=parser.id_handler
-        )
+        try:
+            # Create tracked element
+            element = TrackedElement.create_map(
+                path=file_path,
+                title="",  # Will be extracted during processing
+                id_handler=parser.id_handler
+            )
 
-        # Load and parse content
-        element.content = file_path.read_text()
-        return element
+            # Load and parse content
+            element.content = file_path.read_text()
+
+            # Get processing rules using new rule resolution system
+            resolved_rule = parser.config_manager.resolve_rule(
+                element_type=ElementType.MAP,
+                rule_type=ProcessingRuleType.ELEMENT,
+                context=None  # During initial parsing we don't have a context yet
+            )
+
+            # Use resolved rules or fallback
+            rules = resolved_rule or {
+                "html_tag": "div",
+                "default_classes": ["fallback-map"],
+                "attributes": {
+                    "data-type": "map",
+                    "role": "article"
+                }
+            }
+
+            # Log the rules being used
+            parser.logger.debug(
+                f"Processing rules for '{element.type.value}' during "
+                f"{ProcessingPhase.DISCOVERY.value}: {rules}"
+            )
+
+            # Attach rules to element metadata for later processing
+            element.metadata.update({
+                "rules": rules,
+                "element_type": element.type.value,
+                "processing_phase": ProcessingPhase.DISCOVERY.value
+            })
+
+            return element
+
+        except Exception as e:
+            parser.logger.error(f"Error parsing map file {file_path}: {str(e)}")
+            raise
+
 
 class DITATopicStrategy(ParsingStrategy):
     """Strategy for parsing DITA topics."""

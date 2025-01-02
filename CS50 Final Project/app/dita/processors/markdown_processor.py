@@ -9,7 +9,7 @@ from .base_processor import BaseProcessor
 # Core managers
 from ..event_manager import EventManager
 from ..context_manager import ContextManager
-from ..config_manager import ConfigManager
+from ..config.config_manager import ConfigManager
 from ..metadata.metadata_manager import MetadataManager
 
 # Utils

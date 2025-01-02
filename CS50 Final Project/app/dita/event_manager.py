@@ -23,7 +23,13 @@ class EventType(Enum):
     ERROR = "error"
     CACHE_UPDATE = "cache_update"
     CACHE_INVALIDATE = "cache_invalidate"
+    CACHE_INVALIDATED = "cache_invalidated"
+    FEATURE_UPDATED = "feature_updated"
+    RULE_UPDATED = "rule_updated"
     CONFIG_UPDATE = "config_update"
+    VALIDATION_FAILED = "validation_failed"
+    CACHE_PATTERN_MATCHED = "cache_pattern_matched"
+    RULE_RESOLVED = "rule_resolved"
 
 class EventManager:
     """

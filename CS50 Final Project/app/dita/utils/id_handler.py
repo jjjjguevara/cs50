@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from ..models.types import (
     ProcessingPhase,
     ProcessingState,
-    ElementType,
     ValidationResult,
     ValidationMessage,
     ValidationSeverity

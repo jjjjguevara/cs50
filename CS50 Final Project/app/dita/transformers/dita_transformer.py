@@ -21,7 +21,7 @@ from .base_transformer import BaseTransformer, TransformStrategy
 # Core managers
 from ..event_manager import EventManager, EventType
 from ..context_manager import ContextManager
-from ..config_manager import ConfigManager
+from ..config.config_manager import ConfigManager
 from ..key_manager import KeyManager
 
 # Utils
@@ -45,6 +45,7 @@ from ..models.types import (
     ValidationMessage,
     ValidationSeverity,
     ContentScope,
+    ProcessingRuleType,
     ProcessingStateInfo,
     KeyDefinition
 )
@@ -54,6 +55,7 @@ class DITATransformStrategy(TransformStrategy):
 
     def __init__(self, transformer: 'DITATransformer'):
         self.transformer = transformer
+        self.logger = transformer.logger
 
 
 class DITATopicStrategy(DITATransformStrategy):
@@ -64,7 +66,7 @@ class DITATopicStrategy(DITATransformStrategy):
         element: TrackedElement,
         context: ProcessingContext
     ) -> bool:
-        return element.type == ElementType.TOPIC
+        return True
 
     def transform(
         self,
@@ -73,45 +75,47 @@ class DITATopicStrategy(DITATransformStrategy):
         metadata: ProcessingMetadata,
         config: Dict[str, Any]
     ) -> ProcessedContent:
-        """Transform DITA topic."""
+        """Transform general DITA element."""
         try:
-            # Get specialization type if any
-            specialization = self._get_specialization_type(element, context)
-
-            # Get transformation rules using the string value of the enum
-            rules = self.transformer.config_manager.get_dita_element_rules(
-                (specialization or DITAElementType.TOPIC).value
+            # Use the new rule resolution system
+            resolved_rule = self.transformer.config_manager.resolve_rule(
+                element_type=element.type,
+                rule_type=ProcessingRuleType.ELEMENT,
+                context=context
             )
 
-            # Create topic container
-            container = self.transformer.html_helper.create_element(
-                tag=rules.get("html_tag", "article"),
+            rules = resolved_rule or {}
+
+            # Create element with proper classes
+            classes = ["dita-content"]
+            if element.type == ElementType.DITAMAP:
+                classes.append("dita-map")
+            elif element.type == ElementType.DITA:
+                classes.append("dita-topic")
+            else:
+                classes.append("dita-unknown")
+
+            # Create element
+            transformed = self.transformer.html_helper.create_element(
+                tag=rules.get("html_tag", "div"),
                 attrs={
-                    "class": rules.get("default_classes", ["dita-topic"]),
+                    "class": classes,
                     "id": element.id,
+                    "data-type": element.type.value,
                     **rules.get("attributes", {})
-                }
-            )
-
-            # Handle key resolution
-            self._resolve_keys(element, context)
-
-            # Transform child elements
-            children = self._transform_children(element, context, metadata)
-            container = self.transformer.html_helper.create_container(
-                tag=rules["html_tag"],
-                children=children,
-                attrs=container.attrs
+                },
+                content=element.content
             )
 
             return ProcessedContent(
                 element_id=element.id,
-                html=str(container),
-                metadata=metadata.transient_attributes
+                html=str(transformed),
+                metadata=metadata.transient_attributes,
+                element_type=element.type
             )
 
         except Exception as e:
-            self.transformer.logger.error(f"Error transforming topic: {str(e)}")
+            self.logger.error(f"Error transforming element: {str(e)}")
             raise
 
     def validate(
@@ -228,10 +232,14 @@ class DITAMapStrategy(DITATransformStrategy):
             # Update current map context
             self.transformer._current_map_id = element.id
 
-            # Get transformation rules using the string value of the enum
-            rules = self.transformer.config_manager.get_dita_element_rules(
-                DITAElementType.MAP.value
+            # Use the new rule resolution system
+            resolved_rule = self.transformer.config_manager.resolve_rule(
+                element_type=ElementType.MAP,
+                rule_type=ProcessingRuleType.ELEMENT,
+                context=context
             )
+
+            rules = resolved_rule or {}
 
             # Create map container
             container = self.transformer.html_helper.create_element(
@@ -364,10 +372,14 @@ class DITAElementStrategy(DITATransformStrategy):
     ) -> ProcessedContent:
         """Transform general DITA element."""
         try:
-            # Get element rules using the string value of the enum
-            rules = self.transformer.config_manager.get_dita_element_rules(
-                DITAElementType.UNKNOWN.value
+            # Use the new rule resolution system
+            resolved_rule = self.transformer.config_manager.resolve_rule(
+                element_type=element.type,
+                rule_type=ProcessingRuleType.ELEMENT,
+                context=context
             )
+
+            rules = resolved_rule or {}
 
             # Create element
             transformed = self.transformer.html_helper.create_element(
@@ -444,21 +456,32 @@ class DITATransformer(BaseTransformer):
         self._topic_hierarchy: Dict[str, List[str]] = {}
 
         # Initialize DITA-specific strategies
-        self._initialize_dita_strategies()
+        self._initialize_strategies()  # Changed to use base class method name
 
-
-    def _initialize_dita_strategies(self) -> None:
+    def _initialize_strategies(self) -> None:  # Changed from _initialize_dita_strategies
         """Initialize DITA-specific transformation strategies."""
-        self._strategies[ElementType.TOPIC] = [DITATopicStrategy(self)]
-        self._strategies[ElementType.DITAMAP] = [DITAMapStrategy(self)]
-        self._strategies[ElementType.UNKNOWN] = [DITAElementStrategy(self)]
+        self._strategies = {
+            ElementType.DITA: [DITAElementStrategy(self)],      # Add base DITA type
+            ElementType.TOPIC: [DITATopicStrategy(self)],
+            ElementType.DITAMAP: [DITAMapStrategy(self)],
+            ElementType.UNKNOWN: [DITAElementStrategy(self)]
+        }
+
+    def register_strategy(
+        self,
+        element_type: ElementType,
+        strategy: TransformStrategy
+    ) -> None:
+        """Register a DITA transformation strategy."""
+        if element_type not in self._strategies:
+            self._strategies[element_type] = []
+        self._strategies[element_type].append(strategy)
 
     def transform_content(
         self,
         element: TrackedElement,
         context: Optional[ProcessingContext] = None
     ) -> ProcessedContent:
-        """Transform DITA content."""
         try:
             # Get or create context
             if not context:
@@ -509,49 +532,13 @@ class DITATransformer(BaseTransformer):
                 ctx
             )
 
-            return strategy.transform(element, ctx, metadata, config)
+            # Transform and enrich content
+            transformed = strategy.transform(element, ctx, metadata, config)
+            return self.enrich_content(transformed, ctx)
 
         except Exception as e:
             self.logger.error(f"Error transforming DITA content: {str(e)}")
             raise
-
-    def _resolve_keys(
-        self,
-        element: TrackedElement,
-        context: ProcessingContext
-    ) -> None:
-        """Resolve key references in element."""
-        try:
-            if key_refs := element.metadata.get("key_references"):
-                current_map = self._current_map_id
-                if not current_map:
-                    self.logger.warning(f"No current map ID for key resolution: {element.id}")
-                    return
-
-                for key in key_refs:
-                    if key not in self._key_resolution_cache:
-                        resolved = self.key_manager.resolve_key(
-                            key=key,
-                            context_map=current_map
-                        )
-                        if resolved:
-                            self._key_resolution_cache[key] = resolved
-                            context.metadata_refs[key] = resolved.href or ""
-
-        except Exception as e:
-            self.logger.error(f"Error resolving keys: {str(e)}")
-
-    def register_strategy(
-        self,
-        element_type: ElementType,
-        strategy: TransformStrategy
-    ) -> None:
-        """Register a DITA transformation strategy."""
-        if element_type not in self._strategies:
-            self._strategies[element_type] = []
-        self._strategies[element_type].append(strategy)
-
-
 
     def _validate_element(
         self,
@@ -582,3 +569,29 @@ class DITATransformer(BaseTransformer):
                     )
                 ]
             )
+
+    def _resolve_keys(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> None:
+        """Resolve key references in element."""
+        try:
+            if key_refs := element.metadata.get("key_references"):
+                current_map = self._current_map_id
+                if not current_map:
+                    self.logger.warning(f"No current map ID for key resolution: {element.id}")
+                    return
+
+                for key in key_refs:
+                    if key not in self._key_resolution_cache:
+                        resolved = self.key_manager.resolve_key(
+                            key=key,
+                            context_map=current_map
+                        )
+                        if resolved:
+                            self._key_resolution_cache[key] = resolved
+                            context.metadata_refs[key] = resolved.href or ""
+
+        except Exception as e:
+            self.logger.error(f"Error resolving keys: {str(e)}")

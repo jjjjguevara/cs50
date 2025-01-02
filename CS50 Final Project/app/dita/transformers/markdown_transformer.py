@@ -12,7 +12,7 @@ from .base_transformer import BaseTransformer, TransformStrategy
 # Core managers
 from ..event_manager import EventManager, EventType
 from ..context_manager import ContextManager
-from ..config_manager import ConfigManager
+from ..config.config_manager import ConfigManager
 from ..key_manager import KeyManager
 
 # Utils
@@ -238,7 +238,6 @@ class MarkdownCalloutStrategy(MarkdownTransformStrategy):
         )
 
 
-
 class MarkdownTransformer(BaseTransformer):
     """
     Markdown-specific transformer implementation.
@@ -285,23 +284,22 @@ class MarkdownTransformer(BaseTransformer):
         self._current_frontmatter: Optional[Dict[str, Any]] = None
 
         # Initialize Markdown-specific strategies
-        self._initialize_markdown_strategies()
+        self._initialize_strategies()  # Changed from _initialize_markdown_strategies
 
+    def register_strategy(
+        self,
+        element_type: ElementType,
+        strategy: TransformStrategy
+    ) -> None:
+        """Register a Markdown transformation strategy."""
+        if element_type not in self._strategies:
+            self._strategies[element_type] = []
+        self._strategies[element_type].append(strategy)
 
-    def _initialize_markdown_strategies(self) -> None:
+    def _initialize_strategies(self) -> None:  # Changed method name
         """Initialize Markdown-specific transformation strategies."""
         self._strategies[ElementType.MARKDOWN] = [MarkdownTopicStrategy(self)]
         self._strategies[ElementType.NOTE] = [MarkdownCalloutStrategy(self)]
-
-    def register_strategy(
-            self,
-            element_type: ElementType,
-            strategy: TransformStrategy
-        ) -> None:
-            """Register a Markdown transformation strategy."""
-            if element_type not in self._strategies:
-                self._strategies[element_type] = []
-            self._strategies[element_type].append(strategy)
 
     def transform_content(
         self,
@@ -359,7 +357,9 @@ class MarkdownTransformer(BaseTransformer):
                 ctx
             )
 
-            return strategy.transform(element, ctx, metadata, config)
+            # Transform and enrich content
+            transformed = strategy.transform(element, ctx, metadata, config)
+            return self.enrich_content(transformed, ctx)  # Added enrichment step
 
         except Exception as e:
             self.logger.error(f"Error transforming Markdown content: {str(e)}")
@@ -397,33 +397,3 @@ class MarkdownTransformer(BaseTransformer):
         except Exception as e:
             self.logger.error(f"Error extracting frontmatter: {str(e)}")
             return None
-
-    def _validate_element(
-        self,
-        element: TrackedElement,
-        context: ProcessingContext
-    ) -> ValidationResult:
-        """Validate element before transformation."""
-        try:
-            strategies = self._get_strategies(element.type)
-            for strategy in strategies:
-                if strategy.can_transform(element, context):
-                    return strategy.validate(element, context)
-            return ValidationResult(
-                is_valid=True,
-                messages=[]
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error validating element: {str(e)}")
-            return ValidationResult(
-                is_valid=False,
-                messages=[
-                    ValidationMessage(
-                        path=element.id,
-                        message=str(e),
-                        severity=ValidationSeverity.ERROR,
-                        code="validation_error"
-                    )
-                ]
-            )

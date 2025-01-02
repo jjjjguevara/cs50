@@ -170,17 +170,39 @@ class ContextManager:
             self.logger.error(f"Error updating context: {str(e)}")
             raise
 
+    # In context_manager.py
+
     def register_context(
         self,
         content_id: str,
         element_type: ElementType,
         metadata: Dict[str, Any]
-    ) -> None:
+    ) -> ProcessingContext:
         """Register context with metadata awareness."""
         try:
-            # Create metadata state
+            # Create metadata state with proper transient/persistent separation
             metadata_state = MetadataState(
                 content_id=content_id,
+                phase=ProcessingPhase.DISCOVERY,
+                state=ProcessingState.PENDING,
+                cached=False,  # Will be set to true when cached
+                metadata_refs={},  # For key references
+                key_references=[]  # For tracking key dependencies
+            )
+
+            # Create navigation context
+            navigation = NavigationContext(
+                path=[],
+                level=0,
+                sequence=0,
+                parent_id=None,
+                root_map=content_id,
+                siblings=[]
+            )
+
+            # Create processing state info
+            state_info = ProcessingStateInfo(
+                element_id=content_id,
                 phase=ProcessingPhase.DISCOVERY,
                 state=ProcessingState.PENDING
             )
@@ -190,28 +212,42 @@ class ContextManager:
                 context_id=content_id,
                 element_id=content_id,
                 element_type=element_type,
-                state_info=ProcessingStateInfo(
-                    phase=ProcessingPhase.DISCOVERY,
-                    state=ProcessingState.PENDING,
-                    element_id=content_id
-                ),
-                navigation=NavigationContext(
-                    path=[],
-                    level=0,
-                    sequence=0,
-                    parent_id=None,
-                    root_map=content_id
-                ),
+                state_info=state_info,
+                navigation=navigation,
                 scope=ContentScope.LOCAL,
-                metadata_state=metadata_state
+                metadata_state=metadata_state,
+                metadata_cache={},  # For transient metadata
+                metadata_refs={}    # For metadata references
             )
 
             # Store context
             self._active_contexts[content_id] = context
-            self._metadata_states[content_id] = metadata_state
 
-            # Process initial metadata
-            self._process_initial_metadata(content_id, metadata)
+            # Handle metadata separation
+            # Transient metadata goes to cache
+            transient_metadata = {
+                k: v for k, v in metadata.items()
+                if k not in {'persistent', 'key_refs', 'metadata_refs'}
+            }
+            self.content_cache.set(
+                key=f"metadata_{content_id}",
+                data=transient_metadata,
+                entry_type=CacheEntryType.METADATA,
+                element_type=element_type,
+                phase=ProcessingPhase.DISCOVERY
+            )
+
+            # Persistent metadata goes to storage via metadata manager
+            persistent_metadata = metadata.get('persistent', {})
+            if persistent_metadata:
+                self.metadata_manager.store_metadata(content_id, persistent_metadata)
+
+            # Process key references and metadata references
+            if key_refs := metadata.get('key_refs', []):
+                metadata_state.key_references = key_refs
+
+            if metadata_refs := metadata.get('metadata_refs', {}):
+                context.metadata_refs.update(metadata_refs)
 
             # Emit event
             self.event_manager.emit(
@@ -220,9 +256,39 @@ class ContextManager:
                 state_info=context.state_info
             )
 
+            return context
+
         except Exception as e:
-            self.logger.error(f"Error registering context: {str(e)}")
-            raise
+            self.logger.error(f"Error registering context for {content_id}: {str(e)}")
+            # Create and return a fallback context instead of None
+            fallback_context = ProcessingContext(
+                context_id=content_id,
+                element_id=content_id,
+                element_type=element_type,
+                state_info=ProcessingStateInfo(
+                    element_id=content_id,
+                    phase=ProcessingPhase.ERROR,
+                    state=ProcessingState.ERROR,
+                    error_message=str(e)
+                ),
+                navigation=NavigationContext(
+                    path=[],
+                    level=0,
+                    sequence=0,
+                    parent_id=None,
+                    root_map=content_id,
+                    siblings=[]
+                ),
+                scope=ContentScope.LOCAL,
+                metadata_state=MetadataState(
+                    content_id=content_id,
+                    phase=ProcessingPhase.ERROR,
+                    state=ProcessingState.ERROR
+                )
+            )
+            self._active_contexts[content_id] = fallback_context
+            return fallback_context
+
 
     def _process_initial_metadata(
             self,

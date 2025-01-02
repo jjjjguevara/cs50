@@ -19,7 +19,7 @@ from .models.types import (
 from .event_manager import EventManager, EventType
 from .utils.cache import ContentCache, CacheEntryType
 from .utils.logger import DITALogger
-from .config_manager import ConfigManager
+from .config.config_manager import ConfigManager
 from .context_manager import ContextManager
 from .metadata.storage import MetadataStorage
 
@@ -69,56 +69,69 @@ class KeyManager:
         self._max_invalidation_depth = 10
 
 
-
     def _initialize_from_config(self) -> None:
         """Initialize key processing rules from config."""
         try:
-            # Get key resolution config from either source
-            keyref_config = self.config_manager._keyref_config
-            key_resolution = self.config_manager._load_key_resolution_config()
+            # Get configurations using public methods
+            keyref_config = self.config_manager.keyref_config
+            key_resolution = self.config_manager.load_key_resolution_config()
 
-            # Combine configurations
+            # Get defaults
+            default_hierarchy = ["map", "topic", "element"]
+            default_inheritance_rules = {
+                "props": "merge",
+                "outputclass": "append",
+                "other": "override"
+            }
+
+            # Combine configurations using safe access
             self._resolution_config = {
                 "keyref_resolution": keyref_config.get("keyref_resolution", {}),
                 "processing_hierarchy": keyref_config.get("processing_hierarchy", {
-                    "order": ["map", "topic", "element"]  # Default hierarchy if not specified
+                    "order": default_hierarchy
                 }),
-                "inheritance_rules": keyref_config.get("inheritance_rules", key_resolution.get("inheritance", {})),
+                "inheritance_rules": (
+                    keyref_config.get("inheritance_rules") or
+                    key_resolution.get("inheritance", {}) or
+                    default_inheritance_rules
+                ),
                 "global_defaults": keyref_config.get("global_defaults", {}),
                 "element_defaults": keyref_config.get("element_defaults", {})
             }
 
-            # Get processing hierarchy with fallback
-            self._processing_hierarchy = self._resolution_config.get(
-                "processing_hierarchy", {}).get(
-                    "order", ["map", "topic", "element"]
+            # Get processing hierarchy with safe fallback
+            self._processing_hierarchy = (
+                self._resolution_config.get("processing_hierarchy", {})
+                .get("order", default_hierarchy)
             )
 
-            # Get inheritance rules with fallback
-            self._inheritance_rules = self._resolution_config.get(
-                "inheritance_rules", {
-                    "props": "merge",
-                    "outputclass": "append",
-                    "other": "override"
-                }
+            # Get inheritance rules with safe fallback
+            self._inheritance_rules = (
+                self._resolution_config.get("inheritance_rules") or
+                default_inheritance_rules
             )
 
         except Exception as e:
             self.logger.error(f"Error initializing from config: {str(e)}")
             # Set defaults if initialization fails
-            self._processing_hierarchy = ["map", "topic", "element"]
-            self._inheritance_rules = {
+            default_hierarchy = ["map", "topic", "element"]
+            default_inheritance_rules = {
                 "props": "merge",
                 "outputclass": "append",
                 "other": "override"
             }
+
+            # Set all defaults
+            self._processing_hierarchy = default_hierarchy
+            self._inheritance_rules = default_inheritance_rules
             self._resolution_config = {
                 "keyref_resolution": {},
-                "processing_hierarchy": {"order": self._processing_hierarchy},
-                "inheritance_rules": self._inheritance_rules,
+                "processing_hierarchy": {"order": default_hierarchy},
+                "inheritance_rules": default_inheritance_rules,
                 "global_defaults": {},
                 "element_defaults": {}
             }
+
 
     def _register_events(self) -> None:
         """Register for key-related events."""

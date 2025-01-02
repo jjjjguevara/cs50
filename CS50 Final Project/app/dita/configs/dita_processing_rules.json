@@ -3,6 +3,17 @@
   "description": "DITA-specific processing rules for element transformation",
   "element_rules": {
     "structure": {
+      "map": {
+        "html_tag": "section",
+        "default_classes": ["dita-map", "map-content"],
+        "attributes": {
+          "role": "document"
+        },
+        "content_wrapper": {
+          "tag": "div",
+          "classes": ["map-wrapper"]
+        }
+      },
       "concept": {
         "html_tag": "article",
         "default_classes": ["dita-concept", "article-content"],
@@ -76,17 +87,17 @@
       }
     },
     "lists": {
-      "unordered": {
+      "unordered_list": {
         "html_tag": "ul",
-        "default_classes": ["dita-ul"]
+        "default_classes": ["list-disc", "pl-5"]
       },
-      "ordered": {
+      "ordered_list": {
         "html_tag": "ol",
-        "default_classes": ["dita-ol"]
+        "default_classes": ["list-decimal", "pl-5"]
       },
-      "item": {
+      "list_item": {
         "html_tag": "li",
-        "default_classes": ["dita-li"]
+        "default_classes": ["list-item"]
       }
     },
     "tables": {
@@ -270,16 +281,20 @@
     }
   },
   "element_type_mapping": {
-    "concept": "structure.concept",
-    "task": "structure.task",
-    "reference": "structure.reference",
+    "map": "structure_map",
+    "concept": "structure_concept",
+    "task": "structure_task",
+    "reference": "structure_reference",
+    "unordered_list": "unordered",
+    "ordered_list": "ordered",
+    "list_item": "item",
     "section": "block.section",
     "paragraph": "block.paragraph",
     "note": "block.note",
     "code_block": "block.code_block",
-    "ul": "lists.unordered",
-    "ol": "lists.ordered",
-    "li": "lists.item",
+    "ul": "lists.unordered_list",
+    "ol": "lists.ordered_list",
+    "li": "lists.list_item",
     "table": "tables.base",
     "figure": "media.figure",
     "image": "media.image",

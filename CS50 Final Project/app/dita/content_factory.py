@@ -8,7 +8,7 @@ from dataclasses import dataclass
 # Core managers
 from .event_manager import EventManager, EventType
 from .context_manager import ContextManager
-from .config_manager import ConfigManager
+from .config.config_manager import ConfigManager
 from .key_manager import KeyManager
 from .metadata.metadata_manager import MetadataManager
 
@@ -130,7 +130,11 @@ class ContentFactory:
                 html_helper=self.html_helper,
                 heading_handler=self.heading_handler,
                 id_handler=self.id_handler,
-                logger=self.logger
+                logger=self.logger,
+                specialization_rules=self.config_manager.get_processing_rules(
+                    ElementType.DITA,
+                    None  # No context needed for specialization rules
+                ).get('specializations', {})
             ),
             ElementType.MARKDOWN: MarkdownTransformer(
                 event_manager=self.event_manager,
@@ -141,7 +145,10 @@ class ContentFactory:
                 html_helper=self.html_helper,
                 heading_handler=self.heading_handler,
                 id_handler=self.id_handler,
-                logger=self.logger
+                logger=self.logger,
+                custom_syntax_rules=self.config_manager.get_processing_rules(
+                    ElementType.MARKDOWN
+                )
             )
         }
 
@@ -150,39 +157,47 @@ class ContentFactory:
         entry_path: Union[str, Path],
         options: Optional[AssemblyOptions] = None
     ) -> str:
-        """
-        Process an entry file (map or topic) and return assembled HTML.
-
-        Args:
-            entry_path: Path to entry file
-            options: Optional assembly options
-
-        Returns:
-            str: Assembled HTML content
-        """
+        """Process an entry file (map or topic) and return assembled HTML."""
         try:
             # Convert path
             path = Path(entry_path)
+            self.logger.debug(f"Processing file at path: {path}")
+
+            # Verify file exists
+            if not path.exists():
+                raise FileNotFoundError(f"File not found: {path}")
+
             self._current_entry_id = self.id_handler.generate_id(
                 path.stem,
                 IDType.MAP if path.suffix == '.ditamap' else IDType.TOPIC
             )
+            self.logger.debug(f"Generated entry ID: {self._current_entry_id}")
 
             # Check cache
             if cached := self._assembly_cache.get(self._current_entry_id):
                 return cached
 
-            # Determine content type
+            # Determine content type and process
             content_type = self._determine_content_type(path)
+            self.logger.debug(f"Determined content type: {content_type}")
 
-            # Process content
+            # Read and log file content for debugging
+            try:
+                content = path.read_text(encoding='utf-8')
+                self.logger.debug(f"File content:\n{content}")
+            except Exception as e:
+                self.logger.error(f"Error reading file: {str(e)}")
+                raise
+
             processed = self._processors[content_type].process_file(path)
+            self.logger.debug(f"File processed successfully")
 
             # Transform content
             transformed = self._transformers[content_type].transform_content(
-                element=processed.element,
-                context=processed.context
+                element=processed,
+                context=None
             )
+            self.logger.debug(f"Content transformed successfully")
 
             # Assemble final HTML
             assembled = self._assemble_content(
@@ -197,6 +212,28 @@ class ContentFactory:
 
         except Exception as e:
             self.logger.error(f"Error processing entry {entry_path}: {str(e)}")
+            raise
+
+    def transform_content(
+        self,
+        element: TrackedElement,
+        context: Optional[ProcessingContext] = None
+    ) -> ProcessedContent:
+        """Transform processed content to HTML."""
+        try:
+            # Get transformer based on element type
+            transformer = self._transformers.get(element.type)
+            if not transformer:
+                raise ValueError(f"No transformer found for {element.type}")
+
+            # Transform content using appropriate transformer
+            return transformer.transform_content(
+                element=element,
+                context=context
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error transforming content {element.path}: {str(e)}")
             raise
 
     def _determine_content_type(self, path: Path) -> ElementType:

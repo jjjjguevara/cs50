@@ -14,7 +14,7 @@ from ..models.types import LaTeXEquation, ProcessedEquation
 # Core managers
 from ..event_manager import EventManager, EventType
 from ..context_manager import ContextManager
-from ..config_manager import ConfigManager
+from ..config.config_manager import ConfigManager
 from ..key_manager import KeyManager
 
 # Utils
@@ -386,17 +386,64 @@ class BaseTransformer(ABC):
         element: TrackedElement,
         context: Optional[ProcessingContext] = None
     ) -> ProcessedContent:
-        """
-        Transform content with phase management.
+        """Transform element through appropriate strategy."""
+        try:
+            # Get or create context
+            if not context:
+                ctx = self.context_manager.get_context(element.id)
+                if not ctx:
+                    ctx = self.context_manager.register_context(
+                        content_id=element.id,
+                        element_type=element.type,
+                        metadata=element.metadata
+                    )
+            else:
+                ctx = context
 
-        Args:
-            element: Element to transform
-            context: Optional processing context
+            if not ctx:
+                raise ValueError(f"Could not create context for {element.id}")
 
-        Returns:
-            ProcessedContent: Transformed content
-        """
-        pass
+            # Validate element
+            validation_result = self._validate_element(element, ctx)
+            if not validation_result.is_valid:
+                raise ValueError(
+                    f"Validation failed for {element.id}: "
+                    f"{validation_result.messages[0].message}"
+                )
+
+            # Get appropriate strategies
+            strategies = self._get_strategies(element.type)
+            if not strategies:
+                raise ValueError(f"No strategy found for {element.type}")
+
+            # Find suitable strategy
+            strategy = next(
+                (s for s in strategies if s.can_transform(element, ctx)),
+                None
+            )
+            if not strategy:
+                raise ValueError(f"No suitable strategy for {element.id}")
+
+            # Create processing metadata
+            metadata = ProcessingMetadata(
+                content_id=element.id,
+                content_type=element.type,
+                content_scope=ctx.scope
+            )
+
+            # Get transformation config
+            config = self.config_manager.get_processing_rules(
+                element.type,
+                ctx
+            )
+
+            # Transform using strategy and enrich content
+            transformed = strategy.transform(element, ctx, metadata, config)
+            return self.enrich_content(transformed, ctx)
+
+        except Exception as e:
+            self.logger.error(f"Error transforming content: {str(e)}")
+            raise
 
     @abstractmethod
     def register_strategy(
@@ -412,6 +459,36 @@ class BaseTransformer(ABC):
             strategy: Strategy implementation
         """
         pass
+
+    def _validate_element(
+        self,
+        element: TrackedElement,
+        context: ProcessingContext
+    ) -> ValidationResult:
+        """Validate element before transformation."""
+        try:
+            strategies = self._get_strategies(element.type)
+            for strategy in strategies:
+                if strategy.can_transform(element, context):
+                    return strategy.validate(element, context)
+            return ValidationResult(
+                is_valid=True,
+                messages=[]
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error validating element: {str(e)}")
+            return ValidationResult(
+                is_valid=False,
+                messages=[
+                    ValidationMessage(
+                        path=element.id,
+                        message=str(e),
+                        severity=ValidationSeverity.ERROR,
+                        code="validation_error"
+                    )
+                ]
+            )
 
     def _get_strategies(
         self,

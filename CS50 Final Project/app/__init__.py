@@ -9,7 +9,7 @@ from pathlib import Path
 # Import managers and dependencies
 from .dita.event_manager import EventManager
 from .dita.context_manager import ContextManager
-from .dita.config_manager import ConfigManager
+from .dita.config.config_manager import ConfigManager
 from .dita.key_manager import KeyManager
 from .dita.metadata.metadata_manager import MetadataManager
 from .dita.utils.cache import ContentCache
@@ -17,6 +17,8 @@ from .dita.utils.html_helpers import HTMLHelper
 from .dita.utils.heading import HeadingHandler
 from .dita.utils.id_handler import DITAIDHandler
 from .dita.utils.logger import DITALogger
+from .dita.validation_manager import ValidationManager
+from .dita.schema_manager import SchemaManager
 
 # Setup logging
 logger = DITALogger(name=__name__)
@@ -59,14 +61,33 @@ def create_app(config_name=None):
             id_handler = DITAIDHandler()
             event_manager = EventManager(cache=content_cache)
 
-            # Initialize config manager first with explicit config path
-            config_manager = ConfigManager(
-                content_cache=content_cache,
+            # Initialize validation and schema managers first
+            validation_manager = ValidationManager(
+                cache=content_cache,
                 event_manager=event_manager,
-                id_handler=id_handler,
-                env=config_name,
-                config_path=app.config['CONFIGS_PATH']
+                config_manager=None,  # Initially None
+                logger=logger
             )
+
+            schema_manager = SchemaManager(
+                config_path=app.config['CONFIGS_PATH'],
+                cache=content_cache,
+                logger=logger
+            )
+
+            # Initialize config manager
+            config_manager = ConfigManager(
+                config_path=app.config['CONFIGS_PATH'],
+                event_manager=event_manager,
+                content_cache=content_cache,
+                id_handler=id_handler,
+                validation_manager=validation_manager,
+                schema_manager=schema_manager,
+                logger=logger
+            )
+
+            # Update validation manager with config manager
+            validation_manager.config_manager = config_manager
 
             # Ensure config manager is initialized
             config_manager.initialize()

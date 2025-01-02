@@ -11,7 +11,7 @@ from .dita.content_factory import ContentFactory, AssemblyOptions
 from .dita.processors.dita_parser import DITAParser
 from .dita.event_manager import EventManager
 from .dita.context_manager import ContextManager
-from .dita.config_manager import ConfigManager
+from .dita.config.config_manager import ConfigManager
 from .dita.key_manager import KeyManager
 from .dita.metadata.metadata_manager import MetadataManager
 
@@ -117,15 +117,20 @@ def get_content_factory():
 def get_content_path(entry_name: str) -> Optional[Path]:
     """Get content file path from entry name."""
     try:
-        content_root = current_app.config['CONTENT_ROOT']  # New config variable
+        content_root = current_app.config['CONTENT_ROOT']
         for folder in ['maps', 'topics']:
             for ext in ['.ditamap', '.dita', '.md']:
                 path = content_root / folder / f"{entry_name}{ext}"
+                current_app.logger.debug(f"Checking path: {path}")
                 if path.exists():
+                    current_app.logger.debug(f"Found file at: {path}")
                     return path
+
+        current_app.logger.warning(f"No content found for {entry_name}")
         return None
+
     except Exception as e:
-        current_app.config['LOGGER'].error(f"Error getting content path: {str(e)}")
+        current_app.logger.error(f"Error getting content path: {str(e)}")
         return None
 
 def init_app(app):

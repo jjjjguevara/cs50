@@ -9,7 +9,7 @@ import importlib
 
 # Type checking imports
 if TYPE_CHECKING:
-    from ..config_manager import ConfigManager
+    from ..config.config_manager import ConfigManager
     from ..context_manager import ContextManager
     from ..key_manager import KeyManager
 

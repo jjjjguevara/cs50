@@ -1,143 +1,139 @@
 {
-  "version": "1.0",
-  "description": "Validation patterns for scientific content",
+  "version": "1.0.0",
+  "description": "Validation patterns for DITA content",
   "patterns": {
     "identifiers": {
-      "map": {
-        "pattern": "^map-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for map IDs",
-        "examples": ["map-introduction", "map-methodology"]
+      "id": {
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "description": "Basic identifier pattern",
+        "severity": "error",
+        "metadata": {
+          "category": "identifiers",
+          "scope": "global",
+          "applies_to": ["elements", "references"]
+        },
+        "dependencies": ["length_check"],
+        "conditions": {
+          "when": {
+            "content_type": ["dita", "markdown"],
+            "phase": ["validation", "transformation"]
+          }
+        }
       },
-      "topic": {
-        "pattern": "^topic-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for topic IDs",
-        "examples": ["topic-abstract", "topic-results"]
-      },
-      "heading": {
-        "pattern": "^heading-[a-zA-Z0-9_\\-]+-h[1-6]$",
-        "description": "Pattern for heading IDs with level",
-        "examples": ["heading-introduction-h1", "heading-methods-h2"]
-      },
-      "artifact": {
-        "pattern": "^artifact-[a-zA-Z0-9_\\-]+-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for artifact IDs",
-        "examples": ["artifact-graph-results", "artifact-table-data"]
+      "length_check": {
+        "type": "schema",
+        "schema": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 64
+        },
+        "description": "Length validation for identifiers",
+        "severity": "warning",
+        "metadata": {
+          "category": "constraints",
+          "scope": "global"
+        }
       }
     },
     "references": {
-      "doi": {
-        "pattern": "^10\\.\\d{4,}/[-._;()/:a-zA-Z0-9]+$",
-        "description": "Pattern for DOI references",
-        "examples": ["10.1234/journal.article.2023"]
+      "href": {
+        "pattern": "^([a-z]+:|/|#|\\.|\\.\\./).*$",
+        "description": "Valid href format",
+        "severity": "error",
+        "metadata": {
+          "category": "references",
+          "scope": "global"
+        },
+        "dependencies": ["url_safety"],
+        "conditions": {
+          "when": {
+            "element_type": ["link", "xref"]
+          }
+        }
       },
-      "citation": {
-        "pattern": "^cite-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for citation keys",
-        "examples": ["cite-smith2023", "cite-analysis2024"]
-      },
-      "equation": {
-        "pattern": "^eq-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for equation references",
-        "examples": ["eq-momentum", "eq-energy"]
+      "url_safety": {
+        "pattern": "^(?!javascript:).*$",
+        "description": "URL safety check",
+        "severity": "error",
+        "metadata": {
+          "category": "security",
+          "scope": "global"
+        }
       }
     },
-    "scientific_elements": {
-      "figure": {
-        "pattern": "^fig-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for figure references",
-        "examples": ["fig-results", "fig-methodology"]
-      },
-      "table": {
-        "pattern": "^tbl-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for table references",
-        "examples": ["tbl-data", "tbl-comparison"]
-      },
-      "formula": {
-        "pattern": "^formula-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for formula references",
-        "examples": ["formula-velocity", "formula-acceleration"]
+    "scientific_content": {
+      "doi": {
+        "pattern": "^10\\.\\d{4,}/[-._;()/:a-zA-Z0-9]+$",
+        "description": "DOI format validation",
+        "severity": "error",
+        "metadata": {
+          "category": "scientific",
+          "scope": "content"
+        },
+        "conditions": {
+          "when": {
+            "content_type": "scientific_article"
+          }
+        }
       }
     },
     "metadata": {
       "keywords": {
-        "pattern": "^[a-zA-Z0-9\\s,_\\-]+$",
-        "description": "Pattern for keywords",
-        "examples": ["machine learning", "data analysis"]
-      },
-      "author_id": {
-        "pattern": "^([A-Z0-9]{4}-){3}[A-Z0-9]{4}$",
-        "description": "Pattern for author identifiers",
-        "examples": ["ABCD-1234-EFGH-5678"]
-      },
-      "version": {
-        "pattern": "^\\d+\\.\\d+\\.\\d+$",
-        "description": "Pattern for version numbers",
-        "examples": ["1.0.0", "2.1.3"]
+        "type": "schema",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9\\s,_-]+$"
+          },
+          "minItems": 1,
+          "maxItems": 10
+        },
+        "description": "Keywords validation",
+        "severity": "warning",
+        "metadata": {
+          "category": "metadata",
+          "scope": "content"
+        }
       }
-    },
-    "content_rules": {
-      "section_id": {
-        "pattern": "^sec-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for section identifiers",
-        "examples": ["sec-introduction", "sec-methods"]
-      },
-      "appendix_id": {
-        "pattern": "^app-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for appendix identifiers",
-        "examples": ["app-data", "app-calculations"]
-      },
-      "supplemental_id": {
-        "pattern": "^supp-[a-zA-Z0-9_\\-]+$",
-        "description": "Pattern for supplemental material",
-        "examples": ["supp-dataset", "supp-code"]
-      }
-    }
-  },
-  "validation_rules": {
-    "required_patterns": {
-      "scientific_article": [
-        "identifiers.map",
-        "identifiers.topic",
-        "references.doi"
-      ],
-      "research_data": [
-        "scientific_elements.table",
-        "scientific_elements.figure",
-        "metadata.version"
-      ],
-      "methodology": [
-        "content_rules.section_id",
-        "scientific_elements.formula",
-        "references.citation"
-      ]
     },
     "conditional_patterns": {
-      "has_equations": ["references.equation", "scientific_elements.formula"],
-      "has_appendices": ["content_rules.appendix_id"],
-      "has_supplemental": ["content_rules.supplemental_id"]
+      "heading_pattern": {
+        "pattern": "^[A-Z][^.!?]*$",
+        "description": "Heading format",
+        "severity": "warning",
+        "metadata": {
+          "category": "style",
+          "scope": "content"
+        },
+        "conditions": {
+          "when": {
+            "element_type": "heading",
+            "level": { "$lt": 3 }
+          },
+          "unless": {
+            "style_override": true
+          }
+        }
+      }
     }
   },
-  "default_metadata": {
-    "language": "en",
-    "display_flags": {
-      "visible": true,
-      "enabled": true,
-      "expanded": true
-    },
-    "validation_level": {
-      "identifiers": "strict",
-      "references": "strict",
-      "scientific_elements": "strict",
-      "metadata": "warn",
-      "content_rules": "warn"
-    }
+  "pattern_groups": {
+    "basic_validation": ["identifiers.id", "references.href"],
+    "scientific_validation": ["scientific_content.doi", "metadata.keywords"],
+    "style_validation": ["conditional_patterns.heading_pattern"]
   },
-  "error_messages": {
-    "invalid_id": "Invalid identifier format. Expected pattern: {pattern}",
-    "invalid_reference": "Invalid reference format. Must match pattern: {pattern}",
-    "invalid_metadata": "Invalid metadata format. Please check pattern: {pattern}",
-    "missing_required": "Missing required pattern for {context}: {pattern}",
-    "pattern_mismatch": "Value does not match required pattern: {pattern}",
-    "validation_failed": "Validation failed for {element_type}: {message}"
+  "dependencies": {
+    "identifiers.id": ["identifiers.length_check"],
+    "references.href": ["references.url_safety"]
+  },
+  "conditional_rules": {
+    "scientific_mode": {
+      "enabled_patterns": ["scientific_validation"],
+      "disabled_patterns": ["style_validation"],
+      "when": {
+        "document_type": "scientific"
+      }
+    }
   }
 }

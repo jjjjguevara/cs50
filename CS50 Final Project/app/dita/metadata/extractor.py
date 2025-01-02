@@ -7,7 +7,7 @@ from lxml import etree
 import re
 import logging
 if TYPE_CHECKING:
-    from ..config_manager import ConfigManager
+    from ..config.config_manager import ConfigManager
 
 from ..models.types import (
     TrackedElement,
@@ -18,7 +18,7 @@ from ..models.types import (
     YAMLFrontmatter,
     ValidationResult
 )
-from ..config_manager import ConfigManager
+from ..config.config_manager import ConfigManager
 from ..utils.cache import ContentCache, CacheEntryType
 from ..utils.logger import DITALogger
 

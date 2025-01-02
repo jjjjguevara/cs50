@@ -8,7 +8,7 @@ import logging
 # Core managers
 from ..event_manager import EventManager, EventType
 from ..context_manager import ContextManager
-from ..config_manager import ConfigManager
+from ..config.config_manager import ConfigManager
 from ..metadata.metadata_manager import MetadataManager
 
 # Utils
@@ -41,26 +41,27 @@ class BaseProcessor(ABC):
             self,
             element: TrackedElement,
             context: ProcessingContext,
-            metadata: ProcessingMetadata,  # This is correct
+            metadata: ProcessingMetadata,
             rules: Dict[str, Any]
         ) -> ProcessedContent:
             """Process element according to its type and rules."""
             pass
 
     class MapProcessingStrategy(ProcessingStrategy):
-            def process(
-                self,
-                element: TrackedElement,
-                context: ProcessingContext,
-                metadata: ProcessingMetadata,
-                rules: Dict[str, Any]
-            ) -> ProcessedContent:
-                """Process map elements."""
-                return ProcessedContent(
-                    element_id=element.id,
-                    html="",  # No transformation here
-                    metadata=metadata.transient_attributes
-                )
+        def process(
+            self,
+            element: TrackedElement,
+            context: ProcessingContext,
+            metadata: ProcessingMetadata,
+            rules: Dict[str, Any]
+        ) -> ProcessedContent:
+            """Process map elements."""
+            return ProcessedContent(
+                element_id=element.id,
+                html="",  # No transformation here
+                metadata=metadata.transient_attributes,
+                element_type=element.type
+            )
 
     class TopicProcessingStrategy(ProcessingStrategy):
         def process(
@@ -74,7 +75,8 @@ class BaseProcessor(ABC):
             return ProcessedContent(
                 element_id=element.id,
                 html="",  # No transformation here
-                metadata=metadata.transient_attributes
+                metadata=metadata.transient_attributes,
+                element_type=element.type
             )
 
     class DefaultProcessingStrategy(ProcessingStrategy):
@@ -89,7 +91,8 @@ class BaseProcessor(ABC):
             return ProcessedContent(
                 element_id=element.id,
                 html="",  # No transformation here
-                metadata=metadata.transient_attributes
+                metadata=metadata.transient_attributes,
+                element_type=element.type
             )
 
 

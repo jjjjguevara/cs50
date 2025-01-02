@@ -9,6 +9,16 @@ from uuid import uuid4
 if TYPE_CHECKING:
     from ..utils.id_handler import DITAIDHandler
 
+class CacheEntryType(Enum):
+    """Types of cache entries for specialized handling."""
+    CONTENT = "content"          # Processed content
+    METADATA = "metadata"        # Metadata entries
+    TRANSFORM = "transform"      # Transformation results
+    VALIDATION = "validation"    # Validation results
+    REFERENCE = "reference"      # Reference lookups
+    STATE = "state"             # State information
+    FEATURE = "feature"         # Feature flags
+    CONFIG = "config"           # Configuration
 
 
 # Type aliases
@@ -26,7 +36,7 @@ class ElementType(Enum):
     MARKDOWN = "markdown"
 
     # Structural elements
-    DEFAULT = "default"          # Default fallback type
+    DEFAULT = "default"
     HEADING = "heading"
     TITLE = "title"
     MAP_TITLE = "map_title"
@@ -41,20 +51,26 @@ class ElementType(Enum):
     BLOCKQUOTE = "blockquote"
     NOTE = "note"
 
-    # List elements (aligned with JSON)
-    UNORDERED_LIST = "unordered"
-    ORDERED_LIST = "ordered"
-    LIST_ITEM = "item"
+    # Structure types (add these to match config)
+    STRUCTURE_MAP = "structure_map"        # Add this to match structure.map
+    STRUCTURE_CONCEPT = "structure_concept" # Add this to match structure.concept
+    STRUCTURE_TASK = "structure_task"      # Add this to match structure.task
+    STRUCTURE_REFERENCE = "structure_reference" # Add this to match structure.reference
 
-    # Inline elements (aligned with JSON)
+    # List elements
+    UNORDERED_LIST = "unordered_list"  # Change to match config
+    ORDERED_LIST = "ordered_list"      # Change to match config
+    LIST_ITEM = "list_item"           # Change to match config
+
+    # Inline elements
     CODE_PHRASE = "codeph"
     BOLD = "bold"
     ITALIC = "italic"
     UNDERLINE = "underline"
-    PHRASE = "phrase"
+    PHRASE = "phrase"            # Added
     HIGHLIGHT = "highlight"
     STRIKETHROUGH = "strikethrough"
-    QUOTE = "quote"
+    QUOTE = "quote"              # Added
     CITE = "cite"
 
     # Media elements
@@ -78,9 +94,12 @@ class ElementType(Enum):
     PREREQ = "prereq"
     STEPS = "steps"
     STEP = "step"
-    SUBSTEP = "substep"
-    SUBSTEPS = "substeps"
+    SUBSTEP = "substep"          # Added
+    SUBSTEPS = "substeps"        # Added
+    CMD = "cmd"                  # Added
+    INFO = "info"                # Added
     DEFINITION = "definition"
+    DLENTRY = "dlentry"          # Added
     TERM = "term"
     METADATA = "metadata"
     TOPICREF = "topicref"
@@ -88,10 +107,7 @@ class ElementType(Enum):
     TASK = "task"
     REFERENCE = "reference"
     BASE = "base"
-    CMD = "cmd"
-    INFO = "info"
-    DLENTRY = "dlentry"
-    TOPICGROUP = "topicgroup"
+    TOPICGROUP = "topicgroup"    # Added
     UNKNOWN = "unknown"
 
     @classmethod
@@ -161,7 +177,95 @@ class ProcessingState(Enum):
     ERROR = "error"
 
 
+class ProcessingRuleType(Enum):
+    """Types of processing rules with hierarchical validation."""
+    ELEMENT = "element"           # Basic element processing
+    TRANSFORMATION = "transform"  # Content transformation
+    VALIDATION = "validation"     # Content validation
+    SPECIALIZATION = "special"    # Content specialization
+    ENRICHMENT = "enrichment"     # Content enrichment
+    PUBLICATION = "publication"   # Publication-specific
+    TITLES = "titles"             # Title processing
+    BLOCKS = "blocks"             # Block element processing
+    TABLES = "tables"             # Table processing
+    EMPHASIS = "emphasis"         # Emphasis processing
+    LINKS = "links"               # Link processing
+    HEADINGS = "headings"         # Heading processing
+    LISTS = "lists"               # List processing
+    MEDIA = "media"               # Media processing
+    INLINE = "inline"             # Inline element processing
+    CODE_BLOCK = "code_block"     # Code block processing
+    BLOCK = "block"               # Block element processing
+    STRUCTURE = "structure"       # Structure processing
+    TASK_ELEMENTS = "task_elements" # Task elements processing
+    DEFINITION = "definition"     # Definition list entry processing
+    METADATA = "metadata"         # Metadata processing
+    NAVIGATION = "navigation"     # Navigation element processing
+    DEFAULT = "default"           # Default processing
 
+    @classmethod
+    def validate_rule_type(cls, rule_type: str) -> bool:
+        """Validate if a rule type is valid."""
+        try:
+            cls(rule_type)
+            return True
+        except ValueError:
+            return False
+
+    @classmethod
+    def get_parent_type(cls, rule_type: str) -> Optional[str]:
+        """Get parent rule type if exists."""
+        hierarchy = {
+            "titles": "element",
+            "blocks": "element",
+            "tables": "blocks",
+            "emphasis": "inline",
+            "links": "element",
+            "headings": "titles",
+            "lists": "blocks",
+            "media": "element",
+            "inline": "element",
+            "code_block": "blocks",
+            "block": "element",
+            "structure": "element",
+            "task_elements": "element",
+            "definition": "blocks",
+            "metadata": "element",
+            "navigation": "element",
+            "default": "element"
+        }
+        return hierarchy.get(rule_type)
+
+    @classmethod
+    def get_allowed_operations(cls, rule_type: str) -> Set[str]:
+        """Get allowed operations for rule type."""
+        base_operations = {"transform", "validate"}
+
+        type_operations = {
+            "element": base_operations | {"enrich", "specialize"},
+            "transform": base_operations | {"extract", "inject"},
+            "validation": {"validate"},
+            "special": {"specialize"},
+            "enrichment": {"enrich"},
+            "publication": base_operations | {"extract"},
+            "metadata": base_operations | {"extract"}
+        }
+
+        return type_operations.get(rule_type, base_operations)
+
+@dataclass
+class ProcessingRule:
+    """Definition of a processing rule."""
+    rule_id: str
+    rule_type: ProcessingRuleType
+    element_type: ElementType
+    config: Dict[str, Any]
+    conditions: Dict[str, Any] = field(default_factory=dict)
+    priority: int = 0
+    is_active: bool = True
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: datetime = field(default_factory=datetime.now)
+    modified_at: Optional[datetime] = None
 
 @dataclass
 class ProcessingStateInfo:
@@ -253,56 +357,6 @@ class ProcessingStateInfo:
         """Check if element is blocked by dependencies."""
         return bool(self.blocking_ids)
 
-class ProcessingRuleType(Enum):
-    """Types of processing rules with hierarchical validation."""
-    ELEMENT = "element"           # Basic element processing
-    TRANSFORMATION = "transform"  # Content transformation
-    VALIDATION = "validation"     # Content validation
-    SPECIALIZATION = "special"    # Content specialization
-    ENRICHMENT = "enrichment"     # Content enrichment
-    PUBLICATION = "publication"   # Publication-specific
-    TITLES = "titles"             # Title processing
-    BLOCKS = "blocks"             # Block element processing
-    TABLES = "tables"             # Table processing
-    EMPHASIS = "emphasis"         # Emphasis processing
-    LINKS = "links"               # Link processing
-    HEADINGS = "headings"         # Heading processing
-    LISTS = "lists"               # List processing
-    MEDIA = "media"               # Media processing
-    INLINE = "inline"             # Inline element processing
-    CODE_BLOCK = "code_block"     # Code block processing
-    BLOCK = "block"               # Block element processing
-    STRUCTURE = "structure"       # Structure processing
-    TASK_ELEMENTS = "task_elements" # Task elements processing
-    DEFINITION = "definition"     # Definition list entry processing
-    METADATA = "metadata"         # Metadata processing
-    NAVIGATION = "navigation"     # Navigation element processing
-    DEFAULT = "default"           # Default processing
-
-    @classmethod
-    def validate_rule_type(cls, rule_type: str) -> bool:
-        """Validate if a rule type is valid."""
-        return rule_type in [member.value for member in cls]
-
-    @classmethod
-    def get_parent_type(cls, rule_type: str) -> Optional[str]:
-        """Get parent rule type if exists."""
-        hierarchy = {
-            "titles": "element",
-            "blocks": "element",
-            "tables": "blocks",
-            "emphasis": "inline",
-            "links": "element",
-            "headings": "titles",
-            "lists": "blocks",
-            "media": "element",
-            "inline": "element",
-            "definition": "blocks",
-            "metadata": "element",
-            "navigation": "element",
-            "default": "element"
-        }
-        return hierarchy.get(rule_type)
 
 
 class ContentType(Enum):
@@ -567,23 +621,136 @@ class ContentScope(Enum):
 
 class ContentRelationType(Enum):
     """Types of content relationships."""
-    PARENT = "parent"
-    CHILD = "child"
-    PREREQ = "prerequisite"
-    RELATED = "related"
-    REFERENCE = "reference"
-    CONREF = "conref"
-    KEYREF = "keyref"
+    PARENT = "parent"           # Parent-child relationship
+    CHILD = "child"            # Child-parent relationship
+    PREREQ = "prerequisite"    # Prerequisite content
+    RELATED = "related"        # Related/similar content
+    REFERENCE = "reference"    # Referenced content
+    CONREF = "conref"         # Content reference
+    KEYREF = "keyref"         # Key reference
+    SIBLING = "sibling"       # Same-level content
+    DERIVED = "derived"       # Specialized/derived content
+    LINK = "link"             # Generic link relationship
+
+    @classmethod
+    def get_inverse(cls, relation_type: str) -> Optional[str]:
+        """Get inverse relationship type if exists."""
+        inverse_map = {
+            cls.PARENT.value: cls.CHILD.value,
+            cls.CHILD.value: cls.PARENT.value,
+            cls.PREREQ.value: "dependent",  # Not a direct inverse
+            cls.REFERENCE.value: "referenced_by",  # Not a direct inverse
+            cls.DERIVED.value: "base"  # Not a direct inverse
+        }
+        return inverse_map.get(relation_type)
+
+    @classmethod
+    def is_hierarchical(cls, relation_type: str) -> bool:
+        """Check if relationship type is hierarchical."""
+        hierarchical_types = {
+            cls.PARENT.value,
+            cls.CHILD.value,
+            cls.DERIVED.value
+        }
+        return relation_type in hierarchical_types
 
 @dataclass
 class ContentRelationship:
     """Represents a relationship between content elements."""
+    # Core identification
     source_id: str
     target_id: str
     relation_type: ContentRelationType
     scope: ContentScope
+
+    # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
     key_refs: Set[str] = field(default_factory=set)
+
+    # Validation fields
+    created_at: datetime = field(default_factory=datetime.now)
+    validated: bool = False
+    validation_errors: List[str] = field(default_factory=list)
+
+    # Processing state
+    is_resolved: bool = False
+    is_processed: bool = False
+    processing_errors: List[str] = field(default_factory=list)
+
+    def validate(self) -> bool:
+        """Validate relationship integrity."""
+        try:
+            # Clear previous errors
+            self.validation_errors.clear()
+
+            # Validate required fields
+            if not self.source_id:
+                self.validation_errors.append("Missing source ID")
+            if not self.target_id:
+                self.validation_errors.append("Missing target ID")
+
+            # Validate source != target
+            if self.source_id == self.target_id:
+                self.validation_errors.append("Self-referential relationship not allowed")
+
+            # Validate relation type is valid for scope
+            if not self._validate_scope_compatibility():
+                self.validation_errors.append(
+                    f"Invalid relationship type {self.relation_type.value} "
+                    f"for scope {self.scope.value}"
+                )
+
+            self.validated = not bool(self.validation_errors)
+            return self.validated
+
+        except Exception as e:
+            self.validation_errors.append(f"Validation error: {str(e)}")
+            self.validated = False
+            return False
+
+    def _validate_scope_compatibility(self) -> bool:
+        """Validate relationship type is compatible with scope."""
+        if self.scope == ContentScope.EXTERNAL:
+            # External content can only have reference relationships
+            return self.relation_type in {
+                ContentRelationType.REFERENCE,
+                ContentRelationType.LINK
+            }
+
+        if self.scope == ContentScope.PEER:
+            # Peer content cannot have parent/child relationships
+            return self.relation_type not in {
+                ContentRelationType.PARENT,
+                ContentRelationType.CHILD
+            }
+
+        # Local scope can have any relationship type
+        return True
+
+    def mark_processed(self, success: bool = True, error: Optional[str] = None) -> None:
+        """Mark relationship as processed with optional error."""
+        self.is_processed = True
+        if not success and error:
+            self.processing_errors.append(error)
+
+    def mark_resolved(self, success: bool = True, error: Optional[str] = None) -> None:
+        """Mark relationship as resolved with optional error."""
+        self.is_resolved = True
+        if not success and error:
+            self.processing_errors.append(error)
+
+    @property
+    def has_errors(self) -> bool:
+        """Check if relationship has any errors."""
+        return bool(self.validation_errors or self.processing_errors)
+
+    def add_key_ref(self, key: str) -> None:
+        """Add key reference to relationship."""
+        self.key_refs.add(key)
+
+    def remove_key_ref(self, key: str) -> None:
+        """Remove key reference from relationship."""
+        self.key_refs.discard(key)
 
 @dataclass
 class NavigationContext:
@@ -678,6 +845,50 @@ class ProcessingContext:
         if new_state:
             self.state_info.state = new_state
         self.state_info.timestamp = datetime.now()
+
+
+
+class FeatureScope(Enum):
+    """Scope levels for features."""
+    GLOBAL = "global"         # Application-wide features
+    PIPELINE = "pipeline"     # Pipeline-specific features
+    CONTENT = "content"       # Content-specific features
+    COMPONENT = "component"   # Component-specific features
+    UI = "ui"                 # User interface features
+
+    @classmethod
+    def validate_scope(cls, scope: str) -> bool:
+        """Validate if a scope is valid."""
+        try:
+            cls(scope)
+            return True
+        except ValueError:
+            return False
+
+    @classmethod
+    def get_parent_scope(cls, scope: str) -> Optional[str]:
+        """Get parent scope if exists."""
+        hierarchy = {
+            "pipeline": "global",
+            "content": "pipeline",
+            "component": "global",
+            "ui": "global"
+        }
+        return hierarchy.get(scope)
+
+@dataclass
+class Feature:
+    """Feature definition with metadata."""
+    name: str
+    scope: FeatureScope
+    default: bool
+    description: Optional[str] = None
+    dependencies: List[str] = field(default_factory=list)
+    conflicts: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: datetime = field(default_factory=datetime.now)
+    modified_at: Optional[datetime] = None
+
 
 @dataclass
 class ElementReference:
@@ -810,10 +1021,12 @@ class ProcessingMetadata:
 @dataclass
 class ProcessedContent:
     """Processed element content"""
-    html: str
     element_id: str
-    heading_level: Optional[int] = None
+    html: str
     metadata: Optional[Dict[str, Any]] = None
+    context: Optional[ProcessingContext] = None  # Add context
+    element_type: Optional[ElementType] = None   # Add element type
+    heading_level: Optional[int] = None
 
 
 @dataclass

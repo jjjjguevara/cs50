@@ -10,7 +10,7 @@ from .base_processor import BaseProcessor
 # Core managers
 from ..event_manager import EventManager
 from ..context_manager import ContextManager
-from ..config_manager import ConfigManager
+from ..config.config_manager import ConfigManager
 from ..metadata.metadata_manager import MetadataManager
 from ..key_manager import KeyManager
 
@@ -28,6 +28,7 @@ from ..models.types import (
     ProcessingPhase,
     ProcessingMetadata,
     ProcessingContext,
+    ProcessingRuleType,
     ElementType,
     DITAElementType,
     DITAElementInfo,
@@ -62,8 +63,10 @@ class DITAProcessor(BaseProcessor):
             heading_handler=heading_handler
         )
 
+
         # DITA-specific initialization
         self.key_manager = key_manager
+        self._current_context: Optional[ProcessingContext] = None
 
         # Initialize DITA element strategies
         self._initialize_strategies()
@@ -135,16 +138,50 @@ class DITAProcessor(BaseProcessor):
         self._strategies[ElementType.DITAMAP] = self.DITAMapStrategy(self)
 
 
-    def process_file(self, file_path: Path) -> ProcessedContent:
+    def process_file(self, file_path: Path) -> TrackedElement:
         """Process a DITA file."""
         try:
             # Determine if it's a map or topic
-            if file_path.suffix == '.ditamap':
-                return self.process_map(file_path)
-            elif file_path.suffix == '.dita':
-                return self.process_topic(file_path)
+            is_map = file_path.suffix == '.ditamap'
+
+            # Create element
+            element = TrackedElement.create_map(
+                path=file_path,
+                title="",  # Will be filled after parsing
+                id_handler=self.id_handler
+            ) if is_map else TrackedElement.from_discovery(
+                path=file_path,
+                element_type=ElementType.DITA,
+                id_handler=self.id_handler
+            )
+
+            # Set type
+            element.type = ElementType.DITAMAP if is_map else ElementType.DITA
+
+            # Parse XML if it's a map
+            if is_map:
+                from lxml import etree
+                parser = etree.XMLParser(remove_blank_text=True)
+                tree = etree.parse(str(file_path), parser)
+
+                # Extract title
+                title_elem = tree.find('.//title')
+                if title_elem is not None and title_elem.text:
+                    element.title = title_elem.text.strip()
+
+                # Extract topic references
+                element.topics = [
+                    href.strip() for href in tree.xpath('//topicref/@href')
+                    if href.strip()
+                ]
+
+                # Store raw content
+                element.content = etree.tostring(tree, encoding='unicode', pretty_print=True)
             else:
-                raise ValueError(f"Unsupported file type: {file_path.suffix}")
+                # For non-map files, just read content
+                element.content = file_path.read_text(encoding='utf-8')
+
+            return element
 
         except Exception as e:
             self.logger.error(f"Error processing file {file_path}: {str(e)}")
@@ -206,22 +243,36 @@ class DITAProcessor(BaseProcessor):
                     # Get DITA element type
                     dita_type = DITAElementType(specialization_type)
 
-                    # Get specialized rules using string value of dita_type
-                    dita_rules = self.config_manager.get_dita_element_rules(dita_type.value)
+                    # Use the new rule resolution system
+                    resolved_rule = self.config_manager.resolve_rule(
+                        element_type=ElementType(dita_type.value),
+                        rule_type=ProcessingRuleType.SPECIALIZATION,  # Use specialization rule type
+                        context=self._current_context  # Use current context from processor
+                    )
 
-                    # Ensure the result is a dictionary and update
-                    if isinstance(dita_rules, dict):
-                        specialized_rules.update(dita_rules)
+                    # Update rules if resolution successful
+                    if resolved_rule:
+                        specialized_rules.update(resolved_rule)
                     else:
                         self.logger.warning(
-                            f"DITA element rules for {specialization_type} are not a dictionary"
+                            f"No specialization rules resolved for {specialization_type} "
+                            f"during {self._current_phase.value} phase"
                         )
+
+                    # Log specialization resolution
+                    self.logger.debug(
+                        f"Resolved specialization rules for {specialization_type} "
+                        f"during {self._current_phase.value} phase"
+                    )
 
             return specialized_rules
 
         except Exception as e:
-            self.logger.error(f"Error getting specialization rules: {str(e)}")
-            return base_rules
+            self.logger.error(
+                f"Error getting specialization rules during "
+                f"{self._current_phase.value} phase: {str(e)}"
+            )
+            return base_rules  # Error fallback
 
     def _process_keyref(self, element: TrackedElement, context: ProcessingContext) -> None:
         """Process key references in element."""
