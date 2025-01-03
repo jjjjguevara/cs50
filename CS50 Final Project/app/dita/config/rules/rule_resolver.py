@@ -123,11 +123,23 @@ class RuleResolver:
     ) -> Optional[str]:
         """Get base rule ID for element and rule type."""
         try:
+            # Handle DITA map specifically
+            if element_type == ElementType.MAP:
+                return "structure.map"
+            elif element_type == ElementType.DITAMAP:
+                return "structure.map"
+
+            # Get rules registry
             rules = self._rule_registry.get(rule_type.value, {})
+
+            # Try exact type match first
             for rule_id, rule in rules.items():
                 if rule.get('element_type') == element_type.value:
                     return rule_id
-            return None
+
+            # Fall back to default rules
+            return "default.unknown"
+
         except Exception as e:
             self.logger.error(f"Error getting rule ID: {str(e)}")
             return None

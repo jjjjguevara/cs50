@@ -228,6 +228,7 @@ class DITAParser:
         metadata_manager: MetadataManager,
         key_manager: KeyManager,
         content_cache: ContentCache,
+        dtd_path: Path,
         logger: Optional[DITALogger] = None,
         id_handler: Optional[DITAIDHandler] = None
     ):
@@ -254,6 +255,7 @@ class DITAParser:
             metadata_manager=metadata_manager,
             key_manager=key_manager,
             content_cache=content_cache,
+            dtd_path=dtd_path,  # Pass it through
             logger=logger,
             id_handler=id_handler
         )

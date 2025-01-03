@@ -35,6 +35,10 @@ def create_app(config_name=None):
         # Set up paths with explicit instance folder
         instance_path = Path(app.instance_path)
         instance_path.mkdir(parents=True, exist_ok=True)
+        app.config['CONTENT_ROOT'] = Path(app.root_path) / 'content'
+        app.config['CONFIG_PATH'] = Path(app.root_path) / 'config'
+        app.config['DTD_PATH'] = Path(app.root_path) / 'dita' / 'dtd'
+        app.config['METADATA_DB_PATH'] = Path(app.instance_path) / 'metadata.db'
 
         # Explicitly set config paths
         app.config.update({

@@ -1,8 +1,28 @@
 <!-- concept.dtd -->
-<!ENTITY % topic-dtd PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-%topic-dtd;
-
-<!ELEMENT concept (title, prolog?, abstract?, conbody?)>
+<!ELEMENT concept (title, prolog?, abstract?, body?)>
 <!ATTLIST concept id ID #REQUIRED>
 
-<!ELEMENT conbody (section*)>
+<!ELEMENT title (#PCDATA)>
+<!ELEMENT prolog (metadata?)>
+<!ELEMENT metadata (othermeta*, author*, institution?, category*, keywords?)>
+<!ELEMENT othermeta EMPTY>
+<!ATTLIST othermeta
+    name CDATA #REQUIRED
+    content CDATA #REQUIRED>
+<!ELEMENT author (#PCDATA)>
+<!ELEMENT institution (#PCDATA)>
+<!ELEMENT category (#PCDATA)>
+<!ELEMENT keywords (keyword*)>
+<!ELEMENT keyword (#PCDATA)>
+
+<!ELEMENT abstract (shortdesc?, p*)>
+<!ELEMENT shortdesc (#PCDATA)>
+<!ELEMENT body (section*)>
+<!ELEMENT section (title?, p*)>
+<!ATTLIST section id ID #IMPLIED>
+<!ELEMENT p (#PCDATA | b | i | ul | ol)*>
+<!ELEMENT b (#PCDATA)>
+<!ELEMENT i (#PCDATA)>
+<!ELEMENT ul (li+)>
+<!ELEMENT ol (li+)>
+<!ELEMENT li (#PCDATA | p)*>

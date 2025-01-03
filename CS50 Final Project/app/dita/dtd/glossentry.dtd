@@ -1,0 +1,7 @@
+<!-- glossentry.dtd -->
+<!ELEMENT glossentry (term, definition)>
+<!ATTLIST glossentry id ID #REQUIRED>
+
+<!ELEMENT term (#PCDATA)>
+<!ELEMENT definition (#PCDATA | p)*>
+<!ELEMENT p (#PCDATA | b | i | ul | ol)*>

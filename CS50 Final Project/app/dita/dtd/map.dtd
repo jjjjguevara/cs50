@@ -1,9 +1,16 @@
 <!-- map.dtd -->
-<!ELEMENT map (title?, topicref*)>
+<!ELEMENT map (title?, topicref+)>
 <!ATTLIST map id ID #REQUIRED>
 
-<!ELEMENT topicref EMPTY>
+<!ELEMENT topicref (topicmeta?, subtopicref*)>
 <!ATTLIST topicref
-    href CDATA #REQUIRED
+    href CDATA #IMPLIED
     format CDATA #IMPLIED
-    type CDATA #IMPLIED>
+    scope (local | external | peer) "local"
+    type CDATA #IMPLIED
+    id ID #IMPLIED>
+
+<!ELEMENT topicmeta (title?, description?)>
+<!ELEMENT description (#PCDATA)>
+
+<!ELEMENT subtopicref (topicref*)>

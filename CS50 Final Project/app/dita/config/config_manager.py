@@ -336,26 +336,55 @@ class ConfigManager:
         return self.config_loader.get_config("keyref_config.json") or {}
 
     def load_key_resolution_config(self) -> Dict[str, Any]:
-        """Load key resolution configuration."""
+        """
+        Load key resolution configuration.
+
+        Returns:
+            Dict[str, Any]: Key resolution configuration including resolution rules,
+            processing hierarchy, and defaults
+        """
         try:
             # Try loading from keyref_config.json first
-            if keyref_config := self.keyref_config:
-                if "keyref_resolution" in keyref_config:
-                    return {
-                        "resolution_rules": keyref_config["keyref_resolution"],
-                        "processing_hierarchy": keyref_config.get("processing_hierarchy", {}),
-                        "global_defaults": keyref_config.get("global_defaults", {}),
-                        "element_defaults": keyref_config.get("element_defaults", {})
-                    }
+            keyref_config = self.get_config("keyref_config.json") or {}
+            if "keyref_resolution" in keyref_config:
+                return {
+                    "resolution_rules": {
+                        "scopes": keyref_config["keyref_resolution"].get("scopes", ["local", "peer", "external"]),
+                        "fallback_order": keyref_config["keyref_resolution"].get("fallback_order", []),
+                        "inheritance_rules": keyref_config["keyref_resolution"].get("inheritance_rules", {})
+                    },
+                    "processing_hierarchy": keyref_config.get("processing_hierarchy", {}),
+                    "global_defaults": keyref_config.get("global_defaults", {}),
+                    "element_defaults": keyref_config.get("element_defaults", {})
+                }
 
             # Fall back to key_resolution.json
-            key_resolution = self.config_loader.get_config("key_resolution.json")
-            if key_resolution:
-                if "resolution_rules" not in key_resolution:
-                    raise ValueError("Missing resolution_rules in key resolution config")
-                return key_resolution
+            key_resolution = self.get_config("key_resolution.json") or {}
+            if "resolution_rules" in key_resolution:
+                return {
+                    "resolution_rules": key_resolution["resolution_rules"],
+                    "processing_hierarchy": key_resolution.get("processing_hierarchy", {}),
+                    "global_defaults": key_resolution.get("global_defaults", {}),
+                    "element_defaults": key_resolution.get("element_defaults", {})
+                }
 
-            raise FileNotFoundError("No valid key resolution config found")
+            # Return default configuration if no valid config found
+            return {
+                "resolution_rules": {
+                    "scopes": ["local", "peer", "external"],
+                    "fallback_order": ["local", "peer", "external"],
+                    "inheritance_rules": {
+                        "props": "merge",
+                        "outputclass": "append",
+                        "other": "override"
+                    }
+                },
+                "processing_hierarchy": {
+                    "order": ["map", "topic", "element"]
+                },
+                "global_defaults": {},
+                "element_defaults": {}
+            }
 
         except Exception as e:
             self.logger.error(f"Error loading key resolution config: {str(e)}")

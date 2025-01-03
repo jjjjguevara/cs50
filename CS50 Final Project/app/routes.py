@@ -14,6 +14,9 @@ from .dita.context_manager import ContextManager
 from .dita.config.config_manager import ConfigManager
 from .dita.key_manager import KeyManager
 from .dita.metadata.metadata_manager import MetadataManager
+from .dita.schema_manager import SchemaManager
+from .dita.validation_manager import ValidationManager
+from .dita.processors.dita_processor import DITAProcessor
 
 # Types
 from .dita.models.types import ProcessingPhase, IDType
@@ -31,7 +34,7 @@ dita_bp = Blueprint('dita', __name__)
 
 def init_managers(app):
     """Initialize all managers within application context."""
-    # Initialize utilities
+    # Initialize utilities first
     content_cache = ContentCache()
     logger = DITALogger(name="routes")
     id_handler = DITAIDHandler()
@@ -39,24 +42,47 @@ def init_managers(app):
     # Initialize event manager
     event_manager = EventManager(cache=content_cache)
 
-    # Initialize core managers
-    config_manager = ConfigManager(
-        metadata_manager=None,
-        context_manager=None,
-        content_cache=content_cache,
-        event_manager=event_manager,
-        id_handler=id_handler
+    # Get config path from app config
+    config_path = Path(app.config.get('CONFIG_PATH', Path(app.instance_path) / 'config'))
+
+    # Initialize Schema and Validation managers first
+    schema_manager = SchemaManager(
+        config_path=config_path,
+        cache=content_cache,
+        logger=logger
     )
 
+    validation_manager = ValidationManager(
+        cache=content_cache,
+        event_manager=event_manager,
+        config_manager=None,  # Will be set later
+        context_manager=None, # Will be set later
+        metadata_manager=None, # Will be set later
+        logger=logger
+    )
+
+    # Initialize ConfigManager with required dependencies
+    config_manager = ConfigManager(
+        config_path=config_path,
+        validation_manager=validation_manager,
+        schema_manager=schema_manager,
+        event_manager=event_manager,
+        content_cache=content_cache,  # Changed from cache to content_cache
+        id_handler=id_handler,
+        logger=logger
+    )
+
+    # Initialize MetadataManager
     metadata_manager = MetadataManager(
         db_path=app.config.get('METADATA_DB_PATH', Path(app.instance_path) / 'metadata.db'),
         cache=content_cache,
         event_manager=event_manager,
-        context_manager=None,
+        context_manager=None,  # Will be set later
         config_manager=config_manager,
         logger=logger
     )
 
+    # Initialize ContextManager
     context_manager = ContextManager(
         event_manager=event_manager,
         content_cache=content_cache,
@@ -66,9 +92,10 @@ def init_managers(app):
     )
 
     # Resolve circular dependencies
-    metadata_manager.context_manager = context_manager
-    config_manager.metadata_manager = metadata_manager
-    config_manager.context_manager = context_manager
+    metadata_manager._context_manager = context_manager
+    validation_manager._context_manager = context_manager
+    validation_manager._metadata_manager = metadata_manager
+    validation_manager._config_manager = config_manager
 
     # Initialize additional utilities
     html_helper = HTMLHelper(dita_root=app.config.get('DITA_ROOT'))
@@ -83,6 +110,8 @@ def init_managers(app):
         CONFIG_MANAGER=config_manager,
         METADATA_MANAGER=metadata_manager,
         CONTEXT_MANAGER=context_manager,
+        VALIDATION_MANAGER=validation_manager,
+        SCHEMA_MANAGER=schema_manager,
         HTML_HELPER=html_helper,
         HEADING_HANDLER=heading_handler
     )
@@ -93,18 +122,21 @@ def get_content_factory():
     """Get or create ContentFactory instance."""
     if 'content_factory' not in g:
         metadata_storage = current_app.config['METADATA_MANAGER'].storage
+
+        key_manager = KeyManager(
+            event_manager=current_app.config['EVENT_MANAGER'],
+            cache=current_app.config['CONTENT_CACHE'],
+            config_manager=current_app.config['CONFIG_MANAGER'],
+            context_manager=current_app.config['CONTEXT_MANAGER'],
+            metadata_storage=metadata_storage,
+            logger=current_app.config['LOGGER']
+        )
+
         g.content_factory = ContentFactory(
             event_manager=current_app.config['EVENT_MANAGER'],
             context_manager=current_app.config['CONTEXT_MANAGER'],
             config_manager=current_app.config['CONFIG_MANAGER'],
-            key_manager=KeyManager(
-                event_manager=current_app.config['EVENT_MANAGER'],
-                cache=current_app.config['CONTENT_CACHE'],
-                config_manager=current_app.config['CONFIG_MANAGER'],
-                context_manager=current_app.config['CONTEXT_MANAGER'],
-                metadata_storage=metadata_storage,  # Pass metadata_storage
-                logger=current_app.config['LOGGER']
-            ),
+            key_manager=key_manager,
             metadata_manager=current_app.config['METADATA_MANAGER'],
             content_cache=current_app.config['CONTENT_CACHE'],
             html_helper=current_app.config['HTML_HELPER'],
@@ -112,6 +144,7 @@ def get_content_factory():
             id_handler=current_app.config['ID_HANDLER'],
             logger=current_app.config['LOGGER']
         )
+
     return g.content_factory
 
 def get_content_path(entry_name: str) -> Optional[Path]:

@@ -2,7 +2,9 @@
 
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Type
+from typing import Dict, List, Optional, Any, Type, Union
+from lxml import etree
+from lxml.etree import _InputDocument
 
 # Base processor and strategy
 from .base_processor import BaseProcessor
@@ -15,7 +17,7 @@ from ..metadata.metadata_manager import MetadataManager
 from ..key_manager import KeyManager
 
 # Utils
-from ..utils.cache import ContentCache
+from ..utils.cache import ContentCache, CacheEntryType
 from ..utils.id_handler import DITAIDHandler
 from ..utils.html_helpers import HTMLHelper
 from ..utils.heading import HeadingHandler
@@ -35,6 +37,18 @@ from ..models.types import (
     KeyDefinition
 )
 
+class DTDResolver(etree.Resolver):
+    def __init__(self, dtd_path: Path):
+        self.dtd_path = dtd_path
+        super().__init__()
+
+    def resolve(self, system_url: str, public_id: str, context) -> Optional[Union[etree._Element, etree._ElementTree]]:
+        if system_url == "map.dtd":
+            return self.resolve_filename(str(self.dtd_path / "map.dtd"), context)
+        elif system_url == "topic.dtd":
+            return self.resolve_filename(str(self.dtd_path / "topic.dtd"), context)
+        return None
+
 class DITAProcessor(BaseProcessor):
     """Processor for DITA-specific content."""
 
@@ -46,6 +60,7 @@ class DITAProcessor(BaseProcessor):
         metadata_manager: MetadataManager,
         key_manager: KeyManager,  # Additional for DITA key resolution
         content_cache: ContentCache,
+        dtd_path: Path,
         logger: Optional[DITALogger] = None,
         id_handler: Optional[DITAIDHandler] = None,
         html_helper: Optional[HTMLHelper] = None,
@@ -66,6 +81,7 @@ class DITAProcessor(BaseProcessor):
 
         # DITA-specific initialization
         self.key_manager = key_manager
+        self.dtd_path = dtd_path  # Store DTD path
         self._current_context: Optional[ProcessingContext] = None
 
         # Initialize DITA element strategies
@@ -141,6 +157,7 @@ class DITAProcessor(BaseProcessor):
     def process_file(self, file_path: Path) -> TrackedElement:
         """Process a DITA file."""
         try:
+
             # Determine if it's a map or topic
             is_map = file_path.suffix == '.ditamap'
 
@@ -158,28 +175,61 @@ class DITAProcessor(BaseProcessor):
             # Set type
             element.type = ElementType.DITAMAP if is_map else ElementType.DITA
 
-            # Parse XML if it's a map
-            if is_map:
-                from lxml import etree
-                parser = etree.XMLParser(remove_blank_text=True)
-                tree = etree.parse(str(file_path), parser)
 
+            # Parse XML with DTD resolution
+            from lxml import etree
+            parser = etree.XMLParser(
+                remove_blank_text=True,
+                remove_comments=True,
+                recover=True,
+                resolve_entities=True,
+                load_dtd=True,
+                dtd_validation=False
+            )
+
+            # Add resolver with proper dtd_path
+            parser.resolvers.add(DTDResolver(self.dtd_path))
+
+            # Parse the XML content
+            tree = etree.parse(str(file_path), parser)
+            root = tree.getroot()
+
+            if is_map:
                 # Extract title
                 title_elem = tree.find('.//title')
                 if title_elem is not None and title_elem.text:
                     element.title = title_elem.text.strip()
 
-                # Extract topic references
-                element.topics = [
-                    href.strip() for href in tree.xpath('//topicref/@href')
-                    if href.strip()
-                ]
-
-                # Store raw content
-                element.content = etree.tostring(tree, encoding='unicode', pretty_print=True)
+                # Extract and process topic references
+                for topicref in tree.xpath('//topicref[@href]'):
+                    href = topicref.get('href').strip()
+                    if href:
+                        # Resolve topic path relative to map
+                        topic_path = file_path.parent / href
+                        if topic_path.exists():
+                            topic_element = self.process_file(topic_path)
+                            if topic_element:
+                                element.topics.append(href)
+                                self.content_cache.set(
+                                    key=f"topic_{topic_element.id}",
+                                    data=topic_element,
+                                    entry_type=CacheEntryType.CONTENT,
+                                    element_type=ElementType.DITA,
+                                    phase=ProcessingPhase.DISCOVERY
+                                )
             else:
-                # For non-map files, just read content
-                element.content = file_path.read_text(encoding='utf-8')
+                # For topics, extract title and content
+                title_elem = tree.find('.//title')
+                if title_elem is not None and title_elem.text:
+                    element.title = title_elem.text.strip()
+
+            # Store raw content without XML declaration
+            element.content = etree.tostring(
+                root,
+                encoding='unicode',
+                pretty_print=True,
+                with_tail=True
+            )
 
             return element
 

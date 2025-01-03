@@ -4,7 +4,10 @@
 
 <!ELEMENT title (#PCDATA)>
 <!ELEMENT prolog (metadata?)>
-<!ELEMENT metadata (othermeta*, author*, institution?, category*, keywords?)>
+<!ELEMENT metadata (othermeta*, author*, institution?, category*, keywords?, date?, version?, audience?)>
+<!ELEMENT date (#PCDATA)>
+<!ELEMENT version (#PCDATA)>
+<!ELEMENT audience (#PCDATA)>
 <!ELEMENT othermeta EMPTY>
 <!ATTLIST othermeta
     name CDATA #REQUIRED
@@ -26,3 +29,15 @@
 <!ELEMENT ul (li+)>
 <!ELEMENT ol (li+)>
 <!ELEMENT li (#PCDATA | p)*>
+
+<!ELEMENT image EMPTY>
+<!ATTLIST image
+    src CDATA #REQUIRED
+    alt CDATA #IMPLIED>
+
+<!ELEMENT table (thead, tbody)>
+<!ELEMENT thead (tr+)>
+<!ELEMENT tbody (tr+)>
+<!ELEMENT tr (th | td)+>
+<!ELEMENT th (#PCDATA)>
+<!ELEMENT td (#PCDATA)>

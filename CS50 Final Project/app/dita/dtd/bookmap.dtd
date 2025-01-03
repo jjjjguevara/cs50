@@ -1,0 +1,8 @@
+<!-- bookmap.dtd -->
+<!ELEMENT bookmap (title?, chapter+)>
+<!ATTLIST bookmap id ID #REQUIRED>
+
+<!ELEMENT chapter (title?, topicref+)>
+<!ELEMENT topicref (topicmeta?, subtopicref*)>
+<!ELEMENT topicmeta (title?, description?)>
+<!ELEMENT description (#PCDATA)>

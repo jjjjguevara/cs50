@@ -75,47 +75,87 @@ class DITATopicStrategy(DITATransformStrategy):
         metadata: ProcessingMetadata,
         config: Dict[str, Any]
     ) -> ProcessedContent:
-        """Transform general DITA element."""
+        """Transform DITA topic."""
         try:
-            # Use the new rule resolution system
-            resolved_rule = self.transformer.config_manager.resolve_rule(
-                element_type=element.type,
-                rule_type=ProcessingRuleType.ELEMENT,
-                context=context
-            )
+            # Parse DITA XML
+            from bs4 import BeautifulSoup, Tag
+            soup = BeautifulSoup(element.content, "xml")
+            result_soup = BeautifulSoup("", "html.parser")
 
-            rules = resolved_rule or {}
+            # Create topic container
+            container = result_soup.new_tag("article")
+            container['id'] = element.id
+            container['class'] = ["dita-topic"]
 
-            # Create element with proper classes
-            classes = ["dita-content"]
-            if element.type == ElementType.DITAMAP:
-                classes.append("dita-map")
-            elif element.type == ElementType.DITA:
-                classes.append("dita-topic")
-            else:
-                classes.append("dita-unknown")
+            # Transform title
+            title_elem = soup.find('title')
+            if isinstance(title_elem, Tag):
+                title_tag = result_soup.new_tag("h1")
+                title_tag['class'] = ["topic-title"]
+                title_tag.string = title_elem.text
+                container.append(title_tag)
 
-            # Create element
-            transformed = self.transformer.html_helper.create_element(
-                tag=rules.get("html_tag", "div"),
-                attrs={
-                    "class": classes,
-                    "id": element.id,
-                    "data-type": element.type.value,
-                    **rules.get("attributes", {})
-                },
-                content=element.content
-            )
+            # Transform body
+            body_elem = soup.find('body')
+            if isinstance(body_elem, Tag):
+                body_div = result_soup.new_tag("div")
+                body_div['class'] = ["topic-body"]
+
+                # Transform paragraphs
+                for p in body_elem.find_all('p'):
+                    if isinstance(p, Tag):
+                        p_tag = result_soup.new_tag("p")
+                        p_tag['class'] = ["dita-p"]
+                        p_tag.string = p.text
+                        body_div.append(p_tag)
+
+                # Transform sections
+                for section in body_elem.find_all('section'):
+                    if isinstance(section, Tag):
+                        section_div = result_soup.new_tag("section")
+                        section_div['class'] = ["dita-section"]
+
+                        # Section title
+                        section_title = section.find('title')
+                        if isinstance(section_title, Tag):
+                            h2 = result_soup.new_tag("h2")
+                            h2['class'] = ["section-title"]
+                            h2.string = section_title.text
+                            section_div.append(h2)
+
+                        # Section paragraphs
+                        for p in section.find_all('p'):
+                            if isinstance(p, Tag):
+                                p_tag = result_soup.new_tag("p")
+                                p_tag['class'] = ["dita-p"]
+                                p_tag.string = p.text
+                                section_div.append(p_tag)
+
+                        # Section lists
+                        for ul in section.find_all('ul'):
+                            if isinstance(ul, Tag):
+                                ul_tag = result_soup.new_tag("ul")
+                                ul_tag['class'] = ["dita-ul"]
+                                for li in ul.find_all('li'):
+                                    if isinstance(li, Tag):
+                                        li_tag = result_soup.new_tag("li")
+                                        li_tag.string = li.text
+                                        ul_tag.append(li_tag)
+                                section_div.append(ul_tag)
+
+                        body_div.append(section_div)
+
+                container.append(body_div)
 
             return ProcessedContent(
                 element_id=element.id,
-                html=str(transformed),
+                html=str(container),
                 metadata=metadata.transient_attributes,
-                element_type=element.type
+                element_type=ElementType.DITA
             )
 
         except Exception as e:
-            self.logger.error(f"Error transforming element: {str(e)}")
+            self.transformer.logger.error(f"Error transforming topic: {str(e)}")
             raise
 
     def validate(
@@ -241,40 +281,66 @@ class DITAMapStrategy(DITATransformStrategy):
 
             rules = resolved_rule or {}
 
-            # Create map container
-            container = self.transformer.html_helper.create_element(
-                tag=rules.get("html_tag", "div"),
-                attrs={
-                    "class": rules.get("default_classes", ["dita-map"]),
-                    "id": element.id,
-                    **rules.get("attributes", {})
-                }
-            )
+            # Get html tag with fallback
+            html_tag = rules.get("html_tag", "div")
 
-            # Process topic refs
-            topic_refs = self._process_topic_refs(element, context)
+            # Create BeautifulSoup for proper HTML handling
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup("", "html.parser")
 
-            # Create ToC if enabled
-            if context.features.get("show_toc", True):
-                toc = self._create_toc(element.id, context)
-                children: List[Union[Tag, str]] = [toc]
-                children.extend(topic_refs)
-                container = self.transformer.html_helper.create_container(
-                    tag=rules["html_tag"],
-                    children=children,
-                    attrs=container.attrs
+            # Create main container
+            container = soup.new_tag(html_tag)
+            container['id'] = element.id
+            container['class'] = rules.get("default_classes", ["dita-map", "map-content"])
+
+            # Add title if present
+            if element.title:
+                title_tag = soup.new_tag("h1")
+                title_tag['class'] = ["map-title"]
+                title_tag.string = element.title
+                container.append(title_tag)
+
+            # Get cached topics and transform them
+            content_div = soup.new_tag("div")
+            content_div['class'] = ["map-body"]
+
+            for href in element.topics:
+                topic_id = self.transformer.id_handler.generate_id(
+                    Path(href).stem,
+                    IDType.TOPIC
                 )
-            else:
-                container = self.transformer.html_helper.create_container(
-                    tag=rules["html_tag"],
-                    children=topic_refs,
-                    attrs=container.attrs
+
+                # Get cached topic element
+                topic_element = self.transformer.content_cache.get(
+                    f"topic_{topic_id}",
+                    entry_type=CacheEntryType.CONTENT
                 )
+
+                if topic_element:
+                    # Create topic context
+                    topic_context = self.transformer.context_manager.get_context(topic_id)
+                    if not topic_context:
+                        topic_context = self.transformer.context_manager.register_context(
+                            content_id=topic_id,
+                            element_type=ElementType.DITA,
+                            metadata=topic_element.metadata
+                        )
+
+                    # Transform topic
+                    processed = self.transformer.transform_content(topic_element, topic_context)
+                    if processed and processed.html:
+                        # Parse and append topic content
+                        topic_soup = BeautifulSoup(processed.html, 'html.parser')
+                        content_div.append(topic_soup)
+
+            # Add content after title
+            container.append(content_div)
 
             return ProcessedContent(
                 element_id=element.id,
                 html=str(container),
-                metadata=metadata.transient_attributes
+                metadata=metadata.transient_attributes,
+                element_type=ElementType.MAP
             )
 
         except Exception as e:
@@ -333,23 +399,51 @@ class DITAMapStrategy(DITATransformStrategy):
         self,
         element: TrackedElement,
         context: ProcessingContext
-    ) -> List[Union[Tag, str]]:  # Updated return type
+    ) -> List[Union[Tag, str]]:
         """Process topic references in map."""
         topic_refs = []
-        for topic_id in element.topics:
-            topic_context = self.transformer.context_manager.get_context(topic_id)
-            if not topic_context:
-                continue
-            processed = self.transformer.transform_content(
-                TrackedElement.from_discovery(
-                    path=Path(topic_id),
-                    element_type=ElementType.TOPIC,
-                    id_handler=self.transformer.id_handler
-                ),
-                topic_context
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup("", "html.parser")
+
+        # Debug log the topics list
+        self.transformer.logger.debug(f"Processing topics: {element.topics}")
+
+        # Get base path for resolving topic refs
+        base_path = element.path.parent if element.path else Path(".")
+
+        for href in element.topics:
+            # Resolve topic path relative to map
+            topic_path = base_path / href
+            self.transformer.logger.debug(f"Processing topic at: {topic_path}")
+
+            topic_element = TrackedElement.from_discovery(
+                path=topic_path,
+                element_type=ElementType.DITA,  # Changed from TOPIC to DITA
+                id_handler=self.transformer.id_handler
             )
+
+            # Create topic context
+            topic_context = self.transformer.context_manager.register_context(
+                content_id=topic_element.id,
+                element_type=ElementType.DITA,
+                metadata={
+                    "path": str(topic_path),
+                    "parent_map": element.id,
+                    "root_map": context.navigation.root_map
+                }
+            )
+
+            if not topic_context:
+                self.transformer.logger.error(f"Failed to create context for topic: {href}")
+                continue
+
+            processed = self.transformer.transform_content(topic_element, topic_context)
+
             if processed and processed.html:
                 topic_refs.append(processed.html)
+                self.transformer.logger.debug(f"Successfully processed topic: {href}")
+
+        self.transformer.logger.debug(f"Processed {len(topic_refs)} topics")
         return topic_refs
 
 

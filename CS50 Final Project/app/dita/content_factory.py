@@ -96,6 +96,8 @@ class ContentFactory:
 
     def _init_processors(self) -> None:
         """Initialize content processors."""
+        from flask import current_app
+
         self._processors = {
             ElementType.DITA: DITAProcessor(
                 event_manager=self.event_manager,
@@ -104,6 +106,7 @@ class ContentFactory:
                 metadata_manager=self.metadata_manager,
                 key_manager=self.key_manager,
                 content_cache=self.content_cache,
+                dtd_path=current_app.config['DTD_PATH'],
                 logger=self.logger,
                 id_handler=self.id_handler
             ),
