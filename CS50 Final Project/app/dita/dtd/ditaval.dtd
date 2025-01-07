@@ -1,8 +1,0 @@
-<!-- ditaval.dtd -->
-<!ELEMENT ditaval (rule+)>
-<!ELEMENT rule (condition?, action?)>
-<!ELEMENT condition (prop+)>
-<!ELEMENT prop (#PCDATA)>
-<!ELEMENT action (include | exclude)>
-<!ELEMENT include EMPTY>
-<!ELEMENT exclude EMPTY>

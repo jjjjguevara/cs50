@@ -21,7 +21,7 @@ from ..utils.logger import DITALogger
 
 # Types
 from ..models.types import (
-    TrackedElement,
+    ContentElement,
     ProcessedContent,
     ProcessingMetadata,
     ProcessingContext,
@@ -41,7 +41,7 @@ class MarkdownProcessor(BaseProcessor):
 
         def process(
             self,
-            element: TrackedElement,
+            element: ContentElement,
             context: ProcessingContext,
             metadata: ProcessingMetadata,
             rules: Dict[str, Any]
@@ -70,7 +70,7 @@ class MarkdownProcessor(BaseProcessor):
 
         def process(
             self,
-            element: TrackedElement,
+            element: ContentElement,
             context: ProcessingContext,
             metadata: ProcessingMetadata,
             rules: Dict[str, Any]
@@ -98,7 +98,7 @@ class MarkdownProcessor(BaseProcessor):
 
         def process(
             self,
-            element: TrackedElement,
+            element: ContentElement,
             context: ProcessingContext,
             metadata: ProcessingMetadata,
             rules: Dict[str, Any]
@@ -160,7 +160,7 @@ class MarkdownProcessor(BaseProcessor):
     def process_topic(self, topic_path: Path) -> ProcessedContent:
         """Process a Markdown topic."""
         # Create tracked element for markdown topic
-        element = TrackedElement.from_discovery(
+        element = ContentElement.from_discovery(
             path=topic_path,
             element_type=ElementType.MARKDOWN,
             id_handler=self.id_handler
@@ -178,7 +178,7 @@ class MarkdownProcessor(BaseProcessor):
         """Process an MDITA map."""
         try:
             # Create tracked element for markdown map
-            element = TrackedElement.create_map(
+            element = ContentElement.create_map(
                 path=map_path,
                 title="",  # Will be extracted from frontmatter
                 id_handler=self.id_handler
@@ -200,7 +200,7 @@ class MarkdownProcessor(BaseProcessor):
             self.logger.error(f"Error processing MDITA map: {str(e)}")
             raise
 
-    def _extract_topics(self, element: TrackedElement) -> None:
+    def _extract_topics(self, element: ContentElement) -> None:
         """Extract topics from markdown list structure."""
         try:
             content = element.content.split("---", 2)[-1].strip()  # Skip frontmatter
@@ -219,7 +219,7 @@ class MarkdownProcessor(BaseProcessor):
         except Exception as e:
             self.logger.error(f"Error extracting topics: {str(e)}")
 
-    def _extract_frontmatter(self, element: TrackedElement) -> Dict[str, Any]:
+    def _extract_frontmatter(self, element: ContentElement) -> Dict[str, Any]:
         """Extract and parse YAML frontmatter."""
         try:
             import yaml

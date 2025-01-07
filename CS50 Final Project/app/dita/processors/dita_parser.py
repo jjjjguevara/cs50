@@ -24,7 +24,7 @@ from ..utils.logger import DITALogger
 
 # Types
 from ..models.types import (
-    TrackedElement,
+    ContentElement,
     ProcessedContent,
     ProcessingPhase,
     ProcessingState,
@@ -49,7 +49,7 @@ class ParsingStrategy(ABC):
         self,
         file_path: Path,
         parser: 'DITAParser'
-    ) -> TrackedElement:
+    ) -> ContentElement:
         """Parse file into a tracked element."""
         pass
 
@@ -64,11 +64,11 @@ class DITAMapStrategy(ParsingStrategy):
         self,
         file_path: Path,
         parser: 'DITAParser'
-    ) -> TrackedElement:
+    ) -> ContentElement:
         """Parse DITA map file."""
         try:
             # Create tracked element
-            element = TrackedElement.create_map(
+            element = ContentElement.create_map(
                 path=file_path,
                 title="",  # Will be extracted during processing
                 id_handler=parser.id_handler
@@ -125,10 +125,10 @@ class DITATopicStrategy(ParsingStrategy):
         self,
         file_path: Path,
         parser: 'DITAParser'
-    ) -> TrackedElement:
+    ) -> ContentElement:
         """Parse DITA topic file."""
         # Create tracked element
-        element = TrackedElement.from_discovery(
+        element = ContentElement.from_discovery(
             path=file_path,
             element_type=ElementType.DITA,
             id_handler=parser.id_handler
@@ -164,10 +164,10 @@ class MDITAMapStrategy(ParsingStrategy):
         self,
         file_path: Path,
         parser: 'DITAParser'
-    ) -> TrackedElement:
+    ) -> ContentElement:
         """Parse MDITA map file."""
         # Create tracked element
-        element = TrackedElement.create_map(
+        element = ContentElement.create_map(
             path=file_path,
             title="",  # Will be extracted from frontmatter
             id_handler=parser.id_handler
@@ -199,10 +199,10 @@ class MarkdownTopicStrategy(ParsingStrategy):
         self,
         file_path: Path,
         parser: 'DITAParser'
-    ) -> TrackedElement:
+    ) -> ContentElement:
         """Parse Markdown topic file."""
         # Create tracked element
-        element = TrackedElement.from_discovery(
+        element = ContentElement.from_discovery(
             path=file_path,
             element_type=ElementType.MARKDOWN,
             id_handler=parser.id_handler

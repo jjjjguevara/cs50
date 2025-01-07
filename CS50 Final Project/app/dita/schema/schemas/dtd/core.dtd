@@ -1,0 +1,167 @@
+<!-- core.dtd -->
+<!-- Core DITA Elements and Attributes for Scientific Publishing -->
+
+<!-- ============ Common Attribute Definitions ============ -->
+<!ENTITY % id-atts "
+  id ID #IMPLIED
+  conref CDATA #IMPLIED
+  conrefend CDATA #IMPLIED
+  conaction (mark|pushafter|pushbefore|pushreplace|-dita-use-conref-target) #IMPLIED
+  conkeyref CDATA #IMPLIED"
+>
+
+<!ENTITY % localization-atts "
+  translate (yes|no|-dita-use-conref-target) #IMPLIED
+  xml:lang CDATA #IMPLIED
+  dir (ltr|rtl|lro|rlo|-dita-use-conref-target) #IMPLIED"
+>
+
+<!ENTITY % filter-atts "
+  props CDATA #IMPLIED
+  platform CDATA #IMPLIED
+  product CDATA #IMPLIED
+  audience CDATA #IMPLIED
+  otherprops CDATA #IMPLIED
+  importance (default|deprecated|high|low|normal|obsolete|optional|recommended|required|urgent|-dita-use-conref-target) #IMPLIED
+  rev CDATA #IMPLIED
+  status (changed|deleted|new|unchanged|-dita-use-conref-target) #IMPLIED"
+>
+
+<!ENTITY % scientific-atts "
+  data-type CDATA #IMPLIED
+  data-value CDATA #IMPLIED
+  data-format CDATA #IMPLIED
+  units CDATA #IMPLIED
+  precision CDATA #IMPLIED"
+>
+
+<!ENTITY % reference-atts "
+  href CDATA #IMPLIED
+  format CDATA #IMPLIED
+  scope (external|local|peer|-dita-use-conref-target) #IMPLIED
+  type CDATA #IMPLIED"
+>
+
+<!ENTITY % metadata-atts "
+  author CDATA #IMPLIED
+  source CDATA #IMPLIED
+  publisher CDATA #IMPLIED
+  permissions CDATA #IMPLIED
+  audience CDATA #IMPLIED"
+>
+
+<!-- ============ Common Element Definitions ============ -->
+<!-- Metadata Elements -->
+<!ELEMENT metadata (author*, contributor*, pubdate?, doi?, version?, keywords?, category*)>
+<!ELEMENT author (#PCDATA | email | affiliation)*>
+<!ELEMENT contributor (#PCDATA | email | affiliation)*>
+<!ELEMENT email (#PCDATA)>
+<!ELEMENT affiliation (#PCDATA)>
+<!ELEMENT pubdate (#PCDATA)>
+<!ELEMENT doi (#PCDATA)>
+<!ELEMENT version (#PCDATA)>
+<!ELEMENT keywords (keyword+)>
+<!ELEMENT keyword (#PCDATA)>
+<!ELEMENT category (#PCDATA)>
+
+<!-- Scientific Elements -->
+<!ELEMENT equation (title?, desc?, latex-content)>
+<!ATTLIST equation
+  %id-atts;
+  %scientific-atts;
+  display (block|inline) #IMPLIED
+>
+<!ELEMENT latex-content (#PCDATA)>
+
+<!ELEMENT figure (title?, desc?, (image | equation | code | table)+)>
+<!ATTLIST figure
+  %id-atts;
+  %reference-atts;
+>
+
+<!ELEMENT artifact (title?, desc?, content)>
+<!ATTLIST artifact
+  %id-atts;
+  %reference-atts;
+  type CDATA #REQUIRED
+>
+
+<!-- Common Content Elements -->
+<!ELEMENT title (#PCDATA | b | i | sub | sup | term)*>
+<!ELEMENT desc (#PCDATA | b | i | term)*>
+<!ELEMENT body (section | p | ul | ol | table | figure | note | example)*>
+<!ELEMENT section (title?, (%common.block;)*)>
+<!ELEMENT p (#PCDATA | %common.inline;)*>
+
+<!-- List Elements -->
+<!ELEMENT ul (li+)>
+<!ELEMENT ol (li+)>
+<!ELEMENT li (p | ul | ol | %common.block;)*>
+
+<!-- Table Elements -->
+<!ELEMENT table (title?, desc?, tgroup+)>
+<!ELEMENT tgroup (thead?, tbody)>
+<!ELEMENT thead (row+)>
+<!ELEMENT tbody (row+)>
+<!ELEMENT row (entry+)>
+<!ELEMENT entry (#PCDATA | %common.inline;)*>
+
+<!-- Common Inline Elements -->
+<!ENTITY % common.inline "b | i | u | sub | sup | term | xref | cite">
+<!ELEMENT b (#PCDATA | %common.inline;)*>
+<!ELEMENT i (#PCDATA | %common.inline;)*>
+<!ELEMENT u (#PCDATA | %common.inline;)*>
+<!ELEMENT sub (#PCDATA)>
+<!ELEMENT sup (#PCDATA)>
+<!ELEMENT term (#PCDATA)>
+<!ELEMENT xref (#PCDATA)>
+<!ELEMENT cite (#PCDATA)>
+
+<!-- Code and Programming Elements -->
+<!ELEMENT code (#PCDATA)>
+<!ATTLIST code
+  %id-atts;
+  language CDATA #IMPLIED
+  linenumbers (yes|no) #IMPLIED
+>
+
+<!ELEMENT codeblock (#PCDATA)>
+<!ATTLIST codeblock
+  %id-atts;
+  language CDATA #IMPLIED
+  linenumbers (yes|no) #IMPLIED
+>
+
+<!-- Note Elements -->
+<!ELEMENT note (title?, p+)>
+<!ATTLIST note
+  %id-atts;
+  type (note|tip|important|warning|danger) #IMPLIED
+>
+
+<!-- Example Elements -->
+<!ELEMENT example (title?, (%common.block;)*)>
+<!ATTLIST example
+  %id-atts;
+  importance (recommended|optional|required) #IMPLIED
+>
+
+<!-- Reference Elements -->
+<!ELEMENT references (title?, reference*)>
+<!ELEMENT reference (title, author+, publication, doi?, url?)>
+<!ELEMENT publication (#PCDATA)>
+<!ELEMENT url (#PCDATA)>
+
+<!-- ============ Common Entity Declarations ============ -->
+<!ENTITY % common.block "p | ul | ol | table | figure | note | example | codeblock">
+
+<!-- ============ Specialization Attributes ============ -->
+<!ENTITY % global.atts "
+  %id-atts;
+  %localization-atts;
+  %filter-atts;
+  %metadata-atts;
+  class CDATA #IMPLIED
+  outputclass CDATA #IMPLIED
+  domains CDATA #IMPLIED"
+>

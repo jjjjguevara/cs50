@@ -1,0 +1,744 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Hex 21 Science Journal Metadata Schema",
+  "description": "Comprehensive metadata schema for scientific content processing",
+  "version": "1.0.0",
+
+  "definitions": {
+    "academic_identifiers": {
+      "type": "object",
+      "properties": {
+        "doi": {
+          "type": "string",
+          "pattern": "^10\\.\\d{4,}/[-._;()/:a-zA-Z0-9]+$"
+        },
+        "issn": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{3}[\\dX]$"
+        },
+        "isbn": {
+          "type": "string",
+          "pattern": "^(?:ISBN(?:-1[03])?:? )?(?=[0-9X]{10}$|(?=(?:[0-9]+[- ]){3})[- 0-9X]{13}$|97[89][0-9]{10}$|(?=(?:[0-9]+[- ]){4})[- 0-9]{17}$)(?:97[89][- ]?)?[0-9]{1,5}[- ]?[0-9]+[- ]?[0-9]+[- ]?[0-9X]$"
+        },
+        "journal": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "abbreviation": { "type": "string" },
+            "volume": { "type": "string" },
+            "issue": { "type": "string" },
+            "pages": { "type": "string" },
+            "publication_date": { "type": "string", "format": "date-time" }
+          }
+        },
+        "version": {
+          "type": "object",
+          "properties": {
+            "number": { "type": "string" },
+            "date": { "type": "string", "format": "date-time" },
+            "status": { "$ref": "base_schema.json#/definitions/status" }
+          }
+        }
+      }
+    },
+
+    "authorship": {
+      "type": "object",
+      "properties": {
+        "authors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": {
+                "type": "object",
+                "properties": {
+                  "given": { "type": "string" },
+                  "family": { "type": "string" },
+                  "suffix": { "type": "string" }
+                },
+                "required": ["given", "family"]
+              },
+              "orcid": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "author",
+                    "corresponding_author",
+                    "editor",
+                    "reviewer",
+                    "contributor"
+                  ]
+                }
+              },
+              "affiliations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "institution": { "type": "string" },
+                    "department": { "type": "string" },
+                    "address": { "type": "string" },
+                    "country": { "type": "string" }
+                  }
+                }
+              },
+              "contributions": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "contribution_statement": { "type": "string" },
+        "author_notes": { "type": "string" }
+      }
+    },
+
+    "research_context": {
+      "type": "object",
+      "properties": {
+        "disciplines": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "methodology": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "description": { "type": "string" },
+            "data_collection": { "type": "string" },
+            "analysis_methods": { "type": "string" }
+          }
+        },
+        "funding": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "funder": { "type": "string" },
+              "grant_number": { "type": "string" },
+              "grant_recipient": { "type": "string" }
+            }
+          }
+        },
+        "ethics": {
+          "type": "object",
+          "properties": {
+            "irb_number": { "type": "string" },
+            "approval_date": { "type": "string", "format": "date" },
+            "statement": { "type": "string" }
+          }
+        },
+        "data_availability": {
+          "type": "object",
+          "properties": {
+            "statement": { "type": "string" },
+            "repositories": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "url": { "type": "string" },
+                  "doi": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "citations": {
+      "type": "object",
+      "properties": {
+        "bibliography": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string" },
+              "title": { "type": "string" },
+              "authors": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "family": { "type": "string" },
+                    "given": { "type": "string" }
+                  }
+                }
+              },
+              "year": { "type": "string" },
+              "journal": { "type": "string" },
+              "volume": { "type": "string" },
+              "issue": { "type": "string" },
+              "pages": { "type": "string" },
+              "doi": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        },
+        "citation_formats": {
+          "type": "object",
+          "properties": {
+            "apa": { "type": "string" },
+            "mla": { "type": "string" },
+            "chicago": { "type": "string" },
+            "harvard": { "type": "string" },
+            "vancouver": { "type": "string" }
+          }
+        },
+        "cross_references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_id": { "type": "string" },
+              "target_id": { "type": "string" },
+              "type": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "content_management": {
+      "type": "object",
+      "properties": {
+        "classification": {
+          "type": "object",
+          "properties": {
+            "type": { "$ref": "base_schema.json#/definitions/content_type" },
+            "topics": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "categories": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "tags": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "processing_state": {
+          "type": "object",
+          "properties": {
+            "phase": { "$ref": "base_schema.json#/definitions/phase" },
+            "state": { "$ref": "base_schema.json#/definitions/state" },
+            "validation_status": {
+              "type": "object",
+              "properties": {
+                "is_valid": { "type": "boolean" },
+                "messages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": { "type": "string" },
+                      "message": { "type": "string" },
+                      "severity": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": { "type": "string" },
+              "target": { "type": "string" },
+              "type": {
+                "$ref": "base_schema.json#/definitions/relationship_role"
+              },
+              "metadata": { "type": "object" }
+            }
+          }
+        }
+      }
+    },
+
+    "analytics": {
+      "type": "object",
+      "properties": {
+        "user_interaction": {
+          "type": "object",
+          "properties": {
+            "views": { "type": "integer" },
+            "downloads": { "type": "integer" },
+            "shares": { "type": "integer" },
+            "citations": { "type": "integer" },
+            "average_time": { "type": "number" }
+          }
+        },
+        "user_data": {
+          "type": "object",
+          "properties": {
+            "user_id": { "type": "string" },
+            "session_id": { "type": "string" },
+            "ip_address": { "type": "string" },
+            "user_agent": { "type": "string" },
+            "device_info": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string" },
+                "os": { "type": "string" },
+                "browser": { "type": "string" }
+              }
+            },
+            "location": {
+              "type": "object",
+              "properties": {
+                "country": { "type": "string" },
+                "region": { "type": "string" },
+                "city": { "type": "string" }
+              }
+            }
+          }
+        },
+        "search_data": {
+          "type": "object",
+          "properties": {
+            "search_terms": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "filters_applied": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": { "type": "string" },
+                  "value": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "seo": {
+      "type": "object",
+      "properties": {
+        "meta_description": { "type": "string" },
+        "meta_keywords": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "open_graph": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "image": { "type": "string" },
+            "type": { "type": "string" }
+          }
+        },
+        "twitter_card": {
+          "type": "object",
+          "properties": {
+            "card": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "image": { "type": "string" }
+          }
+        },
+        "schema_org": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "data": { "type": "object" }
+          }
+        }
+      }
+    },
+
+    "system": {
+      "type": "object",
+      "properties": {
+        "processing": {
+          "type": "object",
+          "properties": {
+            "created_at": { "type": "string", "format": "date-time" },
+            "updated_at": { "type": "string", "format": "date-time" },
+            "processed_by": { "type": "string" },
+            "transform_history": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "phase": { "$ref": "base_schema.json#/definitions/phase" },
+                  "timestamp": { "type": "string", "format": "date-time" },
+                  "status": { "$ref": "base_schema.json#/definitions/state" }
+                }
+              }
+            }
+          }
+        },
+        "security": {
+          "type": "object",
+          "properties": {
+            "access_level": {
+              "$ref": "base_schema.json#/definitions/security_level"
+            },
+            "permissions": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "license": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string" },
+                "url": { "type": "string" },
+                "text": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "github_metadata": {
+    "type": "object",
+    "properties": {
+      "repository": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "full_name": { "type": "string" },
+          "owner": {
+            "type": "object",
+            "properties": {
+              "login": { "type": "string" },
+              "id": { "type": "integer" },
+              "type": {
+                "type": "string",
+                "enum": ["User", "Organization"]
+              },
+              "url": { "type": "string" }
+            }
+          },
+          "private": { "type": "boolean" },
+          "html_url": { "type": "string" },
+          "description": { "type": "string" },
+          "fork": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "pushed_at": { "type": "string", "format": "date-time" },
+          "default_branch": { "type": "string" },
+          "topics": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "branch": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "sha": { "type": "string" },
+          "protected": { "type": "boolean" },
+          "protection_rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string" },
+                "enabled": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      },
+      "commit_history": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "sha": { "type": "string" },
+            "author": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "email": { "type": "string" },
+                "github_username": { "type": "string" }
+              }
+            },
+            "committer": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "email": { "type": "string" },
+                "github_username": { "type": "string" }
+              }
+            },
+            "message": { "type": "string" },
+            "date": { "type": "string", "format": "date-time" },
+            "changes": {
+              "type": "object",
+              "properties": {
+                "added": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "modified": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "deleted": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            },
+            "stats": {
+              "type": "object",
+              "properties": {
+                "additions": { "type": "integer" },
+                "deletions": { "type": "integer" },
+                "total": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+      "contributors": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "login": { "type": "string" },
+            "id": { "type": "integer" },
+            "type": { "type": "string" },
+            "contributions": { "type": "integer" },
+            "role": {
+              "type": "string",
+              "enum": ["owner", "collaborator", "contributor"]
+            },
+            "permissions": {
+              "type": "object",
+              "properties": {
+                "admin": { "type": "boolean" },
+                "maintain": { "type": "boolean" },
+                "push": { "type": "boolean" },
+                "triage": { "type": "boolean" },
+                "pull": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      },
+      "issues": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "number": { "type": "integer" },
+            "title": { "type": "string" },
+            "state": {
+              "type": "string",
+              "enum": ["open", "closed"]
+            },
+            "creator": {
+              "type": "object",
+              "properties": {
+                "login": { "type": "string" },
+                "id": { "type": "integer" }
+              }
+            },
+            "assignees": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "login": { "type": "string" },
+                  "id": { "type": "integer" }
+                }
+              }
+            },
+            "created_at": { "type": "string", "format": "date-time" },
+            "updated_at": { "type": "string", "format": "date-time" },
+            "closed_at": { "type": "string", "format": "date-time" },
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "color": { "type": "string" },
+                  "description": { "type": "string" }
+                }
+              }
+            },
+            "milestone": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string" },
+                "description": { "type": "string" },
+                "due_on": { "type": "string", "format": "date-time" },
+                "state": {
+                  "type": "string",
+                  "enum": ["open", "closed"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "pull_requests": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "number": { "type": "integer" },
+            "title": { "type": "string" },
+            "state": {
+              "type": "string",
+              "enum": ["open", "closed", "merged"]
+            },
+            "creator": {
+              "type": "object",
+              "properties": {
+                "login": { "type": "string" },
+                "id": { "type": "integer" }
+              }
+            },
+            "head": {
+              "type": "object",
+              "properties": {
+                "ref": { "type": "string" },
+                "sha": { "type": "string" }
+              }
+            },
+            "base": {
+              "type": "object",
+              "properties": {
+                "ref": { "type": "string" },
+                "sha": { "type": "string" }
+              }
+            },
+            "mergeable": { "type": "boolean" },
+            "merged": { "type": "boolean" },
+            "merged_by": {
+              "type": "object",
+              "properties": {
+                "login": { "type": "string" },
+                "id": { "type": "integer" }
+              }
+            },
+            "comments": { "type": "integer" },
+            "review_comments": { "type": "integer" },
+            "commits": { "type": "integer" },
+            "additions": { "type": "integer" },
+            "deletions": { "type": "integer" },
+            "changed_files": { "type": "integer" },
+            "created_at": { "type": "string", "format": "date-time" },
+            "updated_at": { "type": "string", "format": "date-time" },
+            "closed_at": { "type": "string", "format": "date-time" },
+            "merged_at": { "type": "string", "format": "date-time" },
+            "reviews": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "user": {
+                    "type": "object",
+                    "properties": {
+                      "login": { "type": "string" },
+                      "id": { "type": "integer" }
+                    }
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": ["APPROVED", "CHANGES_REQUESTED", "COMMENTED"]
+                  },
+                  "submitted_at": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "workflows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "path": { "type": "string" },
+            "state": { "type": "string" },
+            "created_at": { "type": "string", "format": "date-time" },
+            "updated_at": { "type": "string", "format": "date-time" },
+            "runs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer" },
+                  "name": { "type": "string" },
+                  "status": { "type": "string" },
+                  "conclusion": { "type": "string" },
+                  "workflow_id": { "type": "integer" },
+                  "created_at": { "type": "string", "format": "date-time" },
+                  "updated_at": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "type": "object",
+  "required": [
+    "academic_identifiers",
+    "authorship",
+    "content_management",
+    "system"
+  ],
+  "properties": {
+    "academic_identifiers": { "$ref": "#/definitions/academic_identifiers" },
+    "authorship": { "$ref": "#/definitions/authorship" },
+    "research_context": { "$ref": "#/definitions/research_context" },
+    "citations": { "$ref": "#/definitions/citations" },
+    "content_management": { "$ref": "#/definitions/content_management" },
+    "analytics": { "$ref": "#/definitions/analytics" },
+    "seo": { "$ref": "#/definitions/seo" },
+    "system": { "$ref": "#/definitions/system" },
+    "github_metadata": { "$ref": "#/definitions/github_metadata" }
+  },
+
+  "metadata": {
+    "schema_version": "1.0.0",
+    "last_updated": "2025-01-24",
+    "maintainers": ["hex21"],
+    "dependencies": {
+      "base_schema": "1.0.0"
+    }
+  }
+}

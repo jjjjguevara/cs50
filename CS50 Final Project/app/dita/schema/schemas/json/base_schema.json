@@ -1,0 +1,461 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DITA Processing Base Schema",
+  "description": "Core type definitions and relationships for DITA processing system",
+  "version": "1.0.0",
+
+  "definitions": {
+    "phase": {
+      "type": "string",
+      "enum": [
+        "discovery",
+        "validation",
+        "transformation",
+        "enrichment",
+        "assembly",
+        "error"
+      ],
+      "description": "Processing phases for content pipeline"
+    },
+
+    "state": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "completed",
+        "error",
+        "warning",
+        "info",
+        "cached",
+        "invalidated",
+        "blocked"
+      ],
+      "description": "Processing and validation states"
+    },
+
+    "scope": {
+      "type": "string",
+      "enum": [
+        "local",
+        "peer",
+        "external",
+        "global",
+        "inherited",
+        "specialized"
+      ],
+      "description": "Content and processing scopes"
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "published",
+        "archived",
+        "blocked",
+        "deprecated",
+        "superseded",
+        "experimental"
+      ],
+      "description": "Content lifecycle status"
+    },
+
+    "mode": {
+      "type": "string",
+      "enum": [
+        "strict",
+        "permissive",
+        "discovery",
+        "debug",
+        "production",
+        "development"
+      ],
+      "description": "Processing and validation modes"
+    },
+
+    "context_type": {
+      "type": "string",
+      "enum": [
+        "document",
+        "reference",
+        "navigation",
+        "processing",
+        "specialization",
+        "resolution",
+        "feature",
+        "validation",
+        "publishing",
+        "metadata"
+      ],
+      "description": "Context types for processing"
+    },
+
+    "attribute_type": {
+      "type": "string",
+      "enum": [
+        "string",
+        "number",
+        "boolean",
+        "date",
+        "enum",
+        "id",
+        "idref",
+        "idrefs",
+        "nmtoken",
+        "nmtokens",
+        "entity",
+        "entities",
+        "notation",
+        "xml",
+        "cdata",
+        "dtd",
+        "yaml",
+        "json"
+      ],
+      "description": "Attribute data types"
+    },
+
+    "action": {
+      "type": "string",
+      "enum": [
+        "include",
+        "exclude",
+        "passthrough",
+        "flag",
+        "skip",
+        "merge",
+        "nomerge",
+        "cascade",
+        "override",
+        "add",
+        "select",
+        "specialize",
+        "inherit",
+        "navigate",
+        "filter",
+        "remove",
+        "combine",
+        "split",
+        "cluster",
+        "rebuild",
+        "chunk",
+        "resolve",
+        "append",
+        "rebase",
+        "impose",
+        "keep",
+        "validate",
+        "identify",
+        "classify",
+        "extract",
+        "apply",
+        "transform",
+        "process",
+        "generate",
+        "assemble",
+        "finalize",
+        "custom"
+      ],
+      "description": "Processing actions"
+    },
+
+    "relationship_role": {
+      "type": "string",
+      "enum": [
+        "ancestor",
+        "child",
+        "cousin",
+        "descendant",
+        "friend",
+        "next",
+        "other",
+        "parent",
+        "previous",
+        "sibling"
+      ],
+      "description": "Content relationship roles"
+    },
+
+    "collection_type": {
+      "type": "string",
+      "enum": ["unordered", "sequence", "choice", "family", "all"],
+      "description": "Collection organization types"
+    },
+
+    "linking_type": {
+      "type": "string",
+      "enum": ["targetonly", "sourceandtarget", "sourceonly", "normal", "none"],
+      "description": "Content linking types"
+    },
+
+    "element_type": {
+      "type": "string",
+      "enum": [
+        "map",
+        "topic",
+        "concept",
+        "task",
+        "reference",
+        "glossary",
+        "bookmap",
+
+        "heading",
+        "title",
+        "map_title",
+        "shortdesc",
+        "body",
+        "section",
+        "abstract",
+        "default",
+        "specialization",
+        "tooltip",
+
+        "paragraph",
+        "code_block",
+        "pre",
+        "quote",
+        "note",
+        "warning",
+        "tip",
+        "important",
+        "callout",
+        "taskbody",
+
+        "ul",
+        "ol",
+        "li",
+        "dl",
+        "dt",
+        "dd",
+        "todo",
+
+        "table",
+        "thead",
+        "tbody",
+        "tr",
+        "th",
+        "td",
+
+        "link",
+        "xref",
+        "topicref",
+        "keyword",
+        "term",
+        "ph",
+        "text",
+        "b",
+        "i",
+        "u",
+        "highlight",
+        "strikethrough",
+        "code",
+        "sub",
+        "sup",
+
+        "image",
+        "fig",
+        "video",
+        "audio",
+        "media",
+
+        "artifact",
+        "equation",
+        "formula",
+        "component",
+        "placeholder"
+      ],
+      "description": "DITA element types"
+    },
+
+    "content_type": {
+      "type": "string",
+      "enum": [
+        "dita",
+        "markdown",
+        "xml",
+        "html",
+        "text",
+        "pdf",
+        "epub",
+        "other",
+        "YAML",
+        "JSON"
+      ],
+      "description": "Content format types"
+    },
+
+    "feature_type": {
+      "type": "string",
+      "enum": [
+        "artifact",
+        "latex",
+        "ui_component",
+        "numbering",
+        "format",
+        "layout",
+        "navigation",
+        "toc",
+        "index",
+        "search",
+        "filter",
+        "sort",
+        "pagination",
+        "theme",
+        "template"
+      ],
+      "description": "Feature categories"
+    },
+
+    "reference_type": {
+      "type": "string",
+      "enum": [
+        "keyref",
+        "conref",
+        "xref",
+        "href",
+        "topicref",
+        "mapref",
+        "cite",
+        "link",
+        "external"
+      ],
+      "description": "Reference mechanisms"
+    },
+
+    "validation_level": {
+      "type": "string",
+      "enum": ["none", "basic", "strict", "full", "custom"],
+      "description": "Validation strictness levels"
+    },
+
+    "cache_strategy": {
+      "type": "string",
+      "enum": ["lru", "fifo", "lifo", "ttl", "none", "custom"],
+      "description": "Cache management strategies"
+    },
+
+    "output_format": {
+      "type": "string",
+      "enum": ["html", "pdf", "xml", "json", "markdown", "plaintext"],
+      "description": "Output content formats"
+    },
+
+    "priority": {
+      "type": "string",
+      "enum": ["highest", "high", "medium", "low", "lowest"],
+      "description": "Processing priority levels"
+    },
+
+    "environment": {
+      "type": "string",
+      "enum": ["development", "testing", "staging", "production"],
+      "description": "Execution environments"
+    },
+
+    "processing_role": {
+      "type": "string",
+      "enum": ["normal", "resource-only", "template", "system"],
+      "description": "Content processing roles"
+    },
+
+    "security_level": {
+      "type": "string",
+      "enum": ["public", "internal", "confidential", "restricted", "private"],
+      "description": "Content security levels"
+    }
+  },
+
+  "type_relationships": {
+    "inheritance": {
+      "description": "Type inheritance hierarchies",
+      "element_inheritance": {
+        "topic": ["concept", "task", "reference"],
+        "map": ["bookmap"],
+        "block": ["section", "paragraph", "note", "pre"],
+        "inline": ["phrase", "keyword", "term"],
+        "list": ["ul", "ol", "dl"],
+        "table": ["simpletable", "properties"]
+      },
+      "feature_inheritance": {
+        "navigation": ["toc", "index", "search"],
+        "formatting": ["numbering", "layout", "theme"],
+        "enrichment": ["latex", "artifact", "media"]
+      }
+    },
+
+    "containment": {
+      "description": "Valid parent-child relationships",
+      "rules": {
+        "map": ["topicref", "navref", "reltable"],
+        "topic": ["title", "shortdesc", "body"],
+        "section": ["title", "paragraph", "list", "table"],
+        "list": ["item"],
+        "table": ["thead", "tbody", "row"]
+      }
+    },
+
+    "compatibility": {
+      "description": "Compatible type combinations",
+      "phase_modes": {
+        "discovery": ["permissive", "strict"],
+        "validation": ["strict"],
+        "transformation": ["strict", "permissive"],
+        "enrichment": ["permissive"],
+        "assembly": ["strict"]
+      },
+      "scope_contexts": {
+        "local": ["document", "processing"],
+        "peer": ["reference", "navigation"],
+        "external": ["reference"],
+        "global": ["feature", "validation"]
+      }
+    }
+  },
+
+  "validation_rules": {
+    "type_constraints": {
+      "description": "Core type validation rules",
+      "rules": {
+        "element_id": {
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "min_length": 3,
+          "max_length": 64
+        },
+        "reference_key": {
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+          "max_length": 128
+        }
+      }
+    },
+    "relationship_constraints": {
+      "description": "Valid relationship combinations",
+      "rules": {
+        "scope_inheritance": {
+          "local": ["local", "peer"],
+          "peer": ["peer", "external"],
+          "external": ["external"]
+        },
+        "phase_sequence": {
+          "discovery": ["validation"],
+          "validation": ["transformation"],
+          "transformation": ["enrichment"],
+          "enrichment": ["assembly"]
+        }
+      }
+    }
+  },
+
+  "metadata": {
+    "schema_version": "1.0.0",
+    "last_updated": "2024-01-24",
+    "maintainers": ["hex21"],
+    "dependencies": {
+      "json_schema_version": "draft-07",
+      "dita_version": "1.3",
+      "markdown_support": "commonmark"
+    }
+  }
+}

@@ -23,7 +23,7 @@ from app.dita.models.types import (
     MDElementInfo,
     MDElementType,
     ProcessingPhase,
-    TrackedElement,
+    ContentElement,
     ProcessingState
 )
 
@@ -202,14 +202,14 @@ class MarkdownElementProcessor:
         source_path: Path,
         document_metadata: Dict[str, Any],
         map_metadata: Dict[str, Any]
-    ) -> TrackedElement:
-        """Process a markdown element into a TrackedElement with proper metadata."""
+    ) -> ContentElement:
+        """Process a markdown element into a ContentElement with proper metadata."""
         try:
             # Get element type - MDElementType is already an ElementType
             element_type = self._get_element_type(elem)
 
             # Initialize tracked element
-            element = TrackedElement.from_discovery(
+            element = ContentElement.from_discovery(
                 path=source_path,
                 element_type=ElementType(element_type.value),  # Convert to ElementType
                 id_handler=self.id_handler
@@ -241,7 +241,7 @@ class MarkdownElementProcessor:
 
         except Exception as e:
             self.logger.error(f"Error processing element: {str(e)}")
-            return TrackedElement.from_discovery(
+            return ContentElement.from_discovery(
                 path=source_path,
                 element_type=ElementType.UNKNOWN,
                 id_handler=self.id_handler
@@ -911,9 +911,9 @@ class MarkdownElementProcessor:
            self.logger.error(f"Error getting element classes: {str(e)}")
            return []
 
-    def _default_element(self, source_path: Path) -> TrackedElement:
-        """Return a default TrackedElement for unprocessable cases."""
-        element = TrackedElement.from_discovery(
+    def _default_element(self, source_path: Path) -> ContentElement:
+        """Return a default ContentElement for unprocessable cases."""
+        element = ContentElement.from_discovery(
             path=source_path,
             element_type=ElementType.BODY,  # Use BODY for default paragraphs
             id_handler=self.id_handler

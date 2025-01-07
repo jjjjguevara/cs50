@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 import json
 
-from ..models.types import TrackedElement, ProcessingPhase, ElementType
+from ..models.types import ContentElement, ProcessingPhase, ElementType
 
 class CacheEntry:
     """Individual cache entry with metadata."""

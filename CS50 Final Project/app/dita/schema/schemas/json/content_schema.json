@@ -1,0 +1,329 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DITA Content Processing Schema",
+  "description": "Content structure and transformation definitions for DITA processing",
+  "version": "1.0.0",
+
+  "definitions": {
+    "content_model": {
+      "type": "object",
+      "description": "Content model definition",
+      "properties": {
+        "type": { "$ref": "#/definitions/element_type" },
+        "structure": {
+          "type": "object",
+          "properties": {
+            "collection_type": {
+              "$ref": "base_schema.json#/definitions/collection_type"
+            },
+            "required_elements": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/element_type" }
+            },
+            "optional_elements": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/element_type" }
+            },
+            "constraints": {
+              "min_occurs": { "type": "integer", "minimum": 0 },
+              "max_occurs": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "attributes": {
+          "type": "object",
+          "properties": {
+            "required": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "optional": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "default_values": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+
+    "transformation_rule": {
+      "type": "object",
+      "properties": {
+        "element_type": {
+          "$ref": "base_schema.json#/definitions/element_type"
+        },
+        "output_format": {
+          "$ref": "base_schema.json#/definitions/output_format"
+        },
+        "html_mapping": {
+          "type": "object",
+          "properties": {
+            "tag": { "type": "string" },
+            "default_classes": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "attributes": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "content_wrapper": {
+              "type": "object",
+              "properties": {
+                "tag": { "type": "string" },
+                "classes": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "content_models": {
+    "structural": {
+      "topic": {
+        "type": "topic",
+        "structure": {
+          "collection_type": "sequence",
+          "required_elements": ["title"],
+          "optional_elements": ["shortdesc", "body", "related-links"],
+          "constraints": {
+            "min_occurs": 1,
+            "max_occurs": 1
+          }
+        },
+        "attributes": {
+          "required": ["id"],
+          "optional": ["outputclass", "xml:lang"],
+          "default_values": {
+            "xml:lang": "en"
+          }
+        }
+      },
+      "map": {
+        "type": "map",
+        "structure": {
+          "collection_type": "sequence",
+          "required_elements": ["title"],
+          "optional_elements": ["topicmeta", "topicref"],
+          "constraints": {
+            "min_occurs": 1,
+            "max_occurs": 1
+          }
+        },
+        "attributes": {
+          "required": ["id"],
+          "optional": ["title", "anchor"]
+        }
+      }
+    },
+
+    "block": {
+      "section": {
+        "type": "section",
+        "structure": {
+          "collection_type": "sequence",
+          "optional_elements": ["title", "p", "ul", "ol", "table", "fig"],
+          "constraints": {
+            "min_occurs": 0,
+            "max_occurs": -1
+          }
+        }
+      },
+      "paragraph": {
+        "type": "paragraph",
+        "structure": {
+          "collection_type": "mixed",
+          "optional_elements": ["b", "i", "u", "code", "link", "xref"],
+          "constraints": {
+            "min_occurs": 0,
+            "max_occurs": -1
+          }
+        }
+      }
+    },
+
+    "inline": {
+      "link": {
+        "type": "link",
+        "attributes": {
+          "required": ["href"],
+          "optional": ["format", "scope", "target"],
+          "default_values": {
+            "scope": "external",
+            "target": "_blank"
+          }
+        }
+      },
+      "xref": {
+        "type": "xref",
+        "attributes": {
+          "required": ["href"],
+          "optional": ["format", "scope", "type"],
+          "default_values": {
+            "scope": "local"
+          }
+        }
+      }
+    }
+  },
+
+  "transformation_rules": {
+    "structural": {
+      "topic": {
+        "element_type": "topic",
+        "output_format": "html",
+        "html_mapping": {
+          "tag": "article",
+          "default_classes": ["dita-topic"],
+          "attributes": {
+            "role": "article"
+          },
+          "content_wrapper": {
+            "tag": "div",
+            "classes": ["topic-content"]
+          }
+        }
+      },
+      "map": {
+        "element_type": "map",
+        "output_format": "html",
+        "html_mapping": {
+          "tag": "nav",
+          "default_classes": ["dita-map"],
+          "attributes": {
+            "role": "navigation",
+            "aria-label": "Main navigation"
+          }
+        }
+      }
+    },
+
+    "block": {
+      "section": {
+        "element_type": "section",
+        "output_format": "html",
+        "html_mapping": {
+          "tag": "section",
+          "default_classes": ["dita-section"],
+          "attributes": {
+            "role": "region"
+          }
+        }
+      },
+      "paragraph": {
+        "element_type": "paragraph",
+        "output_format": "html",
+        "html_mapping": {
+          "tag": "p",
+          "default_classes": ["dita-p"]
+        }
+      }
+    },
+
+    "inline": {
+      "link": {
+        "element_type": "link",
+        "output_format": "html",
+        "html_mapping": {
+          "tag": "a",
+          "default_classes": ["dita-link"],
+          "attributes": {
+            "target": "_blank",
+            "rel": "noopener noreferrer"
+          }
+        }
+      },
+      "xref": {
+        "element_type": "xref",
+        "output_format": "html",
+        "html_mapping": {
+          "tag": "a",
+          "default_classes": ["dita-xref"],
+          "attributes": {
+            "target": "_self"
+          }
+        }
+      }
+    }
+  },
+
+  "processing_rules": {
+    "phase_specific": {
+      "discovery": {
+        "actions": ["identify", "classify", "extract_metadata"],
+        "validation_level": "basic",
+        "cache_strategy": "none"
+      },
+      "validation": {
+        "actions": [
+          "validate_structure",
+          "validate_references",
+          "validate_constraints"
+        ],
+        "validation_level": "strict",
+        "cache_strategy": "lru"
+      },
+      "transformation": {
+        "actions": [
+          "resolve_references",
+          "apply_templates",
+          "transform_content"
+        ],
+        "validation_level": "basic",
+        "cache_strategy": "lru"
+      },
+      "enrichment": {
+        "actions": ["process_latex", "process_artifacts", "enhance_content"],
+        "validation_level": "none",
+        "cache_strategy": "ttl"
+      },
+      "assembly": {
+        "actions": ["generate_toc", "assemble_content", "finalize_output"],
+        "validation_level": "full",
+        "cache_strategy": "none"
+      }
+    },
+
+    "specialization": {
+      "inheritance_rules": {
+        "attributes": "merge",
+        "classes": "append",
+        "content_model": "restrict"
+      },
+      "validation_rules": {
+        "base_validation": true,
+        "specialized_validation": true,
+        "inheritance_validation": true
+      }
+    },
+
+    "reference_resolution": {
+      "keyref": {
+        "scope_order": ["local", "peer", "external"],
+        "fallback": "error"
+      },
+      "conref": {
+        "scope_order": ["local", "peer"],
+        "fallback": "remove"
+      }
+    }
+  },
+
+  "metadata": {
+    "schema_version": "1.0.0",
+    "last_updated": "2024-01-24",
+    "maintainers": ["hex21"],
+    "dependencies": {
+      "base_schema": "1.0.0"
+    }
+  }
+}

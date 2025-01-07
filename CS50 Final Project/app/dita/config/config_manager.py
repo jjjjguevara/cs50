@@ -7,18 +7,22 @@ from datetime import datetime
 import logging
 from functools import lru_cache
 
-from ..event_manager import EventManager, EventType
+from ..events.event_manager import EventManager, EventType
 from ..utils.id_handler import DITAIDHandler, IDType
-from ..utils.cache import ContentCache, CacheEntryType
+from ..cache.cache import ContentCache, CacheEntryType
 from ..utils.logger import DITALogger
-from ..validation_manager import ValidationManager
-from ..schema_manager import SchemaManager
+from ..validation.validation_manager import ValidationManager
+from ..schema.schema_manager import SchemaManager, CompositionStrategy
 
 # Import configuration components
 from .loaders.config_loader import ConfigLoader
 from .features.feature_manager import FeatureManager
 from .rules.rule_resolver import RuleResolver
 
+# DTD imports
+from ..dtd.dtd_mapper import DTDSchemaMapper
+from ..dtd.dtd_validator import DTDValidator
+from ..dtd.dtd_resolver import DTDResolver
 
 # Import core types
 from ..models.types import (
@@ -47,7 +51,7 @@ class ConfigManager:
         event_manager: EventManager,
         content_cache: ContentCache,
         id_handler: DITAIDHandler,
-        validation_manager: ValidationManager,  # Add these parameters
+        validation_manager: ValidationManager,
         schema_manager: SchemaManager,
         logger: Optional[DITALogger] = None
     ):
@@ -58,8 +62,11 @@ class ConfigManager:
         self.cache = content_cache
         self.id_handler = id_handler
         self.validation_manager = validation_manager
-        self.schema_manager = schema_manager
         self.logger = logger or DITALogger(name=__name__)
+
+        # Initialize schema composer from schema manager
+        self.schema_manager = schema_manager
+        self.schema_composer = self.schema_manager.schema_composer
 
         # Initialize components
         self._init_components()
@@ -70,6 +77,9 @@ class ConfigManager:
         # State tracking
         self._initialized = False
         self._environment = "development"
+
+        # Initialize DTD components with proper paths
+        self._init_dtd_components()
 
     def _init_components(self) -> None:
         """Initialize configuration system components."""
@@ -106,6 +116,52 @@ class ConfigManager:
             EventType.STATE_CHANGE,
             self._handle_state_change
         )
+
+    def _init_dtd_components(self) -> None:
+        """Initialize DTD-related components."""
+        try:
+            # Get absolute paths, using config_path as reference
+            # config_path is typically /app/dita/configs
+            dita_root = self.config_path.parent  # Points to /app/dita
+            dtd_base_path = dita_root / "dtd"    # Points to /app/dita/dtd
+            dtd_schemas_path = dtd_base_path / "schemas"
+            dtd_catalog_path = dtd_base_path / "catalog.xml"
+
+            # Debug log the paths
+            self.logger.debug(
+                f"Initializing DTD components with paths:\n"
+                f"  DITA root: {dita_root}\n"
+                f"  DTD base: {dtd_base_path}\n"
+                f"  DTD schemas: {dtd_schemas_path}\n"
+                f"  DTD catalog: {dtd_catalog_path}"
+            )
+
+            # Ensure directories exist
+            dtd_base_path.mkdir(parents=True, exist_ok=True)
+            dtd_schemas_path.mkdir(parents=True, exist_ok=True)
+
+            # Create catalog if it doesn't exist
+            if not dtd_catalog_path.exists():
+                self._create_default_catalog(dtd_catalog_path)
+
+            # Initialize DTD resolver with correct base path
+            self.dtd_resolver = DTDResolver(
+                base_path=dtd_base_path,
+                logger=self.logger
+            )
+
+            # Initialize other components
+            self.dtd_mapper = DTDSchemaMapper(logger=self.logger)
+            self.dtd_validator = DTDValidator(
+                resolver=self.dtd_resolver,
+                dtd_mapper=self.dtd_mapper,
+                validation_manager=self.validation_manager,
+                logger=self.logger
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error initializing DTD components: {str(e)}")
+            raise
 
     def initialize(self, environment: str = "development") -> ValidationResult:
         """
@@ -277,21 +333,61 @@ class ConfigManager:
             raise
 
     def get_processing_rules(
-        self,
-        element_type: ElementType,
-        context: Optional[ProcessingContext] = None
-    ) -> Dict[str, Any]:
-        """Get processing rules for element type and context."""
+            self,
+            element_type: ElementType,
+            context: Optional[ProcessingContext] = None
+        ) -> Dict[str, Any]:
+            """Get processing rules with DTD awareness."""
+            try:
+                # Get base rules
+                if base_rules := self.config_loader.get_config("processing_rules.json"):
+                    base_rules = base_rules.get("rules", {})
+                else:
+                    base_rules = {}
+
+                # Get DTD-specific rules if available
+                dtd_rules = {}
+                if context and context.element_id:
+                    if spec_info := self.dtd_mapper.get_specialization_info(
+                        context.element_id
+                    ):
+                        dtd_rules = spec_info.constraints or {}
+
+                        # Convert DTD rules to match our processing rules format
+                        dtd_rules = self._convert_dtd_rules(dtd_rules)
+
+                # Merge rules with DTD taking precedence for overlapping keys
+                merged_rules = {
+                    **base_rules,
+                    **dtd_rules
+                }
+
+                return merged_rules
+
+            except Exception as e:
+                self.logger.error(f"Error getting processing rules: {str(e)}")
+                return {}
+
+    def _convert_dtd_rules(self, dtd_rules: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert DTD rules to processing rules format."""
+        converted = {}
         try:
-            resolved = self.resolve_rule(
-                element_type=element_type,
-                rule_type=ProcessingRuleType.ELEMENT,  # Base processing rules
-                context=context
-            )
-            return resolved or {}
+            for rule_type, rules in dtd_rules.items():
+                if isinstance(rules, dict):
+                    converted[rule_type] = {
+                        "type": rule_type,
+                        "rules": rules,
+                        "validation": {
+                            "required": rules.get("required", []),
+                            "allowed_values": rules.get("allowed_values", {}),
+                            "patterns": rules.get("patterns", {})
+                        }
+                    }
         except Exception as e:
-            self.logger.error(f"Error getting processing rules: {str(e)}")
-            return {}
+            self.logger.error(f"Error converting DTD rules: {str(e)}")
+
+        return converted
+
 
     def get_metadata_rules(
         self,
@@ -399,3 +495,198 @@ class ConfigManager:
                 "global_defaults": {},
                 "element_defaults": {}
             }
+
+    def load_dtd_config(self) -> Dict[str, Any]:
+        """Load DTD-specific configuration."""
+        try:
+            # Try loading from dtd_config.json first
+            dtd_config = self.config_loader.load_config_file("dtd_config.json")
+            if dtd_config:
+                return dtd_config
+
+            # Fall back to validation_patterns.json DTD section
+            validation_patterns = self.config_loader.load_config_file("validation_patterns.json")
+            if validation_patterns:
+                return validation_patterns.get("dtd_validation", {})
+
+            # Return default configuration
+            return {
+                "validation": {
+                    "enabled": True,
+                    "mode": "strict",
+                    "phases": ["discovery", "validation"],
+                    "specialization": {
+                        "enabled": True,
+                        "inheritance_mode": "strict"
+                    }
+                },
+                "caching": {
+                    "enabled": True,
+                    "ttl": 3600
+                },
+                "error_handling": {
+                    "fail_fast": True,
+                    "strict_validation": True
+                }
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error loading DTD configuration: {str(e)}")
+            return {}
+
+    def get_dtd_validation_config(self) -> Dict[str, Any]:
+        """Get DTD validation configuration with inheritance."""
+        try:
+            # Get base configuration
+            base_config = self.load_dtd_config()
+
+            # Get environment overrides
+            env_config = self.get_env_config()
+            dtd_overrides = env_config.get("dtd_validation", {})
+
+            # Merge configurations
+            merged = self.schema_composer.compose(
+                base=base_config,
+                extension=dtd_overrides,
+                strategy=CompositionStrategy.MERGE
+            )
+
+            # Apply feature flags
+            if self.feature_manager:
+                dtd_features = {
+                    "validation_enabled": self.feature_manager.get_feature_state("dtd_validation"),
+                    "strict_mode": self.feature_manager.get_feature_state("strict_dtd_validation"),
+                    "caching_enabled": self.feature_manager.get_feature_state("dtd_caching")
+                }
+                merged["features"] = dtd_features
+
+            return merged
+
+        except Exception as e:
+            self.logger.error(f"Error getting DTD validation config: {str(e)}")
+            return {}
+
+    def validate_dtd_config(self, config: Dict[str, Any]) -> ValidationResult:
+        """Validate DTD configuration structure."""
+        try:
+            messages = []
+
+            # Validate required sections
+            required_sections = {
+                "validation": ["enabled", "mode", "phases"],
+                "caching": ["enabled", "ttl"],
+                "error_handling": ["fail_fast", "strict_validation"]
+            }
+
+            for section, fields in required_sections.items():
+                if section not in config:
+                    messages.append(ValidationMessage(
+                        path=section,
+                        message=f"Missing required section: {section}",
+                        severity=ValidationSeverity.ERROR,
+                        code="missing_section"
+                    ))
+                    continue
+
+                section_config = config[section]
+                for field in fields:
+                    if field not in section_config:
+                        messages.append(ValidationMessage(
+                            path=f"{section}.{field}",
+                            message=f"Missing required field: {field}",
+                            severity=ValidationSeverity.ERROR,
+                            code="missing_field"
+                        ))
+
+            # Validate value types and ranges
+            if ttl := config.get("caching", {}).get("ttl"):
+                if not isinstance(ttl, int) or ttl < 0:
+                    messages.append(ValidationMessage(
+                        path="caching.ttl",
+                        message="TTL must be a positive integer",
+                        severity=ValidationSeverity.ERROR,
+                        code="invalid_ttl"
+                    ))
+
+            if mode := config.get("validation", {}).get("mode"):
+                if mode not in ["strict", "lax", "none"]:
+                    messages.append(ValidationMessage(
+                        path="validation.mode",
+                        message="Invalid validation mode",
+                        severity=ValidationSeverity.ERROR,
+                        code="invalid_mode"
+                    ))
+
+            return ValidationResult(
+                is_valid=not any(
+                    msg.severity == ValidationSeverity.ERROR for msg in messages
+                ),
+                messages=messages
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error validating DTD config: {str(e)}")
+            return ValidationResult(
+                is_valid=False,
+                messages=[ValidationMessage(
+                    path="",
+                    message=f"Configuration validation error: {str(e)}",
+                    severity=ValidationSeverity.ERROR,
+                    code="validation_error"
+                )]
+            )
+
+    def set_dtd_config(self, dtd_config: Dict[str, Any]) -> None:
+        """Set DTD configuration settings."""
+        try:
+            # Store DTD configuration
+            self.config_loader.load_config_file('dtd_config.json', required=False)
+
+            # Get loaded configs from config_loader
+            if loaded_configs := self.config_loader.get_config('dtd_config.json'):
+                # Update with new settings
+                self.config_loader.store_bulk_metadata([
+                    ('dtd_config.json', dtd_config)
+                ])
+
+            # Clear cache patterns for DTD
+            self.cache.invalidate_by_pattern("dtd_*")
+
+            # Emit configuration update event
+            self.event_manager.emit(
+                EventType.CONFIG_UPDATE,
+                config_type="dtd",
+                config=dtd_config
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error setting DTD configuration: {str(e)}")
+            raise
+
+    def _create_default_catalog(self, catalog_path: Path) -> None:
+        """Create default catalog.xml file."""
+        catalog_content = '''<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE catalog PUBLIC "-//OASIS//DTD Entity Resolution XML Catalog V1.0//EN"
+                            "http://www.oasis-open.org/committees/entity/release/1.0/catalog.dtd">
+    <catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+        <!-- Map DTD public identifiers to local files -->
+        <public publicId="-//OASIS//DTD DITA Map//EN" uri="schemas/map.dtd"/>
+        <public publicId="-//OASIS//DTD DITA Topic//EN" uri="schemas/topic.dtd"/>
+        <public publicId="-//OASIS//DTD DITA Concept//EN" uri="schemas/concept.dtd"/>
+        <public publicId="-//OASIS//DTD DITA Task//EN" uri="schemas/task.dtd"/>
+        <public publicId="-//OASIS//DTD DITA Reference//EN" uri="schemas/reference.dtd"/>
+        <public publicId="-//OASIS//DTD DITA Glossary//EN" uri="schemas/glossentry.dtd"/>
+        <public publicId="-//OASIS//DTD DITA BookMap//EN" uri="schemas/bookmap.dtd"/>
+
+        <!-- Map system identifiers to local files -->
+        <system systemId="map.dtd" uri="schemas/map.dtd"/>
+        <system systemId="topic.dtd" uri="schemas/topic.dtd"/>
+        <system systemId="concept.dtd" uri="schemas/concept.dtd"/>
+        <system systemId="task.dtd" uri="schemas/task.dtd"/>
+        <system systemId="reference.dtd" uri="schemas/reference.dtd"/>
+        <system systemId="glossentry.dtd" uri="schemas/glossentry.dtd"/>
+        <system systemId="bookmap.dtd" uri="schemas/bookmap.dtd"/>
+    </catalog>'''
+
+        with open(catalog_path, 'w') as f:
+            f.write(catalog_content)

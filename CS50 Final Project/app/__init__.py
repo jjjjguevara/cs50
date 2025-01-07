@@ -2,7 +2,7 @@
 import os
 from flask import Flask
 from flask_cors import CORS
-from app_config import config
+from app_config import config, DITAConfig
 import logging
 from pathlib import Path
 
@@ -40,12 +40,18 @@ def create_app(config_name=None):
         app.config['DTD_PATH'] = Path(app.root_path) / 'dita' / 'dtd'
         app.config['METADATA_DB_PATH'] = Path(app.instance_path) / 'metadata.db'
 
-        # Explicitly set config paths
+        # Load DITA configuration
+        dita_config = DITAConfig.from_environment()
+
+        # Update app config with DITA paths
         app.config.update({
             'CONTENT_ROOT': Path(app.root_path) / 'content',
             'DITA_ROOT': Path(app.root_path) / 'dita',
             'CONFIGS_PATH': Path(app.root_path) / 'dita' / 'configs',
-            'METADATA_DB_PATH': instance_path / 'metadata.db'
+            'METADATA_DB_PATH': instance_path / 'metadata.db',
+            'DTD_PATH': dita_config.dtd_config.base_path,
+            'DTD_SCHEMAS_PATH': dita_config.dtd_config.schemas_path,
+            'DTD_CATALOG_PATH': dita_config.dtd_config.catalog_path
         })
 
         # Ensure required directories exist
@@ -54,9 +60,38 @@ def create_app(config_name=None):
             app.config['CONTENT_ROOT'] / 'maps',
             app.config['CONTENT_ROOT'] / 'topics',
             app.config['DITA_ROOT'],
-            app.config['CONFIGS_PATH']
+            app.config['CONFIGS_PATH'],
+            app.config['DTD_PATH'],
+            app.config['DTD_SCHEMAS_PATH']
         ]:
             dir_path.mkdir(parents=True, exist_ok=True)
+
+        # Create catalog.xml if it doesn't exist
+        if not app.config['DTD_CATALOG_PATH'].exists():
+            app.config['DTD_CATALOG_PATH'].parent.mkdir(parents=True, exist_ok=True)
+            with open(app.config['DTD_CATALOG_PATH'], 'w') as f:
+                f.write('''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE catalog PUBLIC "-//OASIS//DTD Entity Resolution XML Catalog V1.0//EN"
+                        "http://www.oasis-open.org/committees/entity/release/1.0/catalog.dtd">
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+    <!-- Map DTD public identifiers to local files -->
+    <public publicId="-//OASIS//DTD DITA Map//EN" uri="schemas/map.dtd"/>
+    <public publicId="-//OASIS//DTD DITA Topic//EN" uri="schemas/topic.dtd"/>
+    <public publicId="-//OASIS//DTD DITA Concept//EN" uri="schemas/concept.dtd"/>
+    <public publicId="-//OASIS//DTD DITA Task//EN" uri="schemas/task.dtd"/>
+    <public publicId="-//OASIS//DTD DITA Reference//EN" uri="schemas/reference.dtd"/>
+    <public publicId="-//OASIS//DTD DITA Glossary//EN" uri="schemas/glossentry.dtd"/>
+    <public publicId="-//OASIS//DTD DITA BookMap//EN" uri="schemas/bookmap.dtd"/>
+
+    <!-- Map system identifiers to local files -->
+    <system systemId="map.dtd" uri="schemas/map.dtd"/>
+    <system systemId="topic.dtd" uri="schemas/topic.dtd"/>
+    <system systemId="concept.dtd" uri="schemas/concept.dtd"/>
+    <system systemId="task.dtd" uri="schemas/task.dtd"/>
+    <system systemId="reference.dtd" uri="schemas/reference.dtd"/>
+    <system systemId="glossentry.dtd" uri="schemas/glossentry.dtd"/>
+    <system systemId="bookmap.dtd" uri="schemas/bookmap.dtd"/>
+</catalog>''')
 
         # Initialize core components with app context
         with app.app_context():
@@ -79,7 +114,7 @@ def create_app(config_name=None):
                 logger=logger
             )
 
-            # Initialize config manager
+            # Initialize config manager with DTD settings
             config_manager = ConfigManager(
                 config_path=app.config['CONFIGS_PATH'],
                 event_manager=event_manager,
@@ -87,8 +122,19 @@ def create_app(config_name=None):
                 id_handler=id_handler,
                 validation_manager=validation_manager,
                 schema_manager=schema_manager,
-                logger=logger
+                logger=logger,
             )
+
+            # After initialization, set DTD configuration
+            config_manager.set_dtd_config({
+                'base_path': str(app.config['DTD_PATH']),
+                'schemas_path': str(app.config['DTD_SCHEMAS_PATH']),
+                'catalog_path': str(app.config['DTD_CATALOG_PATH']),
+                'validation_mode': dita_config.dtd_config.validation_mode,
+                'specialization_handling': dita_config.dtd_config.specialization_handling,
+                'attribute_inheritance': dita_config.dtd_config.attribute_inheritance,
+                'enable_caching': dita_config.dtd_config.enable_caching
+            })
 
             # Update validation manager with config manager
             validation_manager.config_manager = config_manager
@@ -122,14 +168,16 @@ def create_app(config_name=None):
 
             # Store instances in app config
             app.config.update({
-                'DITA_CONFIG_MANAGER': config_manager,
-                'DITA_CONTEXT_MANAGER': context_manager,
-                'DITA_METADATA_MANAGER': metadata_manager,
-                'DITA_EVENT_MANAGER': event_manager,
-                'DITA_CONTENT_CACHE': content_cache,
-                'DITA_HTML_HELPER': html_helper,
-                'DITA_ID_HANDLER': id_handler
-            })
+            'CONTENT_ROOT': Path(app.root_path) / 'content',
+            'DITA_ROOT': Path(app.root_path) / 'dita',
+            'CONFIGS_PATH': Path(app.root_path) / 'dita' / 'configs',
+            'METADATA_DB_PATH': instance_path / 'metadata.db',
+            'DTD_PATH': Path(app.root_path) / 'dita' / 'dtd',  # Updated path
+            'DTD_SCHEMAS_PATH': Path(app.root_path) / 'dita' / 'dtd' / 'schemas',  # Updated path
+            'DTD_CATALOG_PATH': Path(app.root_path) / 'dita' / 'dtd' / 'catalog.xml'  # Updated path
+        })
+
+        app.config['DTD_CONFIG'] = dita_config.dtd_config
 
         # Configure CORS
         CORS(app, resources={
@@ -149,5 +197,5 @@ def create_app(config_name=None):
         return app
 
     except Exception as e:
-        logger.error(f"Application initialization failed: {str(e)}")
-        raise
+            logger.error(f"Application initialization failed: {str(e)}")
+            raise

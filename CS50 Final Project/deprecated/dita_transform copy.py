@@ -9,7 +9,7 @@ from lxml import etree
 from ..models.types import (
     DITAElementType,
     DITAElementInfo,
-    TrackedElement,
+    ContentElement,
     ProcessedContent,
     ProcessingContext,
 )
@@ -89,7 +89,7 @@ class DITATransformer(BaseTransformer):
 
     def transform_topic(
             self,
-            element: TrackedElement,  # Changed from parsed_element: ParsedElement
+            element: ContentElement,  # Changed from parsed_element: ParsedElement
             context: ProcessingContext
         ) -> ProcessedContent:
             try:

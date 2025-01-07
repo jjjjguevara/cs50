@@ -25,7 +25,7 @@ from ..utils.logger import DITALogger
 # Types
 from ..models.types import (
     ProcessedContent,
-    TrackedElement,
+    ContentElement,
     ProcessingPhase,
     ProcessingState,
     ElementType,
@@ -36,7 +36,7 @@ from ..models.types import (
     ValidationMessage,
     ValidationSeverity,
     ContentScope,
-    ProcessingStateInfo
+    ProcessingStatus
 )
 
 class MarkdownTransformStrategy(TransformStrategy):
@@ -50,14 +50,14 @@ class MarkdownTopicStrategy(MarkdownTransformStrategy):
 
     def can_transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> bool:
         return element.type == ElementType.MARKDOWN
 
     def transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext,
         metadata: ProcessingMetadata,
         config: Dict[str, Any]
@@ -101,7 +101,7 @@ class MarkdownTopicStrategy(MarkdownTransformStrategy):
 
     def validate(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> ValidationResult:
         """Validate Markdown topic."""
@@ -141,7 +141,7 @@ class MarkdownTopicStrategy(MarkdownTransformStrategy):
 
     def _transform_content(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext,
         metadata: ProcessingMetadata
     ) -> List[Union[Tag, str]]:
@@ -159,7 +159,7 @@ class MarkdownTopicStrategy(MarkdownTransformStrategy):
 
         # Transform each block
         for block in parsed_content:
-            if isinstance(block, TrackedElement):
+            if isinstance(block, ContentElement):
                 processed = self.transformer.transform_content(block, context)
                 if processed and processed.html:
                     children.append(processed.html)
@@ -171,14 +171,14 @@ class MarkdownCalloutStrategy(MarkdownTransformStrategy):
 
     def can_transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> bool:
         return element.type == ElementType.NOTE
 
     def transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext,
         metadata: ProcessingMetadata,
         config: Dict[str, Any]
@@ -211,7 +211,7 @@ class MarkdownCalloutStrategy(MarkdownTransformStrategy):
 
     def validate(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> ValidationResult:
         """Validate Markdown callout."""
@@ -303,7 +303,7 @@ class MarkdownTransformer(BaseTransformer):
 
     def transform_content(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: Optional[ProcessingContext] = None
     ) -> ProcessedContent:
         """Transform Markdown content."""
@@ -367,7 +367,7 @@ class MarkdownTransformer(BaseTransformer):
 
     def _extract_frontmatter(
         self,
-        element: TrackedElement
+        element: ContentElement
     ) -> Optional[Dict[str, Any]]:
         """Extract frontmatter from Markdown content."""
         try:

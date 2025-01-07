@@ -27,7 +27,7 @@ from ..utils.logger import DITALogger
 # Types
 from ..models.types import (
     ProcessedContent,
-    TrackedElement,
+    ContentElement,
     ProcessingPhase,
     ProcessingState,
     ElementType,
@@ -37,7 +37,7 @@ from ..models.types import (
     ValidationMessage,
     ValidationSeverity,
     ContentScope,
-    ProcessingStateInfo
+    ProcessingStatus
 )
 
 class TransformStrategy(ABC):
@@ -46,7 +46,7 @@ class TransformStrategy(ABC):
     @abstractmethod
     def can_transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> bool:
         """
@@ -64,7 +64,7 @@ class TransformStrategy(ABC):
     @abstractmethod
     def transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext,
         metadata: ProcessingMetadata,
         config: Dict[str, Any]
@@ -86,7 +86,7 @@ class TransformStrategy(ABC):
     @abstractmethod
     def validate(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> ValidationResult:
         """
@@ -350,7 +350,7 @@ class BaseTransformer(ABC):
 
         # State tracking
         self._processed_elements: Set[str] = set()
-        self._active_transformations: Dict[str, ProcessingStateInfo] = {}
+        self._active_transformations: Dict[str, ProcessingStatus] = {}
 
         # Feature flags
         self._feature_flags: Dict[str, bool] = {}
@@ -383,7 +383,7 @@ class BaseTransformer(ABC):
     @abstractmethod
     def transform_content(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: Optional[ProcessingContext] = None
     ) -> ProcessedContent:
         """Transform element through appropriate strategy."""
@@ -462,7 +462,7 @@ class BaseTransformer(ABC):
 
     def _validate_element(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> ValidationResult:
         """Validate element before transformation."""

@@ -4,7 +4,6 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Type, Union
 from lxml import etree
-from lxml.etree import _InputDocument
 
 # Base processor and strategy
 from .base_processor import BaseProcessor
@@ -25,7 +24,7 @@ from ..utils.logger import DITALogger
 
 # Types
 from ..models.types import (
-    TrackedElement,
+    ContentElement,
     ProcessedContent,
     ProcessingPhase,
     ProcessingMetadata,
@@ -42,7 +41,7 @@ class DTDResolver(etree.Resolver):
         self.dtd_path = dtd_path
         super().__init__()
 
-    def resolve(self, system_url: str, public_id: str, context) -> Optional[Union[etree._Element, etree._ElementTree]]:
+    def resolve(self, system_url: str, public_id: str, context) -> Optional[Any]:
         if system_url == "map.dtd":
             return self.resolve_filename(str(self.dtd_path / "map.dtd"), context)
         elif system_url == "topic.dtd":
@@ -96,7 +95,7 @@ class DITAProcessor(BaseProcessor):
 
             def process(
                 self,
-                element: TrackedElement,
+                element: ContentElement,
                 context: ProcessingContext,
                 metadata: ProcessingMetadata,
                 rules: Dict[str, Any]
@@ -128,7 +127,7 @@ class DITAProcessor(BaseProcessor):
 
         def process(
             self,
-            element: TrackedElement,
+            element: ContentElement,
             context: ProcessingContext,
             metadata: ProcessingMetadata,
             rules: Dict[str, Any]
@@ -154,7 +153,7 @@ class DITAProcessor(BaseProcessor):
         self._strategies[ElementType.DITAMAP] = self.DITAMapStrategy(self)
 
 
-    def process_file(self, file_path: Path) -> TrackedElement:
+    def process_file(self, file_path: Path) -> ContentElement:
         """Process a DITA file."""
         try:
 
@@ -162,11 +161,11 @@ class DITAProcessor(BaseProcessor):
             is_map = file_path.suffix == '.ditamap'
 
             # Create element
-            element = TrackedElement.create_map(
+            element = ContentElement.create_map(
                 path=file_path,
                 title="",  # Will be filled after parsing
                 id_handler=self.id_handler
-            ) if is_map else TrackedElement.from_discovery(
+            ) if is_map else ContentElement.from_discovery(
                 path=file_path,
                 element_type=ElementType.DITA,
                 id_handler=self.id_handler
@@ -242,7 +241,7 @@ class DITAProcessor(BaseProcessor):
         """Process a DITA map."""
         try:
             # Create tracked element for map
-            element = TrackedElement.create_map(
+            element = ContentElement.create_map(
                 path=map_path,
                 title="",  # Will be extracted during processing
                 id_handler=self.id_handler
@@ -272,7 +271,7 @@ class DITAProcessor(BaseProcessor):
     def process_topic(self, topic_path: Path) -> ProcessedContent:
         """Process a DITA topic."""
         # Create tracked element for topic
-        element = TrackedElement.from_discovery(
+        element = ContentElement.from_discovery(
             path=topic_path,
             element_type=ElementType.DITA,
             id_handler=self.id_handler
@@ -324,7 +323,7 @@ class DITAProcessor(BaseProcessor):
             )
             return base_rules  # Error fallback
 
-    def _process_keyref(self, element: TrackedElement, context: ProcessingContext) -> None:
+    def _process_keyref(self, element: ContentElement, context: ProcessingContext) -> None:
         """Process key references in element."""
         try:
             # Get key definitions from context

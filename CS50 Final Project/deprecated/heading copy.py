@@ -7,7 +7,7 @@ from app.dita.models.types import (
     ProcessingError,
     ProcessingPhase,
     ProcessingState,
-    TrackedElement,
+    ContentElement,
     ElementType
 )
 from app.dita.event_manager import EventManager, EventType
@@ -34,7 +34,7 @@ class HeadingHandler:
             self.id_handler = DITAIDHandler()
 
             # Track heading hierarchy
-            self._heading_elements: Dict[str, TrackedElement] = {}
+            self._heading_elements: Dict[str, ContentElement] = {}
             self._heading_hierarchy: Dict[str, str] = {}  # child_id -> parent_id
             self._current_level = 0
 
@@ -219,7 +219,7 @@ class HeadingHandler:
 
     def track_heading(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         level: int,
         is_topic_title: bool = False
     ) -> None:
@@ -227,7 +227,7 @@ class HeadingHandler:
         Track a heading element in the hierarchy.
 
         Args:
-            element: The heading TrackedElement
+            element: The heading ContentElement
             level: Heading level (1-6)
             is_topic_title: Whether this is a topic title
         """
@@ -274,12 +274,12 @@ class HeadingHandler:
             self.logger.error(f"Error tracking heading: {str(e)}")
             raise
 
-    def get_parent_heading(self, heading_id: str) -> Optional[TrackedElement]:
+    def get_parent_heading(self, heading_id: str) -> Optional[ContentElement]:
         """Get parent heading for a given heading ID."""
         parent_id = self._heading_hierarchy.get(heading_id)
         return self._heading_elements.get(parent_id) if parent_id else None
 
-    def get_heading_chain(self, heading_id: str) -> List[TrackedElement]:
+    def get_heading_chain(self, heading_id: str) -> List[ContentElement]:
         """Get the full chain of parent headings."""
         chain = []
         current_id = heading_id

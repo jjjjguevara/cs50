@@ -6,6 +6,13 @@ from contextlib import contextmanager
 import logging
 from datetime import datetime
 import importlib
+import re
+
+from dita.dtd.dtd_models import(
+    ValidationState,
+    ValidationSeverity,
+    ValidationMessage
+)
 
 # Type checking imports
 if TYPE_CHECKING:
@@ -22,15 +29,17 @@ from ..utils.logger import DITALogger
 
 # Type imports
 from ..models.types import (
-    TrackedElement,
+    ContentElement,
     ProcessingContext,
     ProcessingPhase,
     ProcessingState,
     ElementType,
     ContentScope,
     MetadataTransaction,
-    ValidationResult
+    ValidationResult,
+    MetadataState
 )
+
 
 class MetadataManager:
     """
@@ -159,7 +168,7 @@ class MetadataManager:
 
     def process_metadata(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext,
         phase: ProcessingPhase
     ) -> Dict[str, Any]:
@@ -388,49 +397,359 @@ class MetadataManager:
         element_id: str,
         scope: Optional[ContentScope] = None
     ) -> Dict[str, Any]:
-        """Get metadata with scope filtering."""
-        # storage.get_metadata only takes element_id
-        base_metadata = self.storage.get_metadata(element_id)
-
-        # Apply scope filtering if needed
-        if scope:
-            return {k: v for k, v in base_metadata.items()
-                    if self._is_in_scope(k, scope)}
-        return base_metadata
-
-    def _is_in_scope(self, key: str, scope: ContentScope) -> bool:
         """
-        Check if metadata key is in the given scope.
+        Get metadata with scope filtering.
 
         Args:
-            key: Metadata key to check
-            scope: Scope to check against
+            element_id: Element ID to get metadata for
+            scope: Optional scope to filter metadata
 
         Returns:
-            bool: True if metadata key is in scope
+            Dict[str, Any]: Filtered metadata
         """
         try:
-            # Global scope includes all metadata
-            if scope == ContentScope.GLOBAL:
-                return True
+            # Get base metadata from storage
+            base_metadata = self.storage.get_metadata(element_id)
 
-            # Local scope includes only local metadata
-            if scope == ContentScope.LOCAL:
-                return not key.startswith(('peer_', 'external_'))
+            # If no scope filtering needed or no context manager, return all metadata
+            if not scope or not self._context_manager:
+                return base_metadata
 
-            # Peer scope includes local and peer metadata
-            if scope == ContentScope.PEER:
-                return not key.startswith('external_')
-
-            # External scope only includes external metadata
-            if scope == ContentScope.EXTERNAL:
-                return key.startswith('external_')
-
-            return False
+            # Use context manager to filter by scope
+            return {
+                k: v for k, v in base_metadata.items()
+                if self._context_manager.validate_scope(k, scope)
+            }
 
         except Exception as e:
-            self.logger.error(f"Error checking metadata scope: {str(e)}")
+            self.logger.error(f"Error getting metadata for {element_id}: {str(e)}")
+            return {}
+
+
+    #########################
+    # Validation Management #
+    #########################
+
+    def validate_metadata(
+        self,
+        metadata: Dict[str, Any],
+        element_type: ElementType,
+        context: Optional[ProcessingContext] = None
+    ) -> ValidationResult:
+        """
+        Validate metadata against rules.
+
+        Args:
+            metadata: Metadata to validate
+            element_type: Type of element metadata belongs to
+            context: Optional processing context
+
+        Returns:
+            ValidationResult indicating validation status
+        """
+        try:
+            # Validate required components
+            if self._config_manager is None:
+                return ValidationResult(
+                    is_valid=False,
+                    messages=[ValidationMessage(
+                        path="metadata",
+                        message="Config manager not initialized",
+                        severity=ValidationSeverity.ERROR,
+                        code="missing_config"
+                    )]
+                )
+
+            # Get metadata rules for element type and context
+            rules = self._config_manager.get_metadata_rules(
+                phase=ProcessingPhase.VALIDATION,
+                element_type=element_type,
+                context=context
+            )
+
+            messages = []
+
+            # Validate against rules
+            messages.extend(self._validate_metadata_content(metadata, rules))
+
+            # Validate metadata state if context provided
+            if context:
+                messages.extend(self._validate_metadata_state(
+                    metadata, context.metadata_state
+                ))
+
+            return ValidationResult(
+                is_valid=not any(
+                    msg.severity == ValidationSeverity.ERROR for msg in messages
+                ),
+                messages=messages
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error validating metadata: {str(e)}")
+            return ValidationResult(
+                is_valid=False,
+                messages=[ValidationMessage(
+                    path="metadata",
+                    message=f"Metadata validation error: {str(e)}",
+                    severity=ValidationSeverity.ERROR,
+                    code="validation_error"
+                )]
+            )
+
+    def _validate_metadata_content(
+        self,
+        metadata: Dict[str, Any],
+        rules: Dict[str, Any]
+    ) -> List[ValidationMessage]:
+        """Validate metadata content against rules."""
+        messages = []
+
+        try:
+            # Required fields validation
+            if required := rules.get('required_fields', []):
+                for field in required:
+                    if field not in metadata:
+                        messages.append(ValidationMessage(
+                            path=f"metadata.{field}",
+                            message=f"Missing required field: {field}",
+                            severity=ValidationSeverity.ERROR,
+                            code="missing_required"
+                        ))
+
+            # Field type validation
+            if field_types := rules.get('field_types', {}):
+                for field, field_type in field_types.items():
+                    if field in metadata:
+                        if not self._validate_field_type(
+                            metadata[field],
+                            field_type
+                        ):
+                            messages.append(ValidationMessage(
+                                path=f"metadata.{field}",
+                                message=f"Invalid type for field {field}",
+                                severity=ValidationSeverity.ERROR,
+                                code="invalid_type"
+                            ))
+
+            # Field value validation
+            if value_rules := rules.get('value_rules', {}):
+                for field, field_rules in value_rules.items():
+                    if field in metadata:
+                        field_messages = self._validate_field_value(
+                            field,
+                            metadata[field],
+                            field_rules
+                        )
+                        messages.extend(field_messages)
+
+            return messages
+
+        except Exception as e:
+            self.logger.error(f"Error validating metadata content: {str(e)}")
+            messages.append(ValidationMessage(
+                path="metadata",
+                message=f"Content validation error: {str(e)}",
+                severity=ValidationSeverity.ERROR,
+                code="content_validation_error"
+            ))
+            return messages
+
+    def _validate_metadata_state(
+        self,
+        metadata: Dict[str, Any],
+        state: MetadataState
+    ) -> List[ValidationMessage]:
+        """Validate metadata state."""
+        messages = []
+
+        try:
+            # Validate phase consistency
+            if state.phase == ProcessingPhase.ERROR:
+                messages.append(ValidationMessage(
+                    path="metadata.state",
+                    message="Metadata in error state",
+                    severity=ValidationSeverity.ERROR,
+                    code="error_state"
+                ))
+
+            # Validate key references
+            if key_refs := state.key_references:
+                messages.extend(self._validate_key_references(key_refs))
+
+            # Validate metadata references
+            if metadata_refs := metadata.get('metadata_refs', {}):
+                messages.extend(self._validate_metadata_references(
+                    metadata_refs,
+                    state
+                ))
+
+            return messages
+
+        except Exception as e:
+            self.logger.error(f"Error validating metadata state: {str(e)}")
+            messages.append(ValidationMessage(
+                path="metadata.state",
+                message=f"State validation error: {str(e)}",
+                severity=ValidationSeverity.ERROR,
+                code="state_validation_error"
+            ))
+            return messages
+
+    def _validate_field_type(self, value: Any, expected_type: str) -> bool:
+        """Validate field value type."""
+        try:
+            type_map = {
+                "string": str,
+                "number": (int, float),
+                "integer": int,
+                "boolean": bool,
+                "array": list,
+                "object": dict,
+                "null": type(None)
+            }
+
+            expected = type_map.get(expected_type)
+            if not expected:
+                return True  # Skip validation for unknown types
+
+            return isinstance(value, expected)
+
+        except Exception as e:
+            self.logger.error(f"Error validating field type: {str(e)}")
             return False
+
+    def _validate_field_value(
+        self,
+        field: str,
+        value: Any,
+        rules: Dict[str, Any]
+    ) -> List[ValidationMessage]:
+        """Validate field value against rules."""
+        messages = []
+
+        try:
+            # Pattern validation
+            if pattern := rules.get('pattern'):
+                if not re.match(pattern, str(value)):
+                    messages.append(ValidationMessage(
+                        path=f"metadata.{field}",
+                        message=f"Value does not match pattern: {pattern}",
+                        severity=ValidationSeverity.ERROR,
+                        code="pattern_mismatch"
+                    ))
+
+            # Range validation
+            if isinstance(value, (int, float)):
+                if min_val := rules.get('min'):
+                    if value < min_val:
+                        messages.append(ValidationMessage(
+                            path=f"metadata.{field}",
+                            message=f"Value below minimum: {min_val}",
+                            severity=ValidationSeverity.ERROR,
+                            code="below_minimum"
+                        ))
+
+                if max_val := rules.get('max'):
+                    if value > max_val:
+                        messages.append(ValidationMessage(
+                            path=f"metadata.{field}",
+                            message=f"Value above maximum: {max_val}",
+                            severity=ValidationSeverity.ERROR,
+                            code="above_maximum"
+                        ))
+
+            # Enum validation
+            if allowed := rules.get('allowed_values'):
+                if value not in allowed:
+                    messages.append(ValidationMessage(
+                        path=f"metadata.{field}",
+                        message=f"Invalid value. Allowed: {allowed}",
+                        severity=ValidationSeverity.ERROR,
+                        code="invalid_value"
+                    ))
+
+            return messages
+
+        except Exception as e:
+            self.logger.error(f"Error validating field value: {str(e)}")
+            messages.append(ValidationMessage(
+                path=f"metadata.{field}",
+                message=f"Value validation error: {str(e)}",
+                severity=ValidationSeverity.ERROR,
+                code="value_validation_error"
+            ))
+            return messages
+
+    def _validate_key_references(
+        self,
+        key_refs: List[str]
+    ) -> List[ValidationMessage]:
+        """Validate key references."""
+        messages = []
+
+        try:
+            if self.key_manager is None:
+                messages.append(ValidationMessage(
+                    path="metadata.key_refs",
+                    message="Key manager not initialized",
+                    severity=ValidationSeverity.ERROR,
+                    code="missing_key_manager"
+                ))
+                return messages
+
+            for key in key_refs:
+                if not self.key_manager.get_key_definition(key):
+                    messages.append(ValidationMessage(
+                        path=f"metadata.key_refs.{key}",
+                        message=f"Invalid key reference: {key}",
+                        severity=ValidationSeverity.ERROR,
+                        code="invalid_key_ref"
+                    ))
+
+            return messages
+
+        except Exception as e:
+            self.logger.error(f"Error validating key references: {str(e)}")
+            messages.append(ValidationMessage(
+                path="metadata.key_refs",
+                message=f"Key reference validation error: {str(e)}",
+                severity=ValidationSeverity.ERROR,
+                code="key_ref_validation_error"
+            ))
+            return messages
+
+    def _validate_metadata_references(
+        self,
+        metadata_refs: Dict[str, str],
+        state: MetadataState
+    ) -> List[ValidationMessage]:
+        """Validate metadata references."""
+        messages = []
+
+        try:
+            for ref_id, ref_type in metadata_refs.items():
+                # Check reference exists
+                if not self.storage.get_metadata(ref_id):
+                    messages.append(ValidationMessage(
+                        path=f"metadata.refs.{ref_id}",
+                        message=f"Invalid metadata reference: {ref_id}",
+                        severity=ValidationSeverity.ERROR,
+                        code="invalid_metadata_ref"
+                    ))
+
+            return messages
+
+        except Exception as e:
+            self.logger.error(f"Error validating metadata references: {str(e)}")
+            messages.append(ValidationMessage(
+                path="metadata.refs",
+                message=f"Metadata reference validation error: {str(e)}",
+                severity=ValidationSeverity.ERROR,
+                code="metadata_ref_validation_error"
+            ))
+            return messages
+
 
     def cleanup(self) -> None:
         """Clean up manager resources."""

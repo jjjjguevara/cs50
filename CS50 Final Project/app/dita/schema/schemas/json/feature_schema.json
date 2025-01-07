@@ -1,0 +1,291 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DITA Feature Schema",
+  "description": "Feature definitions and configurations for DITA processing",
+  "version": "1.0.0",
+
+  "definitions": {
+    "feature_definition": {
+      "type": "object",
+      "required": ["id", "type", "enabled", "scope"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "$ref": "base_schema.json#/definitions/feature_type" },
+        "scope": { "$ref": "base_schema.json#/definitions/scope" },
+        "enabled": { "type": "boolean" },
+        "description": { "type": "string" },
+        "version": { "type": "string" },
+        "dependencies": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "conflicts": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "value": { "type": "string" },
+              "operator": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "features": {
+    "scientific_content": {
+      "latex": {
+        "id": "latex",
+        "name": "LaTeX Processing",
+        "type": "latex",
+        "scope": "global",
+        "enabled": true,
+        "description": "Process LaTeX mathematical expressions",
+        "version": "1.0.0",
+        "dependencies": ["katex"],
+        "processing": {
+          "inline_delimiters": ["$", "$"],
+          "block_delimiters": ["$$", "$$"],
+          "escape_character": "\\",
+          "allowed_environments": ["equation", "align", "matrix", "cases"],
+          "renderer": "katex",
+          "renderer_config": {
+            "throwOnError": false,
+            "errorColor": "#cc0000",
+            "macros": {}
+          },
+          "caching": {
+            "strategy": "lru",
+            "max_size": 1000,
+            "ttl": 3600
+          }
+        }
+      },
+      "artifacts": {
+        "id": "artifacts",
+        "name": "Interactive Artifacts",
+        "type": "artifact",
+        "scope": "global",
+        "enabled": true,
+        "description": "Process interactive artifacts and web components",
+        "version": "1.0.0",
+        "dependencies": ["web_components"],
+        "processing": {
+          "allowed_types": [
+            "molecule_viewer",
+            "graph_plot",
+            "data_table",
+            "interactive_diagram"
+          ],
+          "rendering": {
+            "default_width": "100%",
+            "default_height": "400px",
+            "lazy_loading": true,
+            "fallback_content": true
+          },
+          "security": {
+            "sanitize_inputs": true,
+            "allowed_origins": ["*"],
+            "script_sources": ["self", "trusted-cdn.com"]
+          }
+        }
+      }
+    },
+
+    "navigation": {
+      "toc": {
+        "id": "toc",
+        "name": "Table of Contents",
+        "type": "toc",
+        "scope": "local",
+        "enabled": true,
+        "description": "Generate table of contents",
+        "version": "1.0.0",
+        "processing": {
+          "max_depth": 3,
+          "numbering": true,
+          "collapse_levels": true,
+          "show_page_numbers": true,
+          "link_generation": {
+            "use_ids": true,
+            "generate_missing_ids": true,
+            "id_prefix": "toc_"
+          }
+        }
+      },
+      "index_numbers": {
+        "id": "index_numbers",
+        "name": "Index Numbering",
+        "type": "numbering",
+        "scope": "global",
+        "enabled": true,
+        "description": "Automatic numbering for sections",
+        "version": "1.0.0",
+        "processing": {
+          "formats": {
+            "topic": "1",
+            "section": "1.1",
+            "subsection": "1.1.1"
+          },
+          "styles": {
+            "separator": ".",
+            "prefix": "",
+            "suffix": " "
+          }
+        }
+      }
+    },
+
+    "enrichment": {
+      "code_highlight": {
+        "id": "code_highlight",
+        "name": "Code Highlighting",
+        "type": "format",
+        "scope": "global",
+        "enabled": true,
+        "description": "Syntax highlighting for code blocks",
+        "version": "1.0.0",
+        "dependencies": ["prism"],
+        "processing": {
+          "supported_languages": [
+            "python",
+            "javascript",
+            "java",
+            "cpp",
+            "xml",
+            "json",
+            "yaml",
+            "markdown",
+            "sql",
+            "bash"
+          ],
+          "line_numbers": true,
+          "highlight_lines": true,
+          "copy_button": true,
+          "theme": "default"
+        }
+      },
+      "media_processing": {
+        "id": "media_processing",
+        "name": "Media Processing",
+        "type": "media",
+        "scope": "global",
+        "enabled": true,
+        "description": "Enhanced media processing",
+        "version": "1.0.0",
+        "processing": {
+          "responsive_images": true,
+          "lazy_loading": true,
+          "video_controls": true,
+          "audio_controls": true,
+          "fallback_content": true,
+          "supported_formats": {
+            "image": ["jpg", "png", "svg", "webp"],
+            "video": ["mp4", "webm"],
+            "audio": ["mp3", "wav"]
+          }
+        }
+      }
+    },
+
+    "presentation": {
+      "responsive_layout": {
+        "id": "responsive_layout",
+        "name": "Responsive Layout",
+        "type": "layout",
+        "scope": "global",
+        "enabled": true,
+        "description": "Responsive design features",
+        "version": "1.0.0",
+        "processing": {
+          "breakpoints": {
+            "mobile": "576px",
+            "tablet": "768px",
+            "desktop": "992px",
+            "wide": "1200px"
+          },
+          "grid_system": true,
+          "fluid_typography": true
+        }
+      },
+      "theme_support": {
+        "id": "theme_support",
+        "name": "Theme Support",
+        "type": "theme",
+        "scope": "global",
+        "enabled": true,
+        "description": "Dynamic theme switching",
+        "version": "1.0.0",
+        "processing": {
+          "themes": ["light", "dark", "high-contrast"],
+          "color_schemes": {
+            "primary": "#007bff",
+            "secondary": "#6c757d",
+            "success": "#28a745",
+            "warning": "#ffc107",
+            "danger": "#dc3545"
+          }
+        }
+      }
+    }
+  },
+
+  "feature_sets": {
+    "scientific": {
+      "required": ["latex", "artifacts"],
+      "recommended": ["code_highlight", "toc"],
+      "optional": ["media_processing"]
+    },
+    "documentation": {
+      "required": ["toc", "index_numbers"],
+      "recommended": ["code_highlight"],
+      "optional": ["latex", "artifacts"]
+    },
+    "publication": {
+      "required": ["toc", "index_numbers", "responsive_layout"],
+      "recommended": ["theme_support"],
+      "optional": ["latex", "media_processing"]
+    }
+  },
+
+  "processing_rules": {
+    "feature_resolution": {
+      "strategy": "hierarchical",
+      "inheritance": "merge",
+      "conflict_resolution": "latest_wins"
+    },
+    "feature_validation": {
+      "check_dependencies": true,
+      "check_conflicts": true,
+      "validate_configurations": true
+    },
+    "cache_settings": {
+      "feature_state": {
+        "strategy": "lru",
+        "max_size": 1000,
+        "ttl": 3600
+      },
+      "rendered_content": {
+        "strategy": "ttl",
+        "ttl": 7200
+      }
+    }
+  },
+
+  "metadata": {
+    "schema_version": "1.0.0",
+    "last_updated": "2025-01-05",
+    "maintainers": ["hex21"],
+    "dependencies": {
+      "base_schema": "1.0.0",
+      "content_schema": "1.0.0"
+    }
+  }
+}

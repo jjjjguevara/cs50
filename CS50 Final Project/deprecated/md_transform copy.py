@@ -9,7 +9,7 @@ import markdown
 from bs4 import BeautifulSoup, Tag
 from functools import partial
 from ..models.types import (
-    TrackedElement,
+    ContentElement,
     ProcessingState,
     ProcessedContent,
     MDElementInfo,
@@ -114,7 +114,7 @@ class MarkdownTransformer(BaseTransformer):
 
     def transform_topic(
        self,
-       element: TrackedElement,
+       element: ContentElement,
        context: ProcessingContext,
        html_converter: Optional[Callable[[str, ProcessingContext], str]] = None
     ) -> ProcessedContent:
@@ -165,14 +165,14 @@ class MarkdownTransformer(BaseTransformer):
 
     def _transform_markdown_to_html(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> str:
         """
         Transform Markdown content to HTML with full processing pipeline.
 
         Args:
-            element: TrackedElement containing markdown content
+            element: ContentElement containing markdown content
             context: Processing context
 
         Returns:
@@ -242,7 +242,7 @@ class MarkdownTransformer(BaseTransformer):
     def process_elements(
         self,
         soup: BeautifulSoup,
-        parsed_element: TrackedElement
+        parsed_element: ContentElement
     ) -> None:
         """Process soup elements using our tracking and metadata infrastructure."""
         try:
@@ -293,7 +293,7 @@ class MarkdownTransformer(BaseTransformer):
 
 
 
-    def _transform_paragraph(self, tracked_element: TrackedElement) -> str:
+    def _transform_paragraph(self, tracked_element: ContentElement) -> str:
         """
         Transform paragraph elements to HTML.
 
@@ -317,7 +317,7 @@ class MarkdownTransformer(BaseTransformer):
             self.logger.error(f"Error transforming paragraph: {str(e)}")
             return ""
 
-    def _transform_footnote(self, tracked_element: TrackedElement) -> str:
+    def _transform_footnote(self, tracked_element: ContentElement) -> str:
        """
        Transform footnote elements to HTML, supporting Obsidian-style footnotes.
        Handles both inline references and footnote content sections.
@@ -368,7 +368,7 @@ class MarkdownTransformer(BaseTransformer):
            self.logger.error(f"Error transforming footnote: {str(e)}")
            return ""
 
-    def _transform_emphasis(self, tracked_element: TrackedElement) -> str:
+    def _transform_emphasis(self, tracked_element: ContentElement) -> str:
        """
        Transform emphasis elements to HTML.
        Handles bold, italic, underline and strikethrough, including nested formatting.
@@ -456,7 +456,7 @@ class MarkdownTransformer(BaseTransformer):
        except Exception as e:
            self.logger.error(f"Error processing images: {str(e)}")
 
-    def _transform_image(self, tracked_element: TrackedElement) -> str:
+    def _transform_image(self, tracked_element: ContentElement) -> str:
         """
         Transform an image element to HTML.
 
@@ -513,7 +513,7 @@ class MarkdownTransformer(BaseTransformer):
             return ""
 
 
-    def _transform_table(self, tracked_element: TrackedElement) -> str:
+    def _transform_table(self, tracked_element: ContentElement) -> str:
         """Transform table elements to HTML."""
         content = html.escape(tracked_element.content)
         table_info = tracked_element.metadata.get('table_info', {})
@@ -596,7 +596,7 @@ class MarkdownTransformer(BaseTransformer):
 
         return f'<{tag} {attrs_str}>{content}</{tag}>'
 
-    def _transform_code_block(self, tracked_element: TrackedElement) -> str:
+    def _transform_code_block(self, tracked_element: ContentElement) -> str:
         """Transform code elements (blocks and phrases) to HTML."""
         try:
             content = html.escape(tracked_element.content)
@@ -633,7 +633,7 @@ class MarkdownTransformer(BaseTransformer):
             self.logger.error(f"Error transforming code element: {str(e)}")
             return ""
 
-    def _transform_blockquote(self, tracked_element: TrackedElement) -> str:
+    def _transform_blockquote(self, tracked_element: ContentElement) -> str:
         """Transform blockquote element to HTML."""
         try:
             content = html.escape(tracked_element.content)
@@ -650,7 +650,7 @@ class MarkdownTransformer(BaseTransformer):
             return ""
 
 
-    def _transform_link(self, tracked_element: TrackedElement) -> str:
+    def _transform_link(self, tracked_element: ContentElement) -> str:
         """
         Transform a link element to HTML.
 
@@ -685,7 +685,7 @@ class MarkdownTransformer(BaseTransformer):
             self.logger.error(f"Error transforming link: {str(e)}")
             return ""
 
-    def _transform_list(self, tracked_element: TrackedElement) -> str:
+    def _transform_list(self, tracked_element: ContentElement) -> str:
         """
         Transform list elements to HTML.
         Handles ordered, unordered and todo lists.

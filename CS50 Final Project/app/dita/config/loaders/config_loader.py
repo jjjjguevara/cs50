@@ -1,5 +1,5 @@
 """Configuration loading and validation for DITA processing."""
-from typing import Dict, Optional, Any, Union, Type
+from typing import Dict, Optional, Any, Union, Type, List, Tuple
 from pathlib import Path
 import json
 import yaml
@@ -15,12 +15,12 @@ from ...models.types import (
     ValidationMessage,
     ValidationSeverity,
     ElementType,
-    ProcessingStateInfo,
+    ProcessingStatus,
     ProcessingState
 )
 
 from ...validation_manager import ValidationManager
-from ...schema_manager import SchemaManager, SchemaComposer, CompositionStrategy
+from ...schema.schema_manager import SchemaManager, SchemaComposer, CompositionStrategy
 from ...utils.cache import ContentCache, CacheEntryType
 from ...utils.logger import DITALogger
 from ...event_manager import EventManager, EventType
@@ -124,7 +124,7 @@ class ConfigLoader:
                 self.event_manager.emit(
                     EventType.STATE_CHANGE,
                     element_id="env_config",
-                    state_info=ProcessingStateInfo(
+                    state_info=ProcessingStatus(
                         element_id="env_config",
                         phase=ProcessingPhase.DISCOVERY,
                         state=ProcessingState.COMPLETED
@@ -216,6 +216,33 @@ class ConfigLoader:
                 raise
             return None
 
+    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+        """Validate configuration using ValidationManager."""
+        return self.validation_manager.validate(
+            content=config,
+            validation_type="config",
+            context={"environment": self._environment}
+        )
+
+    def store_bulk_metadata(self, metadata_entries: List[Tuple[str, Dict[str, Any]]]) -> None:
+        """Store multiple config entries."""
+        try:
+            for config_name, config_data in metadata_entries:
+                self._loaded_configs[config_name] = config_data
+
+                # Cache the config
+                self.cache.set(
+                    key=f"config_{config_name}",
+                    data=config_data,
+                    entry_type=CacheEntryType.CONFIG,
+                    element_type=ElementType.UNKNOWN,
+                    phase=ProcessingPhase.DISCOVERY
+                )
+
+        except Exception as e:
+            self.logger.error(f"Error storing bulk metadata: {str(e)}")
+            raise
+
     def get_config(self, name: str) -> Optional[Dict[str, Any]]:
         """Get loaded configuration by name."""
         return self._loaded_configs.get(name)
@@ -252,6 +279,51 @@ class ConfigLoader:
                     code="reload_error"
                 )]
             )
+
+    def _load_validation_patterns(self) -> None:
+        """Load validation patterns from configuration."""
+        try:
+            patterns_file = self.config_path / "validation_patterns.json"
+            self.logger.debug(f"Attempting to load validation patterns from: {patterns_file}")
+
+            if not patterns_file.exists():
+                self.logger.warning(f"Validation patterns file not found: {patterns_file}")
+                self._validation_patterns = {}
+                return
+
+            with open(patterns_file) as f:
+                patterns_data = json.load(f)
+                self.logger.debug(f"Loaded raw patterns data: {patterns_data.keys()}")
+
+            # Validate structure
+            if not isinstance(patterns_data, dict):
+                self.logger.error("Validation patterns must be a dictionary")
+                self._validation_patterns = {}
+                return
+
+            # Extract patterns with proper structure checking
+            patterns = patterns_data.get("patterns", {})
+            if not isinstance(patterns, dict):
+                self.logger.error("'patterns' must be a dictionary")
+                self._validation_patterns = {}
+                return
+
+            # Store patterns and log success
+            self._validation_patterns = patterns
+            self.logger.debug(
+                f"Successfully loaded {len(self._validation_patterns)} validation patterns: "
+                f"{list(self._validation_patterns.keys())}"
+            )
+
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Invalid JSON in validation patterns: {str(e)}")
+            self._validation_patterns = {}
+        except KeyError as e:
+            self.logger.error(f"Missing key in validation patterns: {str(e)}")
+            self._validation_patterns = {}
+        except Exception as e:
+            self.logger.error(f"Error loading validation patterns: {str(e)}")
+            self._validation_patterns = {}
 
     def cleanup(self) -> None:
         """Clean up loader resources."""

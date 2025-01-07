@@ -27,6 +27,39 @@ class LaTeXConfig:
     throw_on_error: bool = False
     output_mode: str = "html"
 
+@dataclass
+class DTDConfig:
+    """DTD processing configuration."""
+    validation_mode: str = "strict"  # strict, lax, or none
+    specialization_handling: str = "inherit"  # inherit, override, or merge
+    attribute_inheritance: str = "merge"  # merge or override
+    enable_caching: bool = True
+    base_path: Optional[Path] = None
+    schemas_path: Optional[Path] = None
+    catalog_path: Optional[Path] = None
+
+    def __post_init__(self):
+        """Convert paths to Path objects and set defaults if needed."""
+        # Set default paths relative to base_path if not provided
+        if self.base_path is None:
+            self.base_path = Path("app/dita/dtd")
+        elif isinstance(self.base_path, str):
+            self.base_path = Path(self.base_path)
+
+        if self.schemas_path is None:
+            self.schemas_path = self.base_path / "schemas"
+        elif isinstance(self.schemas_path, str):
+            self.schemas_path = Path(self.schemas_path)
+
+        if self.catalog_path is None:
+            self.catalog_path = self.base_path / "catalog.xml"
+        elif isinstance(self.catalog_path, str):
+            self.catalog_path = Path(self.catalog_path)
+
+        # Create directories if they don't exist
+        self.base_path.mkdir(parents=True, exist_ok=True)
+        self.schemas_path.mkdir(parents=True, exist_ok=True)
+
 
 
 class DITAConfig:
@@ -43,6 +76,7 @@ class DITAConfig:
         metadata_db_path: Optional[Path] = None,
         features: Optional[Dict[str, bool]] = None,
         latex_config: Optional[LaTeXConfig] = None,
+        dtd_config: Optional[DTDConfig] = None,
         number_headings: bool = False,
         enable_cross_refs: bool = True,
         show_toc: bool = True,
@@ -59,6 +93,23 @@ class DITAConfig:
         self.enable_cross_refs = enable_cross_refs
         self.show_toc = show_toc
         self.process_latex = process_latex
+
+        # Add DTD configuration
+        self.dtd_config = dtd_config or DTDConfig(
+            base_path=Path("app/dita/dtd"),
+            schemas_path=Path("app/dita/dtd/schemas"),
+            catalog_path=Path("app/dita/dtd/catalog.xml")
+        )
+
+        # Add DTD paths
+        self.dtd_schemas_dir = self._default_dir("DITA_DTD_SCHEMAS", "app/dita/dtd/schemas")
+        self.dtd_catalog_path = Path(os.getenv("DITA_DTD_CATALOG", "app/dita/dtd/catalog.xml"))
+
+        # Ensure DTD directories exist
+        if self.dtd_config.base_path:
+            self.dtd_config.base_path.mkdir(parents=True, exist_ok=True)
+        if self.dtd_config.schemas_path:
+            self.dtd_config.schemas_path.mkdir(parents=True, exist_ok=True)
 
         # Features configuration
         self.features = features or {
@@ -89,12 +140,11 @@ class DITAConfig:
         if isinstance(env_var, str):
             topics_dir = Path(env_var)
 
-        # Rest of the configuration setup
-
 
     def _default_dir(self, env_var: str, default: str) -> Path:
         """
         Fetch the directory from the environment or use a default value.
+        Creates the directory if it doesn't exist.
 
         Args:
             env_var (str): The environment variable to check.
@@ -105,21 +155,20 @@ class DITAConfig:
         """
         dir_path = os.getenv(env_var, default)
         resolved_path = Path(dir_path).resolve()
-        if not resolved_path.exists():
-            raise ValueError(f"Configured directory '{env_var}' does not exist: {resolved_path}")
+
+        # Create directory if it doesn't exist
+        resolved_path.mkdir(parents=True, exist_ok=True)
+
         return resolved_path
 
     def validate(self) -> None:
         """
-        Validate the configuration to ensure all critical directories exist.
-
-        Raises:
-            ValueError: If required directories are invalid.
+        Validate the configuration and create required directories if they don't exist.
         """
         for attr in ["topics_dir", "maps_dir", "artifacts_dir", "static_dir"]:
             dir_path = getattr(self, attr, None)
-            if not dir_path or not Path(dir_path).exists():
-                raise ValueError(f"The specified directory for '{attr}' does not exist: {dir_path}")
+            if dir_path:
+                Path(dir_path).mkdir(parents=True, exist_ok=True)
 
     @classmethod
     def from_environment(cls) -> "DITAConfig":
@@ -146,13 +195,26 @@ class DITAConfig:
             output_mode=os.getenv("DITA_LATEX_OUTPUT_MODE", "html")
         ) if features["process_latex"] else None
 
+        # DTD configuration
+        dtd_config = DTDConfig(
+            validation_mode=os.getenv("DITA_DTD_VALIDATION_MODE", "strict"),
+            specialization_handling=os.getenv("DITA_DTD_SPECIALIZATION", "inherit"),
+            attribute_inheritance=os.getenv("DITA_DTD_INHERITANCE", "merge"),
+            enable_caching=os.getenv("DITA_DTD_CACHING", "True").lower() in ("true", "1", "yes"),
+            base_path=Path(os.getenv("DITA_DTD_PATH", "app/dita/dtd")),
+            schemas_path=Path(os.getenv("DITA_DTD_SCHEMAS_PATH", "app/dita/dtd/schemas")),
+            catalog_path=Path(os.getenv("DITA_DTD_CATALOG_PATH", "app/dita/dtd/catalog.xml"))
+        )
+
+
         return cls(
             topics_dir=Path(topics_dir) if topics_dir else None,
             maps_dir=Path(maps_dir) if maps_dir else None,
             artifacts_dir=Path(artifacts_dir) if artifacts_dir else None,
             static_dir=Path(static_dir) if static_dir else None,
             features=features,
-            latex_config=latex_config
+            latex_config=latex_config,
+            dtd_config=dtd_config
         )
 
 class ConfigValidator:

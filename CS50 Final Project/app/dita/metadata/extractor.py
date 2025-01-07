@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from ..config.config_manager import ConfigManager
 
 from ..models.types import (
-    TrackedElement,
+    ContentElement,
     ProcessingContext,
     ProcessingPhase,
     ElementType,
@@ -44,7 +44,7 @@ class MetadataExtractor:
 
     def extract_metadata(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext,
         phase: ProcessingPhase
     ) -> Dict[str, Any]:
@@ -97,7 +97,7 @@ class MetadataExtractor:
 
     def _extract_dita_metadata(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> Dict[str, Any]:
         """Extract metadata from DITA content."""
@@ -154,7 +154,7 @@ class MetadataExtractor:
 
     def _extract_markdown_metadata(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> Dict[str, Any]:
         """Extract metadata from Markdown content."""

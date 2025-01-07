@@ -34,7 +34,7 @@ from ..utils.logger import DITALogger
 # Types
 from ..models.types import (
     ProcessedContent,
-    TrackedElement,
+    ContentElement,
     ProcessingPhase,
     ProcessingState,
     ElementType,
@@ -46,7 +46,7 @@ from ..models.types import (
     ValidationSeverity,
     ContentScope,
     ProcessingRuleType,
-    ProcessingStateInfo,
+    ProcessingStatus,
     KeyDefinition
 )
 
@@ -63,14 +63,14 @@ class DITATopicStrategy(DITATransformStrategy):
 
     def can_transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> bool:
         return True
 
     def transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext,
         metadata: ProcessingMetadata,
         config: Dict[str, Any]
@@ -160,7 +160,7 @@ class DITATopicStrategy(DITATransformStrategy):
 
     def validate(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> ValidationResult:
         """Validate DITA topic."""
@@ -199,7 +199,7 @@ class DITATopicStrategy(DITATransformStrategy):
 
     def _get_specialization_type(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> Optional[DITAElementType]:
         """Get specialization type for element."""
@@ -217,7 +217,7 @@ class DITATopicStrategy(DITATransformStrategy):
 
     def _resolve_keys(
             self,
-            element: TrackedElement,
+            element: ContentElement,
             context: ProcessingContext
         ) -> None:
             """Resolve keys using transformer's key manager."""
@@ -225,7 +225,7 @@ class DITATopicStrategy(DITATransformStrategy):
 
     def _transform_children(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext,
         metadata: ProcessingMetadata
     ) -> List[Union[Tag, str]]:
@@ -244,7 +244,7 @@ class DITATopicStrategy(DITATransformStrategy):
 
         # Transform each child element
         for child_element in child_elements:
-            if isinstance(child_element, TrackedElement):
+            if isinstance(child_element, ContentElement):
                 processed = self.transformer.transform_content(child_element, context)
                 if processed and processed.html:
                     children.append(processed.html)
@@ -255,14 +255,14 @@ class DITAMapStrategy(DITATransformStrategy):
 
     def can_transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> bool:
         return element.type == ElementType.DITAMAP
 
     def transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext,
         metadata: ProcessingMetadata,
         config: Dict[str, Any]
@@ -359,7 +359,7 @@ class DITAMapStrategy(DITATransformStrategy):
 
     def validate(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> ValidationResult:
         """Validate DITA map."""
@@ -397,7 +397,7 @@ class DITAMapStrategy(DITATransformStrategy):
 
     def _process_topic_refs(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> List[Union[Tag, str]]:
         """Process topic references in map."""
@@ -416,7 +416,7 @@ class DITAMapStrategy(DITATransformStrategy):
             topic_path = base_path / href
             self.transformer.logger.debug(f"Processing topic at: {topic_path}")
 
-            topic_element = TrackedElement.from_discovery(
+            topic_element = ContentElement.from_discovery(
                 path=topic_path,
                 element_type=ElementType.DITA,  # Changed from TOPIC to DITA
                 id_handler=self.transformer.id_handler
@@ -452,14 +452,14 @@ class DITAElementStrategy(DITATransformStrategy):
 
     def can_transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> bool:
         return True  # Default strategy for any DITA element
 
     def transform(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext,
         metadata: ProcessingMetadata,
         config: Dict[str, Any]
@@ -498,7 +498,7 @@ class DITAElementStrategy(DITATransformStrategy):
 
     def validate(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> ValidationResult:
         """Validate DITA element."""
@@ -573,7 +573,7 @@ class DITATransformer(BaseTransformer):
 
     def transform_content(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: Optional[ProcessingContext] = None
     ) -> ProcessedContent:
         try:
@@ -636,7 +636,7 @@ class DITATransformer(BaseTransformer):
 
     def _validate_element(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> ValidationResult:
         """Validate element before transformation."""
@@ -666,7 +666,7 @@ class DITATransformer(BaseTransformer):
 
     def _resolve_keys(
         self,
-        element: TrackedElement,
+        element: ContentElement,
         context: ProcessingContext
     ) -> None:
         """Resolve key references in element."""

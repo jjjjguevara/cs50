@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE catalog PUBLIC "-//OASIS//DTD Entity Resolution XML Catalog V1.0//EN"
+                            "http://www.oasis-open.org/committees/entity/release/1.0/catalog.dtd">
+    <catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+        <!-- Map DTD public identifiers to local files -->
+        <public publicId="-//OASIS//DTD DITA Map//EN" uri="schemas/map.dtd"/>
+        <public publicId="-//OASIS//DTD DITA Topic//EN" uri="schemas/topic.dtd"/>
+        <public publicId="-//OASIS//DTD DITA Concept//EN" uri="schemas/concept.dtd"/>
+        <public publicId="-//OASIS//DTD DITA Task//EN" uri="schemas/task.dtd"/>
+        <public publicId="-//OASIS//DTD DITA Reference//EN" uri="schemas/reference.dtd"/>
+        <public publicId="-//OASIS//DTD DITA Glossary//EN" uri="schemas/glossentry.dtd"/>
+        <public publicId="-//OASIS//DTD DITA BookMap//EN" uri="schemas/bookmap.dtd"/>
+
+        <!-- Map system identifiers to local files -->
+        <system systemId="map.dtd" uri="schemas/map.dtd"/>
+        <system systemId="topic.dtd" uri="schemas/topic.dtd"/>
+        <system systemId="concept.dtd" uri="schemas/concept.dtd"/>
+        <system systemId="task.dtd" uri="schemas/task.dtd"/>
+        <system systemId="reference.dtd" uri="schemas/reference.dtd"/>
+        <system systemId="glossentry.dtd" uri="schemas/glossentry.dtd"/>
+        <system systemId="bookmap.dtd" uri="schemas/bookmap.dtd"/>
+    </catalog>

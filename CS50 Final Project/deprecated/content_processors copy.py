@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app.dita.models.types import (
     MDElementInfo,
-    TrackedElement,
+    ContentElement,
     ProcessingContext,
     ProcessedContent,
     ElementType,
@@ -40,7 +40,7 @@ class ContentProcessor:
             self.logger.debug("Content processor initialized")
 
 
-    def process_content(self, element: TrackedElement) -> ProcessedContent:
+    def process_content(self, element: ContentElement) -> ProcessedContent:
         """Process content with appropriate transformer and element processor."""
         try:
             self.logger.debug(f"Processing content of type: {element.type}")
@@ -99,12 +99,12 @@ class ContentProcessor:
         error_type: str = "processing_error",
         element_context: Optional[str] = None,
         element_type: ElementType = ElementType.UNKNOWN
-    ) -> TrackedElement:
+    ) -> ContentElement:
         """Create error element with proper tracking."""
         error_message = str(error) if error else "Unknown error"
 
         # Create tracked element for error
-        error_element = TrackedElement(
+        error_element = ContentElement(
             id=self.id_handler.generate_id(element_context or "error"),
             type=element_type,
             path=Path("error"),  # Placeholder path

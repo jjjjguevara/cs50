@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from app_config import DITAConfig, get_environment
 from .models.types import (
-    TrackedElement,
+    ContentElement,
     DITAProcessingConfig,
     DITAParserConfig,
     ProcessingPhase,

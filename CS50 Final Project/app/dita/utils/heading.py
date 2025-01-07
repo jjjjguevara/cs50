@@ -11,7 +11,7 @@ from ..models.types import (
     ProcessingError,
     ProcessingPhase,
     ProcessingState,
-    TrackedElement,
+    ContentElement,
     ElementType,
     ValidationResult,
     ContentScope,
@@ -141,7 +141,7 @@ class HeadingHandler:
         self,
         text: str,
         level: int,
-        element: TrackedElement,
+        element: ContentElement,
         is_topic_title: bool = False
     ) -> HeadingMetadata:
         """
@@ -150,7 +150,7 @@ class HeadingHandler:
         Args:
             text: Heading text
             level: Heading level (1-6)
-            element: TrackedElement containing the heading
+            element: ContentElement containing the heading
             is_topic_title: Whether this is a topic title
 
         Returns:
