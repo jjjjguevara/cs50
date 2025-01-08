@@ -1,0 +1,169 @@
+<!-- topic.dtd -->
+<!-- DITA Topic with Scientific Publishing Extensions -->
+
+<!-- ============ Dependencies ============ -->
+<!ENTITY % core-dtd PUBLIC
+  "-//HEX21//DTD DITA Core//EN"
+  "core.dtd">
+%core-dtd;
+
+<!-- ============ Topic Elements ============ -->
+<!ELEMENT topic (
+  title,
+  titlealts?,
+  abstract?,
+  prolog?,
+  body?,
+  related-links?,
+  topic*
+)>
+<!ATTLIST topic
+  %global.atts;
+  xmlns:m CDATA #FIXED "http://www.w3.org/1998/Math/MathML"
+  xmlns:latex CDATA #FIXED "http://www.latex-project.org"
+>
+
+<!-- Title Alternatives -->
+<!ELEMENT titlealts (navtitle?, searchtitle?)>
+<!ELEMENT navtitle (#PCDATA | %common.inline;)*>
+<!ELEMENT searchtitle (#PCDATA | %common.inline;)*>
+
+<!-- Abstract -->
+<!ELEMENT abstract ((%common.block;)*, shortdesc?)>
+<!ATTLIST abstract
+  %global.atts;
+  type (purpose|summary|preview) #IMPLIED
+>
+
+<!ELEMENT shortdesc (#PCDATA | %common.inline;)*>
+
+<!-- Prolog -->
+<!ELEMENT prolog (
+  author*,
+  contributor*,
+  critdates?,
+  permissions?,
+  publication-info?,
+  metadata?,
+  scientific-info?,
+  funding-info?,
+  resourceid*
+)>
+
+<!-- Body -->
+<!ELEMENT body (
+  (%common.block;)* |
+  section* |
+  equation* |
+  example* |
+  figure* |
+  table* |
+  artifact* |
+  references*
+)>
+
+<!-- Scientific Content Elements -->
+<!ELEMENT methodology (title?, (%common.block;)*)>
+<!ELEMENT results (title?, (%common.block;)*)>
+<!ELEMENT discussion (title?, (%common.block;)*)>
+<!ELEMENT conclusion (title?, (%common.block;)*)>
+
+<!ELEMENT data-analysis (title?, method*, result*)>
+<!ELEMENT method (title?, description?, parameters?)>
+<!ELEMENT parameters (parameter+)>
+<!ELEMENT parameter (#PCDATA)>
+<!ATTLIST parameter
+  name CDATA #REQUIRED
+  value CDATA #REQUIRED
+  unit CDATA #IMPLIED
+>
+
+<!-- LaTeX and MathML Support -->
+<!ELEMENT latex-equation (#PCDATA)>
+<!ATTLIST latex-equation
+  %global.atts;
+  display (block|inline) #IMPLIED
+>
+
+<!ELEMENT mathml-equation ANY>
+<!ATTLIST mathml-equation
+  %global.atts;
+  display (block|inline) #IMPLIED
+>
+
+<!-- Interactive Elements -->
+<!ELEMENT interactive (title?, description?, content)>
+<!ATTLIST interactive
+  %global.atts;
+  type (visualization|simulation|widget) #REQUIRED
+  framework CDATA #IMPLIED
+  src CDATA #IMPLIED
+>
+
+<!-- Code and Data Elements -->
+<!ELEMENT dataset (title?, description?, data-source?)>
+<!ATTLIST dataset
+  %global.atts;
+  format CDATA #IMPLIED
+  size CDATA #IMPLIED
+>
+
+<!ELEMENT data-source (title?, description?, location)>
+<!ELEMENT location (#PCDATA)>
+<!ATTLIST location
+  type (url|doi|file) #REQUIRED
+>
+
+<!-- Research-Specific Elements -->
+<!ELEMENT hypothesis (title?, (%common.block;)*)>
+<!ELEMENT observation (title?, (%common.block;)*)>
+<!ELEMENT analysis (title?, (%common.block;)*)>
+
+<!-- Reference Elements -->
+<!ELEMENT citation (#PCDATA | %common.inline;)*>
+<!ATTLIST citation
+  %global.atts;
+  ref-id CDATA #REQUIRED
+  style (apa|mla|chicago|ieee) #IMPLIED
+>
+
+<!-- Related Links -->
+<!ELEMENT related-links (link | linklist | linkpool)*>
+<!ELEMENT link (#PCDATA | %common.inline;)*>
+<!ATTLIST link
+  %global.atts;
+  %reference-atts;
+  importance (optional|required) #IMPLIED
+  role (ancestor|child|cousin|descendant|friend|next|other|parent|previous|sibling) #IMPLIED
+>
+
+<!-- ============ Domain Integration ============ -->
+<!-- Scientific Domain -->
+<!ENTITY % scientific-d-def PUBLIC
+  "-//HEX21//ELEMENTS DITA Scientific Domain//EN"
+  "scientificDomain.mod">
+%scientific-d-def;
+
+<!-- Programming Domain -->
+<!ENTITY % programming-d-def PUBLIC
+  "-//HEX21//ELEMENTS DITA Programming Domain//EN"
+  "programmingDomain.mod">
+%programming-d-def;
+
+<!-- Equation Domain -->
+<!ENTITY % equation-d-def PUBLIC
+  "-//HEX21//ELEMENTS DITA Equation Domain//EN"
+  "equationDomain.mod">
+%equation-d-def;
+
+<!-- ============ Specialization Declarations ============ -->
+<!ATTLIST topic        class CDATA "- topic/topic ">
+<!ATTLIST title       class CDATA "- topic/title ">
+<!ATTLIST body        class CDATA "- topic/body ">
+<!ATTLIST section     class CDATA "- topic/section ">
+<!ATTLIST abstract    class CDATA "- topic/abstract ">
+<!ATTLIST shortdesc   class CDATA "- topic/shortdesc ">
+<!ATTLIST methodology class CDATA "- topic/section scientific-d/methodology ">
+<!ATTLIST results     class CDATA "- topic/section scientific-d/results ">
+<!ATTLIST discussion  class CDATA "- topic/section scientific-d/discussion ">
+<!ATTLIST conclusion  class CDATA "- topic/section scientific-d/conclusion ">

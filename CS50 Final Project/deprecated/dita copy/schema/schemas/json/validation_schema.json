@@ -1,0 +1,351 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DITA Validation Schema",
+  "description": "Validation rules and patterns for DITA processing",
+  "version": "1.0.0",
+
+  "definitions": {
+    "validation_rule": {
+      "type": "object",
+      "required": ["type", "severity"],
+      "properties": {
+        "type": { "type": "string" },
+        "severity": { "$ref": "base_schema.json#/definitions/state" },
+        "message": { "type": "string" },
+        "code": { "type": "string" },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": { "type": "string" },
+              "operator": {
+                "type": "string",
+                "enum": [
+                  "equals",
+                  "not_equals",
+                  "contains",
+                  "not_contains",
+                  "matches",
+                  "exists",
+                  "not_exists"
+                ]
+              },
+              "value": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "validation_pattern": {
+      "type": "object",
+      "required": ["pattern", "description"],
+      "properties": {
+        "pattern": { "type": "string" },
+        "description": { "type": "string" },
+        "flags": { "type": "string" },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "value": { "type": "string" },
+              "valid": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "validation_rules": {
+    "structural": {
+      "dita": {
+        "topic": {
+          "required_elements": ["title"],
+          "optional_elements": ["shortdesc", "prolog", "body"],
+          "allowed_children": ["section", "example", "table"],
+          "rules": [
+            {
+              "type": "element_presence",
+              "severity": "error",
+              "message": "Topic must have a title",
+              "code": "missing_title"
+            },
+            {
+              "type": "element_order",
+              "severity": "warning",
+              "message": "Recommended order: title, shortdesc, prolog, body",
+              "code": "incorrect_order"
+            }
+          ]
+        },
+        "map": {
+          "required_elements": ["title"],
+          "optional_elements": ["topicmeta", "topicref"],
+          "rules": [
+            {
+              "type": "reference_validity",
+              "severity": "error",
+              "message": "All topic references must be valid",
+              "code": "invalid_reference"
+            }
+          ]
+        }
+      },
+      "markdown": {
+        "document": {
+          "required_elements": ["heading"],
+          "rules": [
+            {
+              "type": "frontmatter_presence",
+              "severity": "warning",
+              "message": "Document should have YAML frontmatter",
+              "code": "missing_frontmatter"
+            }
+          ]
+        }
+      }
+    },
+
+    "content": {
+      "text": {
+        "patterns": {
+          "heading": {
+            "pattern": "^[A-Z][^\\n]+$",
+            "description": "Headings should start with capital letter"
+          },
+          "sentence": {
+            "pattern": "^[A-Z][^\\n]+[.!?]$",
+            "description": "Sentences should be properly capitalized and terminated"
+          }
+        },
+        "rules": [
+          {
+            "type": "text_length",
+            "severity": "warning",
+            "message": "Text exceeds recommended length",
+            "code": "text_too_long",
+            "conditions": [
+              {
+                "field": "length",
+                "operator": "greater_than",
+                "value": "1000"
+              }
+            ]
+          }
+        ]
+      },
+      "scientific": {
+        "patterns": {
+          "equation": {
+            "pattern": "\\$[^\\$]+\\$|\\$\\$[^\\$]+\\$\\$",
+            "description": "LaTeX equation syntax"
+          },
+          "citation": {
+            "pattern": "\\[[@][A-Za-z0-9_-]+\\]",
+            "description": "Citation key format"
+          }
+        },
+        "rules": [
+          {
+            "type": "equation_balance",
+            "severity": "error",
+            "message": "Unbalanced equation delimiters",
+            "code": "unbalanced_equation"
+          }
+        ]
+      }
+    },
+
+    "references": {
+      "internal": {
+        "patterns": {
+          "xref": {
+            "pattern": "^#[a-z][a-z0-9_-]*$",
+            "description": "Internal reference format"
+          }
+        },
+        "rules": [
+          {
+            "type": "reference_resolution",
+            "severity": "error",
+            "message": "Unresolved internal reference",
+            "code": "unresolved_reference"
+          }
+        ]
+      },
+      "external": {
+        "patterns": {
+          "url": {
+            "pattern": "^https?://[^\\s/$.?#].[^\\s]*$",
+            "description": "Valid URL format"
+          },
+          "doi": {
+            "pattern": "^10\\.\\d{4,}/[-._;()/:a-zA-Z0-9]+$",
+            "description": "Valid DOI format"
+          }
+        },
+        "rules": [
+          {
+            "type": "link_accessibility",
+            "severity": "warning",
+            "message": "External link should have descriptive text",
+            "code": "non_descriptive_link"
+          }
+        ]
+      }
+    },
+
+    "metadata": {
+      "academic": {
+        "required_fields": ["title", "authors", "abstract"],
+        "rules": [
+          {
+            "type": "author_format",
+            "severity": "error",
+            "message": "Invalid author format",
+            "code": "invalid_author_format"
+          },
+          {
+            "type": "citation_completeness",
+            "severity": "warning",
+            "message": "Incomplete citation information",
+            "code": "incomplete_citation"
+          }
+        ]
+      },
+      "github": {
+        "required_fields": ["repository", "branch"],
+        "rules": [
+          {
+            "type": "commit_message",
+            "severity": "warning",
+            "message": "Commit message should be descriptive",
+            "code": "non_descriptive_commit"
+          }
+        ]
+      }
+    },
+
+    "phase_specific": {
+      "discovery": {
+        "validation_level": "basic",
+        "rules": [
+          {
+            "type": "file_existence",
+            "severity": "error",
+            "message": "Required file not found",
+            "code": "missing_file"
+          }
+        ]
+      },
+      "validation": {
+        "validation_level": "strict",
+        "rules": [
+          {
+            "type": "schema_conformance",
+            "severity": "error",
+            "message": "Content does not conform to schema",
+            "code": "schema_violation"
+          }
+        ]
+      },
+      "transformation": {
+        "validation_level": "basic",
+        "rules": [
+          {
+            "type": "transform_compatibility",
+            "severity": "error",
+            "message": "Content cannot be transformed",
+            "code": "transform_error"
+          }
+        ]
+      }
+    }
+  },
+
+  "validation_strategies": {
+    "content_type_specific": {
+      "dita": {
+        "phases": ["dtd", "schema", "specialization", "content"],
+        "fail_fast": true,
+        "cache_results": true
+      },
+      "markdown": {
+        "phases": ["frontmatter", "structure", "content"],
+        "fail_fast": false,
+        "cache_results": true
+      }
+    },
+
+    "scope_specific": {
+      "local": {
+        "reference_validation": true,
+        "inheritance_validation": true
+      },
+      "external": {
+        "reference_validation": false,
+        "inheritance_validation": false
+      }
+    },
+
+    "inheritance": {
+      "specialization": {
+        "validate_base": true,
+        "validate_specialized": true,
+        "inheritance_mode": "strict"
+      },
+      "metadata": {
+        "inherit_validation": true,
+        "override_allowed": false
+      }
+    }
+  },
+
+  "error_handling": {
+    "severity_levels": {
+      "error": {
+        "blocks_processing": true,
+        "requires_fix": true
+      },
+      "warning": {
+        "blocks_processing": false,
+        "requires_fix": false
+      },
+      "info": {
+        "blocks_processing": false,
+        "requires_fix": false
+      }
+    },
+    "aggregation": {
+      "max_errors": 100,
+      "group_by": ["type", "severity", "phase"],
+      "summary_enabled": true
+    }
+  },
+
+  "validation_contexts": {
+    "scientific_article": {
+      "required_validations": ["metadata", "citations", "equations"],
+      "optional_validations": ["style", "grammar"],
+      "validation_level": "strict"
+    },
+    "technical_documentation": {
+      "required_validations": ["structure", "references"],
+      "optional_validations": ["style"],
+      "validation_level": "normal"
+    }
+  },
+
+  "metadata": {
+    "schema_version": "1.0.0",
+    "last_updated": "2025-01-24",
+    "maintainers": ["hex21"],
+    "dependencies": {
+      "base_schema": "1.0.0",
+      "content_schema": "1.0.0"
+    }
+  }
+}

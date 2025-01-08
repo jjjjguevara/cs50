@@ -1,0 +1,126 @@
+<!-- map.dtd -->
+<!-- DITA Map with Scientific Publishing Extensions -->
+
+<!-- ============ Dependencies ============ -->
+<!ENTITY % core-dtd PUBLIC
+  "-//HEX21//DTD DITA Core//EN"
+  "core.dtd">
+%core-dtd;
+
+<!-- ============ Map Attributes ============ -->
+<!ENTITY % map-atts "
+  %global.atts;
+  title CDATA #IMPLIED
+  anchor CDATA #IMPLIED
+  collection-type (choice|family|sequence|unordered) #IMPLIED
+  processing-role (normal|resource-only) #IMPLIED"
+>
+
+<!-- ============ Map Elements ============ -->
+<!ELEMENT map (title?, topicmeta?,
+  (topicref | chapter | appendix | article | collection |
+   reltable | glossarylist | keydef)*
+)>
+<!ATTLIST map %map-atts;>
+
+<!-- Topic Reference Elements -->
+<!ELEMENT topicref (topicmeta?, (topicref | article | keydef)*)>
+<!ATTLIST topicref
+  %global.atts;
+  %reference-atts;
+  keys CDATA #IMPLIED
+  collection-type (choice|family|sequence|unordered) #IMPLIED
+  processing-role (normal|resource-only) #IMPLIED
+  locktitle (yes|no) #IMPLIED
+  navtitle CDATA #IMPLIED
+  search (yes|no) #IMPLIED
+  chunk CDATA #IMPLIED
+>
+
+<!-- Scientific Collection Elements -->
+<!ELEMENT collection (topicmeta?, (article | collection)*)>
+<!ATTLIST collection
+  %global.atts;
+  %reference-atts;
+  type (journal|proceedings|book|series) #IMPLIED
+>
+
+<!ELEMENT article (topicmeta?, (section | references)*)>
+<!ATTLIST article
+  %global.atts;
+  %reference-atts;
+  type (research|review|method|case-study) #IMPLIED
+>
+
+<!-- Book Structure Elements -->
+<!ELEMENT chapter (topicmeta?, (topicref | section)*)>
+<!ATTLIST chapter
+  %global.atts;
+  %reference-atts;
+  navtitle CDATA #IMPLIED
+>
+
+<!ELEMENT appendix (topicmeta?, (topicref | section)*)>
+<!ATTLIST appendix
+  %global.atts;
+  %reference-atts;
+  navtitle CDATA #IMPLIED
+>
+
+<!-- Relationship Table Elements -->
+<!ELEMENT reltable (title?, topicmeta?, relheader?, relrow*)>
+<!ATTLIST reltable
+  %global.atts;
+  title CDATA #IMPLIED
+>
+
+<!ELEMENT relheader (relcolspec+)>
+<!ELEMENT relcolspec (#PCDATA)>
+<!ELEMENT relrow (relcell*)>
+<!ELEMENT relcell (topicref | article)*>
+
+<!-- Glossary Elements -->
+<!ELEMENT glossarylist (topicmeta?, glossref*)>
+<!ATTLIST glossarylist
+  %global.atts;
+  %reference-atts;
+>
+
+<!ELEMENT glossref (topicmeta?)>
+<!ATTLIST glossref
+  %global.atts;
+  %reference-atts;
+  keys CDATA #IMPLIED
+>
+
+<!-- Key Definition Elements -->
+<!ELEMENT keydef (topicmeta?)>
+<!ATTLIST keydef
+  %global.atts;
+  %reference-atts;
+  keys CDATA #REQUIRED
+  processing-role (resource-only) #FIXED 'resource-only'
+>
+
+<!-- Metadata Elements -->
+<!ELEMENT topicmeta (
+  navtitle?, searchtitle?, author*,
+  contributor*, doi?, category*,
+  keywords?, prodinfo?, permissions?,
+  publisher?, critdates?, publication-info?,
+  scientific-info?, funding-info?
+)>
+
+<!ELEMENT publication-info (journal-meta?, conference-meta?)>
+<!ELEMENT journal-meta (journal-id+, journal-title, issn?, publisher?)>
+<!ELEMENT conference-meta (conference-title, conference-date, conference-loc?)>
+<!ELEMENT scientific-info (research-field*, methodology?, data-availability?)>
+<!ELEMENT funding-info (grant-info*, acknowledgements?)>
+
+<!-- ============ Specialization Declarations ============ -->
+<!ATTLIST map      class CDATA "- map/map ">
+<!ATTLIST topicref class CDATA "- map/topicref ">
+<!ATTLIST article  class CDATA "- map/topicref scimap/article ">
+<!ATTLIST chapter  class CDATA "- map/topicref bookmap/chapter ">
+<!ATTLIST appendix class CDATA "- map/topicref bookmap/appendix ">
+<!ATTLIST reltable class CDATA "- map/reltable ">

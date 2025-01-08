@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE catalog PUBLIC "-//OASIS//DTD Entity Resolution XML Catalog V1.0//EN"
+    "http://www.oasis-open.org/committees/entity/release/1.0/catalog.dtd">
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+    <!-- Core DTD -->
+    <public publicId="-//HEX21//DTD DITA Core//EN" uri="core.dtd" />
+
+    <!-- Map DTD -->
+    <public publicId="-//HEX21//DTD DITA Map//EN" uri="map.dtd" />
+    <system systemId="map.dtd" uri="map.dtd" />
+
+    <!-- Topic DTD -->
+    <public publicId="-//HEX21//DTD DITA Topic//EN" uri="topic.dtd" />
+    <system systemId="topic.dtd" uri="topic.dtd" />
+
+    <!-- Scientific Content DTDs -->
+    <public
+        publicId="-//HEX21//DTD DITA Scientific Article//EN"
+        uri="scientific/article.dtd"
+    />
+    <public
+        publicId="-//HEX21//DTD DITA Scientific Report//EN"
+        uri="scientific/report.dtd"
+    />
+    <public
+        publicId="-//HEX21//DTD DITA Research Note//EN"
+        uri="scientific/note.dtd"
+    />
+
+    <!-- Common Element Entities -->
+    <public
+        publicId="-//HEX21//ENTITIES DITA Common Elements//EN"
+        uri="entities/common.ent"
+    />
+    <system systemId="common.ent" uri="entities/common.ent" />
+
+    <!-- Domain Entities -->
+    <public
+        publicId="-//HEX21//ENTITIES DITA Scientific Domain//EN"
+        uri="entities/scientificDomain.ent"
+    />
+    <public
+        publicId="-//HEX21//ENTITIES DITA Programming Domain//EN"
+        uri="entities/programmingDomain.ent"
+    />
+    <public
+        publicId="-//HEX21//ENTITIES DITA Equation Domain//EN"
+        uri="entities/equationDomain.ent"
+    />
+
+    <!-- Constraint Modules -->
+    <public
+        publicId="-//HEX21//ELEMENTS DITA Scientific Constraints//EN"
+        uri="constraints/scientificConstraints.mod"
+    />
+    <public
+        publicId="-//HEX21//ELEMENTS DITA Topic Constraints//EN"
+        uri="constraints/topicConstraints.mod"
+    />
+
+    <!-- Base DITA DTDs (for compatibility) -->
+    <public
+        publicId="-//OASIS//DTD DITA Topic//EN"
+        uri="compatibility/topic.dtd"
+    />
+    <public publicId="-//OASIS//DTD DITA Map//EN" uri="compatibility/map.dtd" />
+    <public
+        publicId="-//OASIS//DTD DITA Concept//EN"
+        uri="compatibility/concept.dtd"
+    />
+    <public
+        publicId="-//OASIS//DTD DITA Task//EN"
+        uri="compatibility/task.dtd"
+    />
+    <public
+        publicId="-//OASIS//DTD DITA Reference//EN"
+        uri="compatibility/reference.dtd"
+    />
+
+    <!-- Rewrite Rules -->
+    <rewriteSystem
+        systemIdStartString="http://docs.hex21.com/dtd/"
+        rewritePrefix="./"
+    />
+
+    <!-- URI Mappings -->
+    <uri name="http://docs.hex21.com/dtd/core.dtd" uri="core.dtd" />
+    <uri
+        name="http://docs.hex21.com/dtd/scientific/article.dtd"
+        uri="scientific/article.dtd"
+    />
+
+    <!-- Group Definitions -->
+    <group xml:base="entities/">
+        <public
+            publicId="-//HEX21//ENTITIES DITA Domains//EN"
+            uri="domains.ent"
+        />
+        <public
+            publicId="-//HEX21//ENTITIES DITA Attributes//EN"
+            uri="attributes.ent"
+        />
+    </group>
+
+    <!-- Delegations for External DTDs -->
+    <delegatePublic
+        publicIdStartString="-//HEX21//DTD DITA"
+        catalog="hex21-catalog.xml"
+    />
+    <delegateSystem
+        systemIdStartString="http://docs.hex21.com/dtd/"
+        catalog="hex21-catalog.xml"
+    />
+</catalog>

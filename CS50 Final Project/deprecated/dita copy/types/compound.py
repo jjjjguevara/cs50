@@ -31,12 +31,13 @@ class Affiliate: # A person or a group that engages with a project, almost alway
     name: str
     job_title: str
     affiliation: "Affiliation"
-    endorser: "Person" # Sponsor of this affiliation
+    department: "Department" # Department who engages with this affiliate.
+    endorser: "Person" # Sponsor of this affiliate
     clearance: SecurityLevel
 
 
 @dataclass
-class Affiliation: # Group of attributes of an affiliate, internal or external
+class Affiliation: # Group of attributes of an affiliate
     id: str
     title: str
     type: AffiliateType
